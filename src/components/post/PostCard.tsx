@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
@@ -17,9 +16,10 @@ import { cn } from "@/lib/utils";
 
 interface PostCardProps {
   post: Post;
+  onAction?: () => void | Promise<void>;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post }) => {
+const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
   const { getUserById, likePost, commentOnPost, sharePost, deletePost } = usePost();
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
@@ -31,6 +31,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
   
   const handleLike = () => {
     likePost(post.id);
+    if (onAction) onAction();
   };
   
   const handleComment = (e: React.FormEvent) => {
@@ -41,15 +42,18 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
       setNewComment("");
       setShowComments(true);
       setIsSubmitting(false);
+      if (onAction) onAction();
     }
   };
   
   const handleShare = () => {
     sharePost(post.id);
+    if (onAction) onAction();
   };
   
   const handleDelete = () => {
     deletePost(post.id);
+    if (onAction) onAction();
   };
 
   const cardVariants = {

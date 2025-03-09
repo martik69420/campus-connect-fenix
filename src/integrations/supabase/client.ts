@@ -32,3 +32,33 @@ export type Post = TablesRow<'posts'> & {
   likes: { id: string }[];
   comments: { id: string }[];
 };
+
+// For PostContext usage - extending the post type with UI needs
+export interface PostContextPost {
+  id: string;
+  userId: string;
+  content: string;
+  images?: string[];
+  createdAt: Date;
+  likes: string[];
+  comments: any[];
+  shares: number;
+  isProfessional?: boolean;
+  isShared?: boolean;
+  originalPostId?: string;
+}
+
+// Ensure we're handling mapping between UI Post and Database Post 
+export const mapDatabasePostToUIPost = (dbPost: Post): PostContextPost => {
+  return {
+    id: dbPost.id,
+    userId: dbPost.user_id,
+    content: dbPost.content,
+    images: dbPost.images as string[] | undefined,
+    createdAt: new Date(dbPost.created_at),
+    likes: dbPost.likes.map(like => like.id),
+    comments: dbPost.comments,
+    shares: 0, // This might need to be tracked differently
+    isProfessional: dbPost.is_professional,
+  };
+};

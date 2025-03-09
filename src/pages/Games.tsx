@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,13 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import TriviaGame from '@/components/game/TriviaGame';
 import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy } from 'lucide-react';
 
-// Extend the TriviaGame component's props since we can't modify the original
-declare module '@/components/game/TriviaGame' {
-  interface TriviaGameProps {
-    onGameEnd: (score: number) => Promise<void>;
-  }
-  
-  export default function TriviaGame(props: TriviaGameProps): JSX.Element;
+interface TriviaGameProps {
+  onGameEnd: (score: number) => Promise<void>;
 }
 
 const Games = () => {
@@ -55,7 +49,6 @@ const Games = () => {
     try {
       setLoading(true);
       
-      // Fetch user profile
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -66,7 +59,6 @@ const Games = () => {
       
       setProfile(profile);
       
-      // Fetch last daily reward
       const { data: dailyRewards, error: rewardsError } = await supabase
         .from('daily_rewards')
         .select('created_at')
@@ -78,7 +70,6 @@ const Games = () => {
         setLastDailyReward(new Date(dailyRewards[0].created_at));
       }
       
-      // Fetch game history
       const { data: gameHistory, error: gameError } = await supabase
         .from('game_history')
         .select('*')
@@ -117,7 +108,6 @@ const Games = () => {
     if (!user || !canClaimDaily()) return;
     
     try {
-      // Add coins to user's balance
       const { data: updateData, error: updateError } = await supabase
         .from('profiles')
         .update({ coins: profile.coins + 25 })
@@ -127,7 +117,6 @@ const Games = () => {
       
       if (updateError) throw updateError;
       
-      // Record the reward claim
       await supabase
         .from('daily_rewards')
         .insert({
@@ -135,7 +124,6 @@ const Games = () => {
           coins_rewarded: 25,
         });
       
-      // Update local state
       setProfile(updateData);
       setLastDailyReward(new Date());
       
@@ -156,7 +144,6 @@ const Games = () => {
     if (!user) return;
     
     try {
-      // Record game history
       await supabase
         .from('game_history')
         .insert({
@@ -165,9 +152,7 @@ const Games = () => {
           score,
         });
       
-      // Check if it's a new high score
       if (score > highScores.triviaHighScore) {
-        // Award coins for new high score
         const coinsToAward = score * 2;
         
         const { data: updateData, error: updateError } = await supabase
@@ -186,7 +171,6 @@ const Games = () => {
           description: `You've earned ${coinsToAward} coins!`,
         });
       } else {
-        // Award some coins for playing
         const coinsToAward = Math.floor(score / 2);
         
         const { data: updateData, error: updateError } = await supabase
@@ -206,7 +190,6 @@ const Games = () => {
         });
       }
       
-      // Update high scores locally
       setHighScores({
         triviaHighScore: Math.max(score, highScores.triviaHighScore),
         triviaGamesPlayed: highScores.triviaGamesPlayed + 1,
@@ -260,7 +243,6 @@ const Games = () => {
               </div>
             </CardHeader>
             <CardContent>
-              {/* Use the TriviaGame component with proper typing */}
               <TriviaGame onGameEnd={handleGameEnd} />
             </CardContent>
           </Card>
