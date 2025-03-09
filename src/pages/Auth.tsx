@@ -13,7 +13,7 @@ const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, login } = useAuth();
   
   useEffect(() => {
     // Only redirect if we're sure the user is authenticated and auth is not still loading
@@ -103,37 +103,22 @@ interface FormProps {
 const LoginForm = ({ loading, setLoading }: FormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { login } = useAuth();
+  const [username, setUsername] = useState('');
   const [inviteCode, setInviteCode] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (inviteCode !== 'test') {
-      toast({
-        title: "Invalid invite code",
-        description: "Please enter a valid invite code to continue",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     try {
       setLoading(true);
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
       
-      if (error) throw error;
+      // Use AuthContext login instead of Supabase directly
+      const success = await login(username, inviteCode);
       
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in",
-      });
-      
-      navigate('/');
+      if (success) {
+        navigate('/');
+      }
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -148,28 +133,16 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">Email</label>
+        <label htmlFor="username" className="text-sm font-medium">Username</label>
         <input
-          id="email"
-          type="email"
-          placeholder="your.email@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          id="username"
+          type="text"
+          placeholder="your_username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           required
           className="w-full p-2 border rounded-md"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium">Password</label>
-        <input
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          className="w-full p-2 border rounded-md"
+          autoComplete="username"
         />
       </div>
       
@@ -200,8 +173,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
 const RegisterForm = ({ loading, setLoading }: FormProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { register } = useAuth();
   const [username, setUsername] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [school, setSchool] = useState('');
@@ -210,39 +182,15 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (inviteCode !== 'test') {
-      toast({
-        title: "Invalid invite code",
-        description: "Please enter a valid invite code to continue",
-        variant: "destructive",
-      });
-      return;
-    }
-    
     try {
       setLoading(true);
       
-      // Register the user
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            username,
-            display_name: displayName,
-            school,
-          },
-        },
-      });
+      // Use AuthContext register instead of Supabase directly
+      const success = await register(username, displayName, school, inviteCode);
       
-      if (error) throw error;
-      
-      toast({
-        title: "Registration successful",
-        description: "Welcome to Campus Fenix!",
-      });
-      
-      navigate('/');
+      if (success) {
+        navigate('/');
+      }
     } catch (error: any) {
       toast({
         title: "Registration failed",
@@ -257,19 +205,6 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
   return (
     <form onSubmit={handleRegister} className="space-y-4">
       <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">Email</label>
-        <input
-          id="email"
-          type="email"
-          placeholder="your.email@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          className="w-full p-2 border rounded-md"
-        />
-      </div>
-      
-      <div className="space-y-2">
         <label htmlFor="username" className="text-sm font-medium">Username</label>
         <input
           id="username"
@@ -279,6 +214,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           onChange={(e) => setUsername(e.target.value)}
           required
           className="w-full p-2 border rounded-md"
+          autoComplete="username"
         />
       </div>
       
@@ -292,6 +228,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           onChange={(e) => setDisplayName(e.target.value)}
           required
           className="w-full p-2 border rounded-md"
+          autoComplete="name"
         />
       </div>
       
@@ -303,19 +240,6 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           placeholder="Example University"
           value={school}
           onChange={(e) => setSchool(e.target.value)}
-          required
-          className="w-full p-2 border rounded-md"
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium">Password</label>
-        <input
-          id="password"
-          type="password"
-          placeholder="••••••••"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
           required
           className="w-full p-2 border rounded-md"
         />
