@@ -7,22 +7,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { GraduationCap, Users } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const { isAuthenticated, isLoading } = useAuth();
   
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate('/');
-      }
-    };
-    
-    checkSession();
-  }, [navigate]);
+    // Only redirect if we're sure the user is authenticated and auth is not still loading
+    if (isAuthenticated && !isLoading) {
+      navigate('/');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  // Don't render anything while checking authentication
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+      </div>
+    );
+  }
+
+  // If user is authenticated, don't render the auth page
+  if (isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">

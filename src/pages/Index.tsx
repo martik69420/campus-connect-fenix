@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase, Post } from '@/integrations/supabase/client';
@@ -10,47 +9,26 @@ import AppLayout from '@/components/layout/AppLayout';
 import CreatePostForm from '@/components/post/CreatePostForm';
 import PostCard from '@/components/post/PostCard';
 import { Loader2, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [posts, setPosts] = useState<Post[]>([]);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [feedType, setFeedType] = useState<'all' | 'professional'>('all');
 
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate('/auth');
-        return;
-      }
-      
-      setUser(session.user);
-      setLoading(false);
+    if (!isLoading && !isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+    
+    if (isAuthenticated) {
       fetchPosts();
-    };
-    
-    checkUser();
-    
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_OUT') {
-          navigate('/auth');
-        } else if (session && event === 'SIGNED_IN') {
-          setUser(session.user);
-          fetchPosts();
-        }
-      }
-    );
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [navigate]);
+    }
+  }, [isAuthenticated, isLoading, navigate]);
 
   const fetchPosts = async () => {
     try {
@@ -100,14 +78,6 @@ const Index = () => {
     fetchPosts();
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
   return (
     <AppLayout>
       <div className="max-w-3xl mx-auto p-4">
@@ -122,7 +92,6 @@ const Index = () => {
             </Button>
           </div>
           
-          {/* Use TypeScript type assertion to fix the prop issue */}
           <CreatePostForm onPostCreated={refreshFeed as any} />
           
           <TabsContent value="all" className="mt-6 space-y-6">

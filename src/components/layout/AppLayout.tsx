@@ -12,11 +12,13 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   const navigate = useNavigate();
 
   React.useEffect(() => {
+    // Only redirect if we're sure the user is not authenticated and auth is not still loading
     if (!isLoading && !isAuthenticated) {
       navigate("/auth");
     }
   }, [isAuthenticated, isLoading, navigate]);
 
+  // Show loading state while checking authentication
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -28,6 +30,7 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
     );
   }
 
+  // If not authenticated, don't render layout
   if (!isAuthenticated) {
     return null; // Will redirect in useEffect
   }
