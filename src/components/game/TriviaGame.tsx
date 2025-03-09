@@ -9,6 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { useGame } from "@/context/GameContext";
 import { toast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
+import { TriviaGameProps } from "./TriviaGameTypes";
 
 // Sample trivia questions
 const TRIVIA_QUESTIONS = [
@@ -39,7 +40,7 @@ const TRIVIA_QUESTIONS = [
   }
 ];
 
-const TriviaGame: React.FC = () => {
+const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
   const { progress, updateTriviaScore } = useGame();
   const [gameStarted, setGameStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -89,9 +90,10 @@ const TriviaGame: React.FC = () => {
   };
   
   // End the game and update score
-  const endGame = () => {
+  const endGame = async () => {
     setGameFinished(true);
     updateTriviaScore(score);
+    await onGameEnd(score);
   };
   
   // Timer for each question
