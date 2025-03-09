@@ -6,9 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { ProfileHeader } from '@/components/profile/ProfileHeader';
-import { PostCard } from '@/components/post/PostCard';
+import AppLayout from '@/components/layout/AppLayout';
+import ProfileHeader from '@/components/profile/ProfileHeader';
+import PostCard from '@/components/post/PostCard';
 import { Edit, Loader2, UserPlus, UserCheck, UserMinus } from 'lucide-react';
 
 type Profile = {

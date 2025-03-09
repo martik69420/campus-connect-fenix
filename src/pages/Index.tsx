@@ -6,9 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { CreatePostForm } from '@/components/post/CreatePostForm';
-import { PostCard } from '@/components/post/PostCard';
+import AppLayout from '@/components/layout/AppLayout';
+import CreatePostForm from '@/components/post/CreatePostForm';
+import PostCard from '@/components/post/PostCard';
 import { Loader2, RefreshCw } from 'lucide-react';
 
 type Post = {

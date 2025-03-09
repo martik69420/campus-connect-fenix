@@ -1,5 +1,5 @@
 
-import React, { useEffect } from "react";
+import React from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
@@ -7,11 +7,11 @@ import { useAuth } from "@/context/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
 
-const AppLayout: React.FC = () => {
+const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   const { isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       navigate("/auth");
     }
@@ -46,7 +46,7 @@ const AppLayout: React.FC = () => {
               transition={{ duration: 0.3 }}
               className="h-full"
             >
-              <Outlet />
+              {children || <Outlet />}
             </motion.div>
           </AnimatePresence>
         </main>

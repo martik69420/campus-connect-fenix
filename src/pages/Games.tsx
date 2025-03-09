@@ -3,11 +3,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
-import { AppLayout } from '@/components/layout/AppLayout';
+import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { TriviaGame } from '@/components/game/TriviaGame';
+import TriviaGame from '@/components/game/TriviaGame';
 import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy } from 'lucide-react';
 
 const Games = () => {
