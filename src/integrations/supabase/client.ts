@@ -9,221 +9,26 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-// Create a custom type that extends the Database type with the tables we're using
-export interface CustomDatabase extends Database {
-  public: {
-    Tables: {
-      profiles: {
-        Row: {
-          id: string;
-          username: string;
-          display_name: string;
-          avatar_url: string | null;
-          bio: string | null;
-          school: string;
-          coins: number;
-          invite_code: string;
-          created_at: string;
-        };
-        Insert: {
-          id: string;
-          username: string;
-          display_name: string;
-          avatar_url?: string | null;
-          bio?: string | null;
-          school: string;
-          coins?: number;
-          invite_code?: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          username?: string;
-          display_name?: string;
-          avatar_url?: string | null;
-          bio?: string | null;
-          school?: string;
-          coins?: number;
-          invite_code?: string;
-          created_at?: string;
-        };
-      };
-      posts: {
-        Row: {
-          id: string;
-          user_id: string;
-          content: string;
-          images: string[] | null;
-          is_professional: boolean;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          content: string;
-          images?: string[] | null;
-          is_professional?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          content?: string;
-          images?: string[] | null;
-          is_professional?: boolean;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      likes: {
-        Row: {
-          id: string;
-          user_id: string;
-          post_id: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          post_id: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          post_id?: string;
-          created_at?: string;
-        };
-      };
-      comments: {
-        Row: {
-          id: string;
-          user_id: string;
-          post_id: string;
-          content: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          post_id: string;
-          content: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          post_id?: string;
-          content?: string;
-          created_at?: string;
-        };
-      };
-      friends: {
-        Row: {
-          id: string;
-          user_id: string;
-          friend_id: string;
-          status: string;
-          created_at: string;
-          updated_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          friend_id: string;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          friend_id?: string;
-          status?: string;
-          created_at?: string;
-          updated_at?: string;
-        };
-      };
-      notifications: {
-        Row: {
-          id: string;
-          user_id: string;
-          type: string;
-          content: string;
-          related_id: string | null;
-          is_read: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          type: string;
-          content: string;
-          related_id?: string | null;
-          is_read?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          type?: string;
-          content?: string;
-          related_id?: string | null;
-          is_read?: boolean;
-          created_at?: string;
-        };
-      };
-      daily_rewards: {
-        Row: {
-          id: string;
-          user_id: string;
-          coins_rewarded: number;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          coins_rewarded: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          coins_rewarded?: number;
-          created_at?: string;
-        };
-      };
-      game_history: {
-        Row: {
-          id: string;
-          user_id: string;
-          game_type: string;
-          score: number;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          game_type: string;
-          score: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          game_type?: string;
-          score?: number;
-          created_at?: string;
-        };
-      };
-    };
-    Views: {};
-    Functions: {};
-    Enums: {};
-    CompositeTypes: {};
-  };
-}
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
-export const supabase = createClient<CustomDatabase>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Create type helpers for our database tables
+export type TablesInsert<T extends keyof Database['public']['Tables']> = 
+  Database['public']['Tables'][T]['Insert'];
+
+export type TablesRow<T extends keyof Database['public']['Tables']> = 
+  Database['public']['Tables'][T]['Row'];
+
+export type TablesUpdate<T extends keyof Database['public']['Tables']> = 
+  Database['public']['Tables'][T]['Update'];
+
+// Type helpers for common tables
+export type Profile = TablesRow<'profiles'>;
+export type Post = TablesRow<'posts'> & { 
+  profiles: {
+    username: string;
+    display_name: string;
+    avatar_url: string | null;
+  },
+  likes: { id: string }[];
+  comments: { id: string }[];
+};

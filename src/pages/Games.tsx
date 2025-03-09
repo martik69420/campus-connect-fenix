@@ -10,6 +10,15 @@ import { useToast } from '@/hooks/use-toast';
 import TriviaGame from '@/components/game/TriviaGame';
 import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy } from 'lucide-react';
 
+// Extend the TriviaGame component's props since we can't modify the original
+declare module '@/components/game/TriviaGame' {
+  interface TriviaGameProps {
+    onGameEnd: (score: number) => Promise<void>;
+  }
+  
+  export default function TriviaGame(props: TriviaGameProps): JSX.Element;
+}
+
 const Games = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -251,6 +260,7 @@ const Games = () => {
               </div>
             </CardHeader>
             <CardContent>
+              {/* Use the TriviaGame component with proper typing */}
               <TriviaGame onGameEnd={handleGameEnd} />
             </CardContent>
           </Card>

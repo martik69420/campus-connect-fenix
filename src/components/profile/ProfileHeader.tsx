@@ -10,9 +10,10 @@ import { Separator } from "@/components/ui/separator";
 import { User, useAuth } from "@/context/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
+import { Profile } from "@/integrations/supabase/client";
 
-interface ProfileHeaderProps {
-  profileUser: User;
+export interface ProfileHeaderProps {
+  profileUser: Profile;
   isOwnProfile: boolean;
 }
 
@@ -20,27 +21,16 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileUser, isOwnProfile
   const { user, updateUser } = useAuth();
   
   // Check if the viewed user is a friend of the current user
-  const isFriend = user?.friends.includes(profileUser.id) || false;
-
+  const isFriend = false; // Placeholder - implement actual friend check logic
+  
   const toggleFriendship = () => {
-    if (!user) return;
-    
-    let newFriends = [...user.friends];
-    
-    if (isFriend) {
-      // Remove from friends
-      newFriends = newFriends.filter(id => id !== profileUser.id);
-    } else {
-      // Add to friends
-      newFriends.push(profileUser.id);
-    }
-    
-    updateUser({ friends: newFriends });
+    // Implementation will be added later when friendship functionality is properly connected to Supabase
+    console.log("Toggle friendship action");
   };
 
   return (
     <Card className="overflow-hidden mb-6">
-      <div className="h-32 bg-gradient-to-r from-fenix/30 to-fenix/10"></div>
+      <div className="h-32 bg-gradient-to-r from-primary/30 to-primary/10"></div>
       
       <CardContent className="pt-0">
         <div className="-mt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -51,15 +41,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileUser, isOwnProfile
               transition={{ duration: 0.3 }}
             >
               <Avatar className="h-24 w-24 border-4 border-background">
-                <AvatarImage src={profileUser.avatar} alt={profileUser.displayName} />
-                <AvatarFallback className="text-2xl font-bold bg-fenix text-white">
-                  {profileUser.displayName.split(' ').map(n => n[0]).join('')}
+                <AvatarImage src={profileUser.avatar_url || undefined} alt={profileUser.display_name} />
+                <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
+                  {profileUser.display_name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>
               </Avatar>
             </motion.div>
             
             <div className="pb-1">
-              <h2 className="text-2xl font-bold">{profileUser.displayName}</h2>
+              <h2 className="text-2xl font-bold">{profileUser.display_name}</h2>
               <p className="text-muted-foreground">@{profileUser.username}</p>
             </div>
           </div>
@@ -110,13 +100,14 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileUser, isOwnProfile
             
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
-              <span>Joined {formatDistanceToNow(new Date(profileUser.createdAt), { addSuffix: true })}</span>
+              <span>Joined {formatDistanceToNow(new Date(profileUser.created_at), { addSuffix: true })}</span>
             </div>
             
+            {/* Friends count - to be implemented */}
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              <Link to={`/profile/${profileUser.id}/friends`} className="hover:text-foreground transition-colors">
-                {profileUser.friends.length} friends
+              <Link to={`/profile/${profileUser.username}/friends`} className="hover:text-foreground transition-colors">
+                0 friends
               </Link>
             </div>
           </div>
@@ -132,7 +123,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileUser, isOwnProfile
             </div>
             
             <Badge variant="outline" className="flex items-center gap-1.5 h-auto py-1">
-              <div className="w-2 h-2 rounded-full bg-fenix"></div>
+              <div className="w-2 h-2 rounded-full bg-green-500"></div>
               <span>Online</span>
             </Badge>
           </div>

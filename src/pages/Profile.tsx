@@ -1,7 +1,6 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, Profile as ProfileType, Post } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,31 +10,6 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import PostCard from '@/components/post/PostCard';
 import { Edit, Loader2, UserPlus, UserCheck, UserMinus } from 'lucide-react';
 
-type Profile = {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string;
-  bio: string | null;
-  school: string;
-  coins: number;
-};
-
-type Post = {
-  id: string;
-  content: string;
-  images: string[] | null;
-  is_professional: boolean;
-  created_at: string;
-  profiles: {
-    username: string;
-    display_name: string;
-    avatar_url: string;
-  };
-  likes: { id: string }[];
-  comments: { id: string }[];
-};
-
 type FriendStatus = 'not_friend' | 'pending_sent' | 'pending_received' | 'friends';
 
 const Profile = () => {
@@ -44,7 +18,7 @@ const Profile = () => {
   const { toast } = useToast();
   
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [profile, setProfile] = useState<Profile | null>(null);
+  const [profile, setProfile] = useState<ProfileType | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('not_friend');
   const [loading, setLoading] = useState(true);
@@ -85,11 +59,13 @@ const Profile = () => {
       setProfile(profile);
       
       // Fetch posts
-      await fetchPosts(profile.id);
-      
-      // Check friend status if not viewing own profile
-      if (currentUser && profile.id !== currentUser.id) {
-        await checkFriendStatus(profile.id);
+      if (profile) {
+        await fetchPosts(profile.id);
+        
+        // Check friend status if not viewing own profile
+        if (currentUser && profile.id !== currentUser.id) {
+          await checkFriendStatus(profile.id);
+        }
       }
     } catch (error: any) {
       toast({
@@ -128,7 +104,9 @@ const Profile = () => {
       
       if (error) throw error;
       
-      setPosts(data || []);
+      // Explicitly cast the data to the Post type
+      const typedPosts = (data || []) as unknown as Post[];
+      setPosts(typedPosts);
     } catch (error: any) {
       toast({
         title: "Error fetching posts",
@@ -273,7 +251,7 @@ const Profile = () => {
     <AppLayout>
       <div className="max-w-4xl mx-auto p-4">
         <ProfileHeader 
-          profile={profile} 
+          profileUser={profile as any} 
           isOwnProfile={isOwnProfile}
         />
         
@@ -335,7 +313,7 @@ const Profile = () => {
               posts.map((post) => (
                 <PostCard 
                   key={post.id} 
-                  post={post} 
+                  post={post as any} 
                   onAction={() => fetchPosts(profile.id)} 
                 />
               ))
@@ -372,7 +350,7 @@ const Profile = () => {
               posts.filter(p => p.is_professional).map((post) => (
                 <PostCard 
                   key={post.id} 
-                  post={post} 
+                  post={post as any} 
                   onAction={() => fetchPosts(profile.id)} 
                 />
               ))

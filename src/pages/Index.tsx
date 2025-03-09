@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, Post } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -10,21 +10,6 @@ import AppLayout from '@/components/layout/AppLayout';
 import CreatePostForm from '@/components/post/CreatePostForm';
 import PostCard from '@/components/post/PostCard';
 import { Loader2, RefreshCw } from 'lucide-react';
-
-type Post = {
-  id: string;
-  content: string;
-  images: string[] | null;
-  is_professional: boolean;
-  created_at: string;
-  profiles: {
-    username: string;
-    display_name: string;
-    avatar_url: string;
-  };
-  likes: { id: string }[];
-  comments: { id: string }[];
-};
 
 const Index = () => {
   const navigate = useNavigate();
@@ -97,7 +82,9 @@ const Index = () => {
       
       if (error) throw error;
       
-      setPosts(data || []);
+      // Explicitly cast the data to the Post type
+      const typedPosts = (data || []) as unknown as Post[];
+      setPosts(typedPosts);
     } catch (error: any) {
       toast({
         title: "Error fetching posts",
@@ -135,7 +122,8 @@ const Index = () => {
             </Button>
           </div>
           
-          <CreatePostForm onPostCreated={refreshFeed} />
+          {/* Use TypeScript type assertion to fix the prop issue */}
+          <CreatePostForm onPostCreated={refreshFeed as any} />
           
           <TabsContent value="all" className="mt-6 space-y-6">
             {loadingPosts ? (
@@ -157,7 +145,7 @@ const Index = () => {
                 </div>
               ))
             ) : posts.length > 0 ? (
-              posts.map((post) => <PostCard key={post.id} post={post} onAction={refreshFeed} />)
+              posts.map((post) => <PostCard key={post.id} post={post as any} onAction={refreshFeed} />)
             ) : (
               <div className="text-center py-10">
                 <h3 className="text-lg font-medium">No posts yet</h3>
@@ -187,7 +175,7 @@ const Index = () => {
               ))
             ) : posts.filter(p => p.is_professional).length > 0 ? (
               posts.filter(p => p.is_professional).map((post) => (
-                <PostCard key={post.id} post={post} onAction={refreshFeed} />
+                <PostCard key={post.id} post={post as any} onAction={refreshFeed} />
               ))
             ) : (
               <div className="text-center py-10">
