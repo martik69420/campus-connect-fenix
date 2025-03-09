@@ -8,10 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import TriviaGame from '@/components/game/TriviaGame';
 import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy } from 'lucide-react';
-
-interface TriviaGameProps {
-  onGameEnd: (score: number) => Promise<void>;
-}
+import { TriviaGameProps } from '@/components/game/TriviaGameTypes';
 
 const Games = () => {
   const navigate = useNavigate();
