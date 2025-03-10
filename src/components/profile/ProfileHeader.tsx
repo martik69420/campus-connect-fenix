@@ -72,7 +72,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               transition={{ duration: 0.3 }}
             >
               <Avatar className="h-24 w-24 border-4 border-background">
-                <AvatarImage src={profileUser.avatar_url || "/placeholder.svg"} alt={profileUser.display_name} />
+                <AvatarImage src={profileUser.avatar_url || undefined} alt={profileUser.display_name} />
                 <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
                   {profileUser.display_name.split(' ').map(n => n[0]).join('')}
                 </AvatarFallback>

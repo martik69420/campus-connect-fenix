@@ -308,7 +308,6 @@ export type Database = {
           display_name: string
           id: string
           invite_code: string
-          password_hash: string | null
           school: string
           username: string
         }
@@ -320,7 +319,6 @@ export type Database = {
           display_name: string
           id: string
           invite_code?: string
-          password_hash?: string | null
           school: string
           username: string
         }
@@ -332,7 +330,6 @@ export type Database = {
           display_name?: string
           id?: string
           invite_code?: string
-          password_hash?: string | null
           school?: string
           username?: string
         }
@@ -343,13 +340,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      validate_password: {
-        Args: {
-          username: string
-          password: string
-        }
-        Returns: boolean
-      }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
