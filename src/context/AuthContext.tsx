@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -199,9 +200,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      // Generate a proper UUID instead of a string format
+      const id = crypto.randomUUID();
+
       // Prepare user data for Supabase format
       const newUserData = {
-        id: `user_${Date.now()}`,
+        id,
         username,
         display_name: displayName,
         avatar_url: "/placeholder.svg",
