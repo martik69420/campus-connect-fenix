@@ -1,195 +1,72 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
 import { motion } from 'framer-motion';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import TriviaGame from '@/components/game/TriviaGame';
-import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy } from 'lucide-react';
-import { TriviaGameProps } from '@/components/game/TriviaGameTypes';
+import SnakeGame from '@/components/game/SnakeGame';
+import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy, GameController2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
+import { useGame } from '@/context/GameContext';
 
 const Games = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated, isLoading, addCoins } = useAuth();
+  const { hasDailyRewardAvailable, claimDailyReward, progress } = useGame();
+  
   const [showTriviaGame, setShowTriviaGame] = useState(false);
-  const [lastDailyReward, setLastDailyReward] = useState<Date | null>(null);
-  const [highScores, setHighScores] = useState<{
-    triviaHighScore: number;
-    triviaGamesPlayed: number;
-  }>({
-    triviaHighScore: 0,
-    triviaGamesPlayed: 0,
-  });
-
+  const [showSnakeGame, setShowSnakeGame] = useState(false);
+  const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate('/auth');
-        return;
-      }
-      
-      setUser(session.user);
-      fetchUserData(session.user.id);
-    };
-    
-    checkUser();
-  }, [navigate]);
-
-  const fetchUserData = async (userId: string) => {
-    try {
-      setLoading(true);
-      
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      
-      if (profileError) throw profileError;
-      
-      setProfile(profile);
-      
-      const { data: dailyRewards, error: rewardsError } = await supabase
-        .from('daily_rewards')
-        .select('created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1);
-      
-      if (dailyRewards && dailyRewards.length > 0) {
-        setLastDailyReward(new Date(dailyRewards[0].created_at));
-      }
-      
-      const { data: gameHistory, error: gameError } = await supabase
-        .from('game_history')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('game_type', 'trivia');
-      
-      if (gameHistory && gameHistory.length > 0) {
-        const highScore = Math.max(...gameHistory.map(game => game.score));
-        setHighScores({
-          triviaHighScore: highScore,
-          triviaGamesPlayed: gameHistory.length,
-        });
-      }
-    } catch (error: any) {
-      toast({
-        title: "Error fetching data",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/auth');
+    } else {
       setLoading(false);
     }
-  };
+  }, [isAuthenticated, isLoading, navigate]);
 
-  const canClaimDaily = () => {
-    if (!lastDailyReward) return true;
-    
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    return lastDailyReward < yesterday;
-  };
-
-  const claimDailyReward = async () => {
-    if (!user || !canClaimDaily()) return;
-    
-    try {
-      const { data: updateData, error: updateError } = await supabase
-        .from('profiles')
-        .update({ coins: profile.coins + 25 })
-        .eq('id', user.id)
-        .select()
-        .single();
-      
-      if (updateError) throw updateError;
-      
-      await supabase
-        .from('daily_rewards')
-        .insert({
-          user_id: user.id,
-          coins_rewarded: 25,
-        });
-      
-      setProfile(updateData);
-      setLastDailyReward(new Date());
-      
-      toast({
-        title: "Daily reward claimed!",
-        description: "You've received 25 coins",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Failed to claim reward",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-
-  const handleGameEnd = async (score: number) => {
+  const handleTriviaGameEnd = async (score: number) => {
     if (!user) return;
     
     try {
-      await supabase
-        .from('game_history')
-        .insert({
-          user_id: user.id,
-          game_type: 'trivia',
-          score,
-        });
+      const coinsToAward = score > progress.trivia.highScore 
+        ? score * 2 // Bonus for high score
+        : Math.floor(score / 2);
       
-      if (score > highScores.triviaHighScore) {
-        const coinsToAward = score * 2;
-        
-        const { data: updateData, error: updateError } = await supabase
-          .from('profiles')
-          .update({ coins: profile.coins + coinsToAward })
-          .eq('id', user.id)
-          .select()
-          .single();
-        
-        if (updateError) throw updateError;
-        
-        setProfile(updateData);
-        
-        toast({
-          title: "New high score!",
-          description: `You've earned ${coinsToAward} coins!`,
-        });
-      } else {
-        const coinsToAward = Math.floor(score / 2);
-        
-        const { data: updateData, error: updateError } = await supabase
-          .from('profiles')
-          .update({ coins: profile.coins + coinsToAward })
-          .eq('id', user.id)
-          .select()
-          .single();
-        
-        if (updateError) throw updateError;
-        
-        setProfile(updateData);
-        
-        toast({
-          title: "Game completed!",
-          description: `You've earned ${coinsToAward} coins!`,
-        });
-      }
+      addCoins(coinsToAward, score > progress.trivia.highScore 
+        ? "New trivia high score!" 
+        : "Trivia game completed");
       
-      setHighScores({
-        triviaHighScore: Math.max(score, highScores.triviaHighScore),
-        triviaGamesPlayed: highScores.triviaGamesPlayed + 1,
+      toast({
+        title: score > progress.trivia.highScore ? "New high score!" : "Game completed!",
+        description: `You've earned ${coinsToAward} coins!`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error saving game results",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleSnakeGameEnd = async (score: number) => {
+    if (!user) return;
+    
+    try {
+      // Calculate coins based on score (1 coin per 10 points)
+      const coinsToAward = Math.floor(score / 10) + 5;
+      
+      addCoins(coinsToAward, "Snake game completed");
+      
+      toast({
+        title: "Snake game completed!",
+        description: `You've earned ${coinsToAward} coins!`,
       });
     } catch (error: any) {
       toast({
@@ -200,7 +77,7 @@ const Games = () => {
     }
   };
 
-  if (loading) {
+  if (loading || isLoading) {
     return (
       <AppLayout>
         <div className="max-w-4xl mx-auto p-4">
@@ -225,7 +102,7 @@ const Games = () => {
           </div>
           <div className="mt-2 md:mt-0 flex items-center gap-2 bg-secondary px-4 py-2 rounded-full">
             <CoinsIcon className="h-5 w-5 text-yellow-500" />
-            <span className="font-bold">{profile?.coins || 0}</span>
+            <span className="font-bold">{user?.coins || 0}</span>
           </div>
         </div>
 
@@ -240,7 +117,21 @@ const Games = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <TriviaGame onGameEnd={handleGameEnd} />
+              <TriviaGame onGameEnd={handleTriviaGameEnd} />
+            </CardContent>
+          </Card>
+        ) : showSnakeGame ? (
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle>Snake Game</CardTitle>
+                <Button variant="outline" onClick={() => setShowSnakeGame(false)}>
+                  Exit Game
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <SnakeGame onGameEnd={handleSnakeGameEnd} />
             </CardContent>
           </Card>
         ) : (
@@ -261,9 +152,9 @@ const Games = () => {
                   <div className="flex justify-between text-sm mb-2">
                     <div className="flex items-center gap-1">
                       <Trophy className="h-4 w-4 text-yellow-500" />
-                      <span>High Score: {highScores.triviaHighScore}</span>
+                      <span>High Score: {progress.trivia.highScore}</span>
                     </div>
-                    <div>Games Played: {highScores.triviaGamesPlayed}</div>
+                    <div>Games Played: {progress.trivia.gamesPlayed}</div>
                   </div>
                   <p className="text-sm mb-4">
                     Answer trivia questions correctly to earn coins! The faster you answer, the more points you get.
@@ -273,6 +164,41 @@ const Games = () => {
                   <Button 
                     className="w-full" 
                     onClick={() => setShowTriviaGame(true)}
+                  >
+                    Play Now
+                  </Button>
+                </CardFooter>
+              </Card>
+            </motion.div>
+
+            <motion.div
+              whileHover={{ scale: 1.03 }}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
+            >
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="flex items-center gap-2">
+                    <GameController2 className="h-5 w-5 text-primary" />
+                    Snake Game
+                  </CardTitle>
+                  <CardDescription>Classic arcade fun</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex justify-between text-sm mb-2">
+                    <div className="flex items-center gap-1">
+                      <Trophy className="h-4 w-4 text-yellow-500" />
+                      <span>High Score: 0</span>
+                    </div>
+                    <div>Games Played: 0</div>
+                  </div>
+                  <p className="text-sm mb-4">
+                    Control the snake to eat food and grow longer! Avoid hitting walls and yourself to score points.
+                  </p>
+                </CardContent>
+                <CardFooter>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => setShowSnakeGame(true)}
                   >
                     Play Now
                   </Button>
@@ -298,14 +224,6 @@ const Games = () => {
                       <CoinsIcon className="h-4 w-4 text-yellow-500" />
                       <span>Reward: 25 coins</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      <span>
-                        {lastDailyReward 
-                          ? `Last claimed: ${new Date(lastDailyReward).toLocaleDateString()}` 
-                          : 'Not claimed yet'}
-                      </span>
-                    </div>
                   </div>
                   <p className="text-sm mb-4">
                     Claim your daily reward to earn coins! Come back every day to increase your balance.
@@ -315,9 +233,9 @@ const Games = () => {
                   <Button 
                     className="w-full" 
                     onClick={claimDailyReward}
-                    disabled={!canClaimDaily()}
+                    disabled={!hasDailyRewardAvailable}
                   >
-                    {canClaimDaily() ? 'Claim Daily Reward' : 'Already Claimed Today'}
+                    {hasDailyRewardAvailable ? 'Claim Daily Reward' : 'Already Claimed Today'}
                   </Button>
                 </CardFooter>
               </Card>

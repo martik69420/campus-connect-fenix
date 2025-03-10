@@ -1,7 +1,7 @@
 
 import React from "react";
 import { Link } from "react-router-dom";
-import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus } from "lucide-react";
+import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,17 +15,48 @@ import { Profile } from "@/integrations/supabase/client";
 export interface ProfileHeaderProps {
   profileUser: Profile;
   isOwnProfile: boolean;
+  friendStatus?: 'not_friend' | 'pending_sent' | 'pending_received' | 'friends';
+  onFriendAction?: () => void;
+  loadingFriendAction?: boolean;
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileUser, isOwnProfile }) => {
-  const { user, updateUser } = useAuth();
+const ProfileHeader: React.FC<ProfileHeaderProps> = ({ 
+  profileUser, 
+  isOwnProfile,
+  friendStatus = 'not_friend',
+  onFriendAction,
+  loadingFriendAction = false
+}) => {
+  const { user } = useAuth();
   
-  // Check if the viewed user is a friend of the current user
-  const isFriend = false; // Placeholder - implement actual friend check logic
+  const getFriendButtonText = () => {
+    switch (friendStatus) {
+      case 'not_friend': return 'Add Friend';
+      case 'pending_sent': return 'Cancel Request';
+      case 'pending_received': return 'Accept Request';
+      case 'friends': return 'Unfriend';
+      default: return 'Add Friend';
+    }
+  };
   
-  const toggleFriendship = () => {
-    // Implementation will be added later when friendship functionality is properly connected to Supabase
-    console.log("Toggle friendship action");
+  const getFriendButtonIcon = () => {
+    if (loadingFriendAction) return <Loader2 className="h-4 w-4 animate-spin" />;
+    
+    switch (friendStatus) {
+      case 'not_friend': return <UserPlus className="h-4 w-4" />;
+      case 'pending_sent': return <UserMinus className="h-4 w-4" />;
+      case 'pending_received': return <UserPlus className="h-4 w-4" />;
+      case 'friends': return <UserMinus className="h-4 w-4" />;
+      default: return <UserPlus className="h-4 w-4" />;
+    }
+  };
+  
+  const getFriendButtonVariant = () => {
+    switch (friendStatus) {
+      case 'friends': return 'destructive';
+      case 'pending_received': return 'default';
+      default: return 'outline';
+    }
   };
 
   return (
@@ -62,21 +93,13 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileUser, isOwnProfile
               </Button>
             ) : (
               <Button
-                variant={isFriend ? "outline" : "default"}
+                variant={getFriendButtonVariant()}
                 className="gap-1.5"
-                onClick={toggleFriendship}
+                onClick={onFriendAction}
+                disabled={loadingFriendAction}
               >
-                {isFriend ? (
-                  <>
-                    <UserMinus className="h-4 w-4" />
-                    Unfriend
-                  </>
-                ) : (
-                  <>
-                    <UserPlus className="h-4 w-4" />
-                    Add Friend
-                  </>
-                )}
+                {getFriendButtonIcon()}
+                {getFriendButtonText()}
               </Button>
             )}
           </div>
@@ -103,7 +126,6 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ profileUser, isOwnProfile
               <span>Joined {formatDistanceToNow(new Date(profileUser.created_at), { addSuffix: true })}</span>
             </div>
             
-            {/* Friends count - to be implemented */}
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <Link to={`/profile/${profileUser.username}/friends`} className="hover:text-foreground transition-colors">

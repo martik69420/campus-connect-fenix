@@ -1,14 +1,13 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { supabase, Profile as ProfileType, Post } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import AppLayout from '@/components/layout/AppLayout';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import PostCard from '@/components/post/PostCard';
-import { Edit, Loader2, UserPlus, UserCheck, UserMinus } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 type FriendStatus = 'not_friend' | 'pending_sent' | 'pending_received' | 'friends';
 
@@ -16,202 +15,174 @@ const Profile = () => {
   const { username } = useParams<{ username: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
   
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [profile, setProfile] = useState<ProfileType | null>(null);
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [profile, setProfile] = useState<any>(null);
+  const [posts, setPosts] = useState<any[]>([]);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('not_friend');
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [loadingFriendAction, setLoadingFriendAction] = useState(false);
   
   useEffect(() => {
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate('/auth');
-        return;
-      }
-      
-      setCurrentUser(session.user);
-      fetchProfile();
-    };
+    if (!username) return;
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
     
-    checkUser();
-  }, [navigate, username]);
+    fetchProfile();
+  }, [navigate, username, user]);
   
   const fetchProfile = async () => {
-    if (!username) return;
+    if (!username || !user) return;
     
     try {
       setLoading(true);
       
-      // Fetch profile
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('username', username)
-        .single();
+      // Find mock user with matching username
+      const mockUsers = [
+        {
+          id: "1",
+          username: "john_doe",
+          displayName: "John Doe",
+          avatar: "/placeholder.svg",
+          coins: 500,
+          inviteCode: "test",
+          createdAt: new Date(),
+          school: "Example University",
+          bio: "Computer Science student and tech enthusiast.",
+          friends: ["2", "3"]
+        },
+        {
+          id: "2",
+          username: "jane_smith",
+          displayName: "Jane Smith",
+          avatar: "/placeholder.svg",
+          coins: 750,
+          inviteCode: "test",
+          createdAt: new Date(),
+          school: "Example University",
+          bio: "Psychology major, love reading and coffee.",
+          friends: ["1"]
+        },
+        {
+          id: "3",
+          username: "alex_johnson",
+          displayName: "Alex Johnson",
+          avatar: "/placeholder.svg",
+          coins: 350,
+          inviteCode: "test",
+          createdAt: new Date(),
+          school: "Example University",
+          friends: ["1"]
+        }
+      ];
       
-      if (profileError) throw profileError;
+      const foundProfile = mockUsers.find(u => u.username === username);
       
-      setProfile(profile);
+      if (!foundProfile) {
+        toast({
+          title: "Profile not found",
+          description: "This user doesn't exist",
+          variant: "destructive"
+        });
+        navigate('/');
+        return;
+      }
       
-      // Fetch posts
-      if (profile) {
-        await fetchPosts(profile.id);
-        
-        // Check friend status if not viewing own profile
-        if (currentUser && profile.id !== currentUser.id) {
-          await checkFriendStatus(profile.id);
+      // Convert to format expected by components
+      const profileData = {
+        id: foundProfile.id,
+        username: foundProfile.username,
+        display_name: foundProfile.displayName,
+        avatar_url: foundProfile.avatar,
+        coins: foundProfile.coins,
+        invite_code: foundProfile.inviteCode,
+        created_at: foundProfile.createdAt.toISOString(),
+        school: foundProfile.school,
+        bio: foundProfile.bio,
+      };
+      
+      setProfile(profileData);
+      
+      // Check if this user is a friend
+      if (user.id !== foundProfile.id) {
+        if (user.friends && user.friends.includes(foundProfile.id)) {
+          setFriendStatus('friends');
+        } else {
+          setFriendStatus('not_friend');
         }
       }
+      
+      // Simulate posts
+      const mockPosts = [
+        {
+          id: "post1",
+          content: "Just attended an amazing workshop on AI!",
+          created_at: new Date().toISOString(),
+          user_id: foundProfile.id,
+          is_professional: true,
+          profiles: {
+            username: foundProfile.username,
+            display_name: foundProfile.displayName,
+            avatar_url: foundProfile.avatar
+          },
+          likes: [],
+          comments: []
+        },
+        {
+          id: "post2",
+          content: "Looking forward to the campus event this weekend!",
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          user_id: foundProfile.id,
+          is_professional: false,
+          profiles: {
+            username: foundProfile.username,
+            display_name: foundProfile.displayName,
+            avatar_url: foundProfile.avatar
+          },
+          likes: [],
+          comments: []
+        }
+      ];
+      
+      setPosts(mockPosts);
+      
     } catch (error: any) {
       toast({
         title: "Error fetching profile",
         description: error.message,
         variant: "destructive"
       });
-      navigate('/');
     } finally {
       setLoading(false);
     }
   };
   
-  const fetchPosts = async (profileId: string) => {
-    try {
-      setLoadingPosts(true);
-      
-      const { data, error } = await supabase
-        .from('posts')
-        .select(`
-          id,
-          content,
-          images,
-          is_professional,
-          created_at,
-          profiles (
-            username,
-            display_name,
-            avatar_url
-          ),
-          likes: likes(id),
-          comments: comments(id)
-        `)
-        .eq('user_id', profileId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      
-      // Explicitly cast the data to the Post type
-      const typedPosts = (data || []) as unknown as Post[];
-      setPosts(typedPosts);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching posts",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingPosts(false);
-    }
-  };
-  
-  const checkFriendStatus = async (profileId: string) => {
-    if (!currentUser) return;
-    
-    try {
-      // Check if there's a friend request from current user to profile
-      const { data: sentRequest, error: sentError } = await supabase
-        .from('friends')
-        .select('*')
-        .eq('user_id', currentUser.id)
-        .eq('friend_id', profileId)
-        .single();
-      
-      if (sentRequest) {
-        setFriendStatus(sentRequest.status === 'accepted' ? 'friends' : 'pending_sent');
-        return;
-      }
-      
-      // Check if there's a friend request from profile to current user
-      const { data: receivedRequest, error: receivedError } = await supabase
-        .from('friends')
-        .select('*')
-        .eq('user_id', profileId)
-        .eq('friend_id', currentUser.id)
-        .single();
-      
-      if (receivedRequest) {
-        setFriendStatus(receivedRequest.status === 'accepted' ? 'friends' : 'pending_received');
-        return;
-      }
-      
-      setFriendStatus('not_friend');
-    } catch (error) {
-      // If no record found, they're not friends
-      setFriendStatus('not_friend');
-    }
-  };
-  
   const handleFriendAction = async () => {
-    if (!currentUser || !profile) return;
+    if (!user || !profile) return;
     
     try {
       setLoadingFriendAction(true);
       
-      switch (friendStatus) {
-        case 'not_friend':
-          // Send friend request
-          await supabase
-            .from('friends')
-            .insert({
-              user_id: currentUser.id,
-              friend_id: profile.id,
-              status: 'pending'
-            });
-          
-          setFriendStatus('pending_sent');
-          toast({
-            title: "Friend request sent",
-            description: `You sent a friend request to ${profile.display_name}`
-          });
-          break;
-          
-        case 'pending_received':
-          // Accept friend request
-          await supabase
-            .from('friends')
-            .update({ status: 'accepted' })
-            .eq('user_id', profile.id)
-            .eq('friend_id', currentUser.id);
-          
-          setFriendStatus('friends');
-          toast({
-            title: "Friend request accepted",
-            description: `You are now friends with ${profile.display_name}`
-          });
-          break;
-          
-        case 'pending_sent':
-        case 'friends':
-          // Cancel request or unfriend
-          await supabase
-            .from('friends')
-            .delete()
-            .or(`user_id.eq.${currentUser.id},friend_id.eq.${currentUser.id}`)
-            .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`);
-          
-          setFriendStatus('not_friend');
-          toast({
-            title: friendStatus === 'friends' ? "Unfriended" : "Request cancelled",
-            description: friendStatus === 'friends' 
-              ? `You are no longer friends with ${profile.display_name}` 
-              : `Friend request to ${profile.display_name} cancelled`
-          });
-          break;
+      // Simulate API call delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      if (friendStatus === 'not_friend') {
+        setFriendStatus('friends');
+        toast({
+          title: "Friend added",
+          description: `You are now friends with ${profile.display_name}`
+        });
+      } else {
+        setFriendStatus('not_friend');
+        toast({
+          title: "Friend removed",
+          description: `You are no longer friends with ${profile.display_name}`
+        });
       }
+      
     } catch (error: any) {
       toast({
         title: "Action failed",
@@ -245,43 +216,18 @@ const Profile = () => {
   
   if (!profile) return null;
   
-  const isOwnProfile = currentUser?.id === profile.id;
+  const isOwnProfile = user?.id === profile.id;
   
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto p-4">
         <ProfileHeader 
-          profileUser={profile as any} 
+          profileUser={profile}
           isOwnProfile={isOwnProfile}
+          friendStatus={friendStatus}
+          onFriendAction={handleFriendAction}
+          loadingFriendAction={loadingFriendAction}
         />
-        
-        {!isOwnProfile && (
-          <div className="flex justify-end mb-4">
-            <Button
-              onClick={handleFriendAction}
-              disabled={loadingFriendAction}
-              className="flex items-center gap-2"
-              variant={friendStatus === 'friends' ? 'destructive' : friendStatus === 'pending_received' ? 'default' : 'outline'}
-            >
-              {loadingFriendAction ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : friendStatus === 'not_friend' ? (
-                <UserPlus className="h-4 w-4" />
-              ) : friendStatus === 'pending_sent' ? (
-                <UserMinus className="h-4 w-4" />
-              ) : friendStatus === 'pending_received' ? (
-                <UserCheck className="h-4 w-4" />
-              ) : (
-                <UserMinus className="h-4 w-4" />
-              )}
-              
-              {friendStatus === 'not_friend' ? 'Add Friend' : 
-                friendStatus === 'pending_sent' ? 'Cancel Request' : 
-                friendStatus === 'pending_received' ? 'Accept Request' : 
-                'Unfriend'}
-            </Button>
-          </div>
-        )}
         
         <Tabs defaultValue="posts" className="w-full mt-6">
           <TabsList className="mb-4">
@@ -313,8 +259,8 @@ const Profile = () => {
               posts.map((post) => (
                 <PostCard 
                   key={post.id} 
-                  post={post as any} 
-                  onAction={() => fetchPosts(profile.id)} 
+                  post={post} 
+                  onAction={() => {}} 
                 />
               ))
             ) : (
@@ -350,8 +296,8 @@ const Profile = () => {
               posts.filter(p => p.is_professional).map((post) => (
                 <PostCard 
                   key={post.id} 
-                  post={post as any} 
-                  onAction={() => fetchPosts(profile.id)} 
+                  post={post} 
+                  onAction={() => {}} 
                 />
               ))
             ) : (
