@@ -21,8 +21,8 @@ type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string, inviteCode: string) => Promise<boolean>;
-  register: (username: string, displayName: string, school: string, inviteCode: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<boolean>;
+  register: (username: string, displayName: string, school: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   addCoins: (amount: number, reason?: string) => void;
@@ -71,6 +71,22 @@ const MOCK_USERS = [
   }
 ];
 
+// Helper function to map Supabase profile to our User model
+const mapProfileToUser = (profile: any): User => {
+  return {
+    id: profile.id,
+    username: profile.username,
+    displayName: profile.display_name,
+    avatar: profile.avatar_url || "/placeholder.svg",
+    coins: profile.coins || 0,
+    inviteCode: profile.invite_code || "test",
+    createdAt: new Date(profile.created_at),
+    school: profile.school || "",
+    bio: profile.bio || "",
+    friends: []
+  };
+};
+
 // Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -98,52 +114,52 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   // Login function with password
-  const login = async (username: string, password: string, inviteCode: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     
     try {
-      // Verify invite code and find user
-      if (inviteCode === "test") {
-        // In a real app, you would use supabase auth here
-        const { data: profile, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('username', username)
-          .single();
+      // Find user profile
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('username', username)
+        .single();
 
-        if (error) throw error;
-        if (!profile) {
-          toast({
-            title: "Login failed",
-            description: "User not found",
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        // Verify password
-        const { data: isValid } = await supabase
-          .rpc('validate_password', {
-            username,
-            password
-          });
-
-        if (!isValid) {
-          toast({
-            title: "Login failed",
-            description: "Invalid password",
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        setUser(profile as User);
+      if (error) throw error;
+      if (!profile) {
         toast({
-          title: "Welcome back!",
-          description: `Logged in as ${profile.display_name}`,
+          title: "Login failed",
+          description: "User not found",
+          variant: "destructive",
         });
-        return true;
+        return false;
       }
+
+      // Verify password
+      const { data: isValid } = await supabase
+        .rpc('validate_password', {
+          username,
+          password
+        });
+
+      if (!isValid) {
+        toast({
+          title: "Login failed",
+          description: "Invalid password",
+          variant: "destructive",
+        });
+        return false;
+      }
+
+      // Map profile to our User model
+      const mappedUser = mapProfileToUser(profile);
+      setUser(mappedUser);
+      
+      toast({
+        title: "Welcome back!",
+        description: `Logged in as ${profile.display_name}`,
+      });
+      return true;
     } catch (error: any) {
       toast({
         title: "Login failed",
@@ -162,59 +178,66 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     username: string, 
     displayName: string, 
     school: string, 
-    inviteCode: string,
     password: string
   ): Promise<boolean> => {
     setIsLoading(true);
     
     try {
-      if (inviteCode === "test") {
-        // Check if username already exists
-        const { data: existingUser } = await supabase
-          .from('profiles')
-          .select('username')
-          .eq('username', username)
-          .single();
+      // Check if username already exists
+      const { data: existingUser } = await supabase
+        .from('profiles')
+        .select('username')
+        .eq('username', username)
+        .single();
 
-        if (existingUser) {
-          toast({
-            title: "Registration failed",
-            description: "Username already taken",
-            variant: "destructive",
-          });
-          return false;
-        }
-
-        // Create new user
-        const newUser: User = {
-          id: `user_${Date.now()}`,
-          username,
-          displayName,
-          avatar: "/placeholder.svg",
-          coins: 100,
-          inviteCode: "test",
-          createdAt: new Date(),
-          school,
-          friends: []
-        };
-
-        // Insert into profiles with password
-        const { error } = await supabase
-          .from('profiles')
-          .insert({
-            ...newUser,
-            password_hash: password // In a real app, hash this!
-          });
-
-        if (error) throw error;
-        
-        setUser(newUser);
+      if (existingUser) {
         toast({
-          title: "Welcome to Campus Fenix!",
-          description: "Your account has been created successfully.",
+          title: "Registration failed",
+          description: "Username already taken",
+          variant: "destructive",
         });
-        return true;
+        return false;
       }
+
+      // Prepare user data for Supabase format
+      const newUserData = {
+        id: `user_${Date.now()}`,
+        username,
+        display_name: displayName,
+        avatar_url: "/placeholder.svg",
+        coins: 100,
+        invite_code: "test",
+        created_at: new Date().toISOString(),
+        school,
+        password_hash: password // In a real app, hash this!
+      };
+
+      // Insert into profiles with password
+      const { error } = await supabase
+        .from('profiles')
+        .insert(newUserData);
+
+      if (error) throw error;
+      
+      // Create our User model
+      const newUser: User = {
+        id: newUserData.id,
+        username: newUserData.username,
+        displayName: newUserData.display_name,
+        avatar: newUserData.avatar_url,
+        coins: newUserData.coins,
+        inviteCode: newUserData.invite_code,
+        createdAt: new Date(newUserData.created_at),
+        school: newUserData.school,
+        friends: []
+      };
+      
+      setUser(newUser);
+      toast({
+        title: "Welcome to Campus Fenix!",
+        description: "Your account has been created successfully.",
+      });
+      return true;
     } catch (error: any) {
       toast({
         title: "Registration failed",
