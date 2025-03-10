@@ -33,45 +33,6 @@ type AuthContextType = {
 // Create context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock user data for testing
-const MOCK_USERS = [
-  {
-    id: "1",
-    username: "john_doe",
-    displayName: "John Doe",
-    avatar: "/placeholder.svg",
-    coins: 500,
-    inviteCode: "test",
-    createdAt: new Date(),
-    school: "Example University",
-    bio: "Computer Science student and tech enthusiast.",
-    friends: ["2", "3"]
-  },
-  {
-    id: "2",
-    username: "jane_smith",
-    displayName: "Jane Smith",
-    avatar: "/placeholder.svg",
-    coins: 750,
-    inviteCode: "test",
-    createdAt: new Date(),
-    school: "Example University",
-    bio: "Psychology major, love reading and coffee.",
-    friends: ["1"]
-  },
-  {
-    id: "3",
-    username: "alex_johnson",
-    displayName: "Alex Johnson",
-    avatar: "/placeholder.svg",
-    coins: 350,
-    inviteCode: "test",
-    createdAt: new Date(),
-    school: "Example University",
-    friends: ["1"]
-  }
-];
-
 // Helper function to map Supabase profile to our User model
 const mapProfileToUser = (profile: any): User => {
   return {
@@ -174,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  // Register function with password
+  // Register function with password - UPDATED to work with Supabase properly
   const register = async (
     username: string, 
     displayName: string, 
@@ -200,28 +161,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Generate a proper UUID instead of a string format
-      const id = crypto.randomUUID();
+      // First, create an auth user with a random email (since we're only using username/password)
+      // In a real app, you'd collect email too
+      const tempEmail = `${username}_${Date.now()}@example.com`;
+      
+      // Create auth user first
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: tempEmail,
+        password: password,
+        options: {
+          data: {
+            username: username,
+            display_name: displayName,
+            school: school
+          }
+        }
+      });
 
-      // Prepare user data for Supabase format
+      if (authError) throw authError;
+      if (!authData.user) {
+        throw new Error("Failed to create user account");
+      }
+
+      // Now create the profile with the auth user's ID
       const newUserData = {
-        id,
+        id: authData.user.id,
         username,
         display_name: displayName,
         avatar_url: "/placeholder.svg",
         coins: 100,
         invite_code: "test",
-        created_at: new Date().toISOString(),
         school,
         password_hash: password // In a real app, hash this!
       };
 
-      // Insert into profiles with password
-      const { error } = await supabase
+      const { error: profileError } = await supabase
         .from('profiles')
         .insert(newUserData);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
       
       // Create our User model
       const newUser: User = {
@@ -231,7 +209,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         avatar: newUserData.avatar_url,
         coins: newUserData.coins,
         inviteCode: newUserData.invite_code,
-        createdAt: new Date(newUserData.created_at),
+        createdAt: new Date(),
         school: newUserData.school,
         friends: []
       };
@@ -243,6 +221,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return true;
     } catch (error: any) {
+      console.error("Registration error:", error);
       toast({
         title: "Registration failed",
         description: error.message,
