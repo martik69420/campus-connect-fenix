@@ -1,142 +1,222 @@
-
 import React, { useState } from "react";
-import { useAuth } from "@/context/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { Mail, Key, AtSign, School, User } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { motion } from "framer-motion";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/context/AuthContext";
 
-const AuthForm: React.FC = () => {
-  const { login, register, isLoading } = useAuth();
-  const [loginData, setLoginData] = useState({ username: "", inviteCode: "" });
-  const [registerData, setRegisterData] = useState({
-    username: "",
-    displayName: "",
-    school: "",
-    inviteCode: ""
+const loginFormSchema = z.object({
+  username: z.string().min(2, {
+    message: "Username must be at least 2 characters.",
+  }),
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
+});
+
+const registerFormSchema = z.object({
+  username: z.string().min(2, {
+    message: "Username must be at least 2 characters.",
+  }),
+  displayName: z.string().min(2, {
+    message: "Display Name must be at least 2 characters.",
+  }),
+  school: z.string().min(2, {
+    message: "School must be at least 2 characters.",
+  }),
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
+  }),
+});
+
+type LoginFormValues = z.infer<typeof loginFormSchema>;
+type RegisterFormValues = z.infer<typeof registerFormSchema>;
+
+export function AuthForm() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { login, register: registerUser } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+
+  const loginForm = useForm<LoginFormValues>({
+    resolver: zodResolver(loginFormSchema),
+    defaultValues: {
+      username: "",
+      password: "",
+    },
   });
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await login(loginData.username, loginData.inviteCode);
+  const registerForm = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerFormSchema),
+    defaultValues: {
+      username: "",
+      displayName: "",
+      school: "",
+      password: "",
+    },
+  });
+
+  const onLoginSubmit = async (data: LoginFormValues) => {
+    setIsLoading(true);
+    try {
+      const success = await login(data.username, data.password);
+      if (success) {
+        navigate("/");
+      }
+    } catch (error) {
+      toast({
+        title: "Login failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await register(
-      registerData.username,
-      registerData.displayName,
-      registerData.school,
-      registerData.inviteCode
-    );
+  const onRegisterSubmit = async (data: RegisterFormValues) => {
+    setIsLoading(true);
+    try {
+      const success = await registerUser(
+        data.username,
+        data.displayName,
+        data.school,
+        data.password
+      );
+      if (success) {
+        navigate("/");
+      }
+    } catch (error) {
+      toast({
+        title: "Registration failed",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto overflow-hidden">
-      <Tabs defaultValue="login">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">Campus Fenix</CardTitle>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-          </div>
-          <CardDescription>
-            Connect with your school community
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <TabsContent value="login" className="mt-0">
-            <form onSubmit={handleLogin}>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    placeholder="username"
-                    value={loginData.username}
-                    onChange={(e) => setLoginData({ ...loginData, username: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="inviteCode">Invite Code</Label>
-                  <Input
-                    id="inviteCode"
-                    placeholder="invite code"
-                    value={loginData.inviteCode}
-                    onChange={(e) => setLoginData({ ...loginData, inviteCode: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Logging in..." : "Login"}
+    <Card className="w-[350px]">
+      <CardHeader className="space-y-1">
+        <CardTitle className="text-2xl">Authentication</CardTitle>
+        <CardDescription>
+          Sign in or create an account to continue
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid gap-4">
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList>
+            <TabsTrigger value="login">Login</TabsTrigger>
+            <TabsTrigger value="register">Register</TabsTrigger>
+          </TabsList>
+          <TabsContent value="login" className="space-y-4">
+            <Form {...loginForm}>
+              <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
+                <FormField
+                  control={loginForm.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input placeholder="shadcn" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={loginForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button disabled={isLoading} type="submit" className="w-full">
+                  {isLoading ? "Loading" : "Login"}
                 </Button>
-              </div>
-              <div className="mt-4 text-sm text-center text-muted-foreground">
-                <span>Use invite code "test" for demo</span>
-              </div>
-            </form>
+              </form>
+            </Form>
           </TabsContent>
-          <TabsContent value="register" className="mt-0">
-            <form onSubmit={handleRegister}>
-              <div className="grid gap-4">
-                <div className="grid gap-2">
-                  <Label htmlFor="r-username">Username</Label>
-                  <Input
-                    id="r-username"
-                    placeholder="Choose a username"
-                    value={registerData.username}
-                    onChange={(e) => setRegisterData({ ...registerData, username: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="displayName">Display Name</Label>
-                  <Input
-                    id="displayName"
-                    placeholder="Your full name"
-                    value={registerData.displayName}
-                    onChange={(e) => setRegisterData({ ...registerData, displayName: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="school">School</Label>
-                  <Input
-                    id="school"
-                    placeholder="Your school/university"
-                    value={registerData.school}
-                    onChange={(e) => setRegisterData({ ...registerData, school: e.target.value })}
-                    required
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="r-inviteCode">Invite Code</Label>
-                  <Input
-                    id="r-inviteCode"
-                    placeholder="Invite code"
-                    value={registerData.inviteCode}
-                    onChange={(e) => setRegisterData({ ...registerData, inviteCode: e.target.value })}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Creating account..." : "Create account"}
+          <TabsContent value="register" className="space-y-4">
+            <Form {...registerForm}>
+              <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
+                <FormField
+                  control={registerForm.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input placeholder="shadcn" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="displayName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Display Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="shadcn" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="school"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>School</FormLabel>
+                      <FormControl>
+                        <Input placeholder="University of Example" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button disabled={isLoading} type="submit" className="w-full">
+                  {isLoading ? "Loading" : "Register"}
                 </Button>
-              </div>
-              <div className="mt-4 text-sm text-center text-muted-foreground">
-                <span>Use invite code "test" for demo</span>
-              </div>
-            </form>
+              </form>
+            </Form>
           </TabsContent>
-        </CardContent>
-      </Tabs>
+        </Tabs>
+      </CardContent>
     </Card>
   );
-};
-
-export default AuthForm;
+}
