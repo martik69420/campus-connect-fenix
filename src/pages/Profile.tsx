@@ -1,9 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import PostCard from '@/components/post/PostCard';
@@ -40,94 +40,114 @@ const Profile = () => {
     try {
       setLoading(true);
       
-      // Try to fetch profile from Supabase first
-      const { data: profileData, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('username', username)
-        .single();
-      
-      if (error || !profileData) {
-        // Fallback to mock data if not found
-        const mockUsers = [
-          {
-            id: "1",
-            username: "john_doe",
-            displayName: "John Doe",
-            avatar: "/placeholder.svg",
-            coins: 500,
-            inviteCode: "test",
-            createdAt: new Date(),
-            school: "Example University",
-            bio: "Computer Science student and tech enthusiast.",
-            friends: ["2", "3"]
-          },
-          {
-            id: "2",
-            username: "jane_smith",
-            displayName: "Jane Smith",
-            avatar: "/placeholder.svg",
-            coins: 750,
-            inviteCode: "test",
-            createdAt: new Date(),
-            school: "Example University",
-            bio: "Psychology major, love reading and coffee.",
-            friends: ["1"]
-          },
-          {
-            id: "3",
-            username: "alex_johnson",
-            displayName: "Alex Johnson",
-            avatar: "/placeholder.svg",
-            coins: 350,
-            inviteCode: "test",
-            createdAt: new Date(),
-            school: "Example University",
-            friends: ["1"]
-          }
-        ];
-        
-        const foundProfile = mockUsers.find(u => u.username === username);
-        
-        if (!foundProfile) {
-          toast({
-            title: "Profile not found",
-            description: "This user doesn't exist",
-            variant: "destructive"
-          });
-          navigate('/');
-          return;
+      // Find mock user with matching username
+      const mockUsers = [
+        {
+          id: "1",
+          username: "john_doe",
+          displayName: "John Doe",
+          avatar: "/placeholder.svg",
+          coins: 500,
+          inviteCode: "test",
+          createdAt: new Date(),
+          school: "Example University",
+          bio: "Computer Science student and tech enthusiast.",
+          friends: ["2", "3"]
+        },
+        {
+          id: "2",
+          username: "jane_smith",
+          displayName: "Jane Smith",
+          avatar: "/placeholder.svg",
+          coins: 750,
+          inviteCode: "test",
+          createdAt: new Date(),
+          school: "Example University",
+          bio: "Psychology major, love reading and coffee.",
+          friends: ["1"]
+        },
+        {
+          id: "3",
+          username: "alex_johnson",
+          displayName: "Alex Johnson",
+          avatar: "/placeholder.svg",
+          coins: 350,
+          inviteCode: "test",
+          createdAt: new Date(),
+          school: "Example University",
+          friends: ["1"]
         }
-        
-        // Convert to format expected by components
-        const profileData = {
-          id: foundProfile.id,
-          username: foundProfile.username,
-          display_name: foundProfile.displayName,
-          avatar_url: foundProfile.avatar,
-          coins: foundProfile.coins,
-          invite_code: foundProfile.inviteCode,
-          created_at: foundProfile.createdAt.toISOString(),
-          school: foundProfile.school,
-          bio: foundProfile.bio,
-        };
-        
-        setProfile(profileData);
-      } else {
-        setProfile(profileData);
+      ];
+      
+      const foundProfile = mockUsers.find(u => u.username === username);
+      
+      if (!foundProfile) {
+        toast({
+          title: "Profile not found",
+          description: "This user doesn't exist",
+          variant: "destructive"
+        });
+        navigate('/');
+        return;
       }
       
+      // Convert to format expected by components
+      const profileData = {
+        id: foundProfile.id,
+        username: foundProfile.username,
+        display_name: foundProfile.displayName,
+        avatar_url: foundProfile.avatar,
+        coins: foundProfile.coins,
+        invite_code: foundProfile.inviteCode,
+        created_at: foundProfile.createdAt.toISOString(),
+        school: foundProfile.school,
+        bio: foundProfile.bio,
+      };
+      
+      setProfile(profileData);
+      
       // Check if this user is a friend
-      if (user.id !== profile?.id) {
-        if (user.friends && user.friends.includes(profile?.id)) {
+      if (user.id !== foundProfile.id) {
+        if (user.friends && user.friends.includes(foundProfile.id)) {
           setFriendStatus('friends');
         } else {
           setFriendStatus('not_friend');
         }
       }
       
-      // Fetch posts for this profile
-      fetchPosts(profileData?.id || profile?.id);
+      // Simulate posts
+      const mockPosts = [
+        {
+          id: "post1",
+          content: "Just attended an amazing workshop on AI!",
+          created_at: new Date().toISOString(),
+          user_id: foundProfile.id,
+          is_professional: true,
+          profiles: {
+            username: foundProfile.username,
+            display_name: foundProfile.displayName,
+            avatar_url: foundProfile.avatar
+          },
+          likes: [],
+          comments: []
+        },
+        {
+          id: "post2",
+          content: "Looking forward to the campus event this weekend!",
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          user_id: foundProfile.id,
+          is_professional: false,
+          profiles: {
+            username: foundProfile.username,
+            display_name: foundProfile.displayName,
+            avatar_url: foundProfile.avatar
+          },
+          likes: [],
+          comments: []
+        }
+      ];
+      
+      setPosts(mockPosts);
       
     } catch (error: any) {
       toast({
@@ -137,73 +157,6 @@ const Profile = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-  
-  const fetchPosts = async (userId: string) => {
-    if (!userId) return;
-    
-    setLoadingPosts(true);
-    
-    try {
-      // Try to fetch posts from Supabase
-      const { data: postsData, error } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id (
-            username,
-            display_name,
-            avatar_url
-          ),
-          likes:id (id),
-          comments:id (id)
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      
-      if (error || !postsData || postsData.length === 0) {
-        // Fallback to mock posts if none found
-        const mockPosts = [
-          {
-            id: "post1",
-            content: "Just attended an amazing workshop on AI!",
-            created_at: new Date().toISOString(),
-            user_id: "1",
-            is_professional: true,
-            profiles: {
-              username: "john_doe",
-              display_name: "John Doe",
-              avatar_url: "/placeholder.svg"
-            },
-            likes: [],
-            comments: []
-          },
-          {
-            id: "post2",
-            content: "Looking forward to the campus event this weekend!",
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            user_id: "1",
-            is_professional: false,
-            profiles: {
-              username: "john_doe",
-              display_name: "John Doe",
-              avatar_url: "/placeholder.svg"
-            },
-            likes: [],
-            comments: []
-          }
-        ];
-        
-        setPosts(mockPosts);
-      } else {
-        setPosts(postsData);
-      }
-      
-    } catch (error) {
-      console.error("Error fetching posts:", error);
-    } finally {
-      setLoadingPosts(false);
     }
   };
   

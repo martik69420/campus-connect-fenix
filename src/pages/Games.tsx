@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -7,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import TriviaGame from '@/components/game/TriviaGame';
 import SnakeGame from '@/components/game/SnakeGame';
-import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy, Gamepad2 } from 'lucide-react';
+import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy, GameController2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 
@@ -177,7 +178,7 @@ const Games = () => {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2">
-                    <Gamepad2 className="h-5 w-5 text-primary" />
+                    <GameController2 className="h-5 w-5 text-primary" />
                     Snake Game
                   </CardTitle>
                   <CardDescription>Classic arcade fun</CardDescription>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -22,6 +23,7 @@ const Auth = () => {
     }
   }, [isAuthenticated, isLoading, navigate, user]);
 
+  // Don't render anything while checking authentication
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -30,6 +32,7 @@ const Auth = () => {
     );
   }
 
+  // If user is authenticated, don't render the auth page
   if (isAuthenticated) {
     return null;
   }
@@ -103,16 +106,15 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   const { toast } = useToast();
   const { login } = useAuth();
   const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
   const [inviteCode, setInviteCode] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !password.trim()) {
+    if (!username.trim() || !inviteCode.trim()) {
       toast({
         title: "Please fill all fields",
-        description: "Username and password are required",
+        description: "Username and invite code are required",
         variant: "destructive",
       });
       return;
@@ -120,7 +122,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
     
     try {
       setLoading(true);
-      const success = await login(username, password);
+      const success = await login(username, inviteCode);
       
       if (success) {
         navigate('/', { replace: true });
@@ -157,19 +159,6 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      
-      <div className="space-y-2">
         <Label htmlFor="invite-code">Invite Code</Label>
         <Input
           id="invite-code"
@@ -201,13 +190,11 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
   const [displayName, setDisplayName] = useState('');
   const [school, setSchool] = useState('');
   const [inviteCode, setInviteCode] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !displayName.trim() || !school.trim() || !password.trim()) {
+    if (!username.trim() || !displayName.trim() || !school.trim() || !inviteCode.trim()) {
       toast({
         title: "Please fill all fields",
         description: "All fields are required to create an account",
@@ -215,19 +202,10 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       });
       return;
     }
-
-    if (password !== confirmPassword) {
-      toast({
-        title: "Passwords don't match",
-        description: "Please make sure your passwords match",
-        variant: "destructive",
-      });
-      return;
-    }
     
     try {
       setLoading(true);
-      const success = await register(username, displayName, school, password);
+      const success = await register(username, displayName, school, inviteCode);
       
       if (success) {
         navigate('/', { replace: true });
@@ -298,32 +276,6 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           placeholder="Enter invite code"
           value={inviteCode}
           onChange={(e) => setInviteCode(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="Choose a password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          placeholder="Confirm your password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
           required
           disabled={loading}
         />
