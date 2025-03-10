@@ -109,10 +109,10 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !password.trim() || !inviteCode.trim()) {
+    if (!username.trim() || !password.trim()) {
       toast({
         title: "Please fill all fields",
-        description: "Username, password, and invite code are required",
+        description: "Username and password are required",
         variant: "destructive",
       });
       return;
@@ -120,7 +120,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
     
     try {
       setLoading(true);
-      const success = await login(username, password, inviteCode);
+      const success = await login(username, password);
       
       if (success) {
         navigate('/', { replace: true });
@@ -207,7 +207,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !displayName.trim() || !school.trim() || !inviteCode.trim() || !password.trim()) {
+    if (!username.trim() || !displayName.trim() || !school.trim() || !password.trim()) {
       toast({
         title: "Please fill all fields",
         description: "All fields are required to create an account",
@@ -227,7 +227,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
     
     try {
       setLoading(true);
-      const success = await register(username, displayName, school, inviteCode, password);
+      const success = await register(username, displayName, school, password);
       
       if (success) {
         navigate('/', { replace: true });
