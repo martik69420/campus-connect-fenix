@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -25,6 +24,15 @@ const AddFriends = () => {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to search for friends",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     if (!searchTerm.trim()) {
       toast({
         title: "Empty search",
@@ -37,36 +45,53 @@ const AddFriends = () => {
     setLoading(true);
     
     try {
+      console.log("Searching for users with term:", searchTerm);
+      console.log("Current user ID:", user.id);
+      
       // Search users by username or display_name
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .or(`username.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%`)
-        .neq('id', user?.id || ''); // exclude current user
+        .neq('id', user.id); // exclude current user
       
-      if (error) throw error;
+      if (error) {
+        console.error("Search error:", error);
+        throw error;
+      }
+      
+      console.log("Search results:", data);
       
       // Get pending requests to check status
       const { data: sentRequests, error: requestsError } = await supabase
         .from('friends')
         .select('friend_id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('status', 'pending');
         
-      if (requestsError) throw requestsError;
+      if (requestsError) {
+        console.error("Error fetching sent requests:", requestsError);
+        throw requestsError;
+      }
       
       // Get existing friends to exclude them
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
         .select('friend_id')
-        .eq('user_id', user?.id)
+        .eq('user_id', user.id)
         .eq('status', 'friends');
         
-      if (friendsError) throw friendsError;
+      if (friendsError) {
+        console.error("Error fetching friends:", friendsError);
+        throw friendsError;
+      }
       
       // Convert to Set for O(1) lookups
       const pendingIds = new Set(sentRequests?.map(r => r.friend_id) || []);
       const friendIds = new Set(friendsData?.map(f => f.friend_id) || []);
+      
+      console.log("Pending requests:", pendingIds);
+      console.log("Friend IDs:", friendIds);
       
       // Update state with pending status
       const pendingMap: Record<string, boolean> = {};
@@ -80,10 +105,10 @@ const AddFriends = () => {
       setSearchResults(filteredResults);
       
     } catch (error: any) {
-      console.error('Search error:', error);
+      console.error('Search error details:', error);
       toast({
         title: "Search failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
     } finally {
@@ -92,9 +117,18 @@ const AddFriends = () => {
   };
   
   const handleSendRequest = async (profileId: string) => {
-    if (!user) return;
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "You must be logged in to send friend requests",
+        variant: "destructive"
+      });
+      return;
+    }
     
     try {
+      console.log("Sending friend request to:", profileId);
+      
       // Check if request already exists
       const { data: existingRequest, error: checkError } = await supabase
         .from('friends')
@@ -102,7 +136,10 @@ const AddFriends = () => {
         .eq('user_id', user.id)
         .eq('friend_id', profileId);
         
-      if (checkError) throw checkError;
+      if (checkError) {
+        console.error("Check existing request error:", checkError);
+        throw checkError;
+      }
       
       if (existingRequest && existingRequest.length > 0) {
         toast({
@@ -121,7 +158,12 @@ const AddFriends = () => {
           status: 'pending'
         });
         
-      if (error) throw error;
+      if (error) {
+        console.error("Send request error:", error);
+        throw error;
+      }
+      
+      console.log("Friend request sent successfully");
       
       // Update UI state
       setPendingRequests(prev => ({
@@ -135,10 +177,10 @@ const AddFriends = () => {
       });
       
     } catch (error: any) {
-      console.error('Send request error:', error);
+      console.error('Send request error details:', error);
       toast({
         title: "Failed to send request",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
     }

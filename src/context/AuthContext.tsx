@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -89,7 +88,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('username', username)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error("Login error:", error);
+        throw error;
+      }
+      
       if (!profile) {
         toast({
           title: "Login failed",
@@ -119,15 +122,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const mappedUser = mapProfileToUser(profile);
       setUser(mappedUser);
       
+      console.log("User logged in successfully:", mappedUser);
+      
       toast({
         title: "Welcome back!",
         description: `Logged in as ${profile.display_name}`,
       });
       return true;
     } catch (error: any) {
+      console.error("Login error details:", error);
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {
@@ -148,12 +154,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
+      console.log("Attempting to register user:", { username, email, displayName, school });
+      
       // Check if username already exists
-      const { data: existingUser } = await supabase
+      const { data: existingUser, error: checkError } = await supabase
         .from('profiles')
         .select('username')
         .eq('username', username)
         .single();
+
+      if (checkError && checkError.code !== 'PGRST116') {
+        // If error is not "no rows returned", it's a real error
+        console.error("Check username error:", checkError);
+        throw checkError;
+      }
 
       if (existingUser) {
         toast({
@@ -165,8 +179,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Create new user directly in profiles table
+      const userId = crypto.randomUUID(); // Generate a UUID for the new user
+      
       const newUserData = {
-        id: crypto.randomUUID(), // Generate a UUID for the new user
+        id: userId,
         username,
         email,
         display_name: displayName,
@@ -174,14 +190,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         coins: 100,
         invite_code: "", // Required field in the profiles table
         school,
-        password_hash: password // In a real app, hash this!
+        password_hash: password, // In a real app, hash this!
+        bio: ""
       };
+
+      console.log("Creating new user profile:", newUserData);
 
       const { error: profileError } = await supabase
         .from('profiles')
         .insert(newUserData);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        throw profileError;
+      }
       
       // Create our User model
       const newUser: User = {
@@ -194,8 +216,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         inviteCode: newUserData.invite_code,
         createdAt: new Date(),
         school: newUserData.school,
+        bio: newUserData.bio,
         friends: []
       };
+      
+      console.log("User registered successfully:", newUser);
       
       setUser(newUser);
       toast({
@@ -204,10 +229,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
       return true;
     } catch (error: any) {
-      console.error("Registration error:", error);
+      console.error("Registration error details:", error);
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive",
       });
     } finally {

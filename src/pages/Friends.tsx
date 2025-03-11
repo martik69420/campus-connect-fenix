@@ -36,11 +36,38 @@ const Friends = () => {
   }, [user, isAuthenticated, isLoading, navigate]);
   
   const fetchFriends = async () => {
-    if (!user) return;
+    if (!user) {
+      console.log("Cannot fetch friends: User is not authenticated");
+      setLoading(false);
+      return;
+    }
     
     setLoading(true);
     
     try {
+      console.log("Fetching friends for user ID:", user.id);
+      
+      // Check if the user exists in the profiles table
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+        
+      if (profileError) {
+        console.error("Error checking user profile:", profileError);
+        // If the user doesn't exist in profiles, we can't fetch friends
+        if (profileError.code === 'PGRST116') {
+          toast({
+            title: "User profile not found",
+            description: "Your profile may not be properly set up. Try logging out and back in.",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      
       // Fetch friends (status = 'friends')
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
@@ -54,7 +81,10 @@ const Friends = () => {
         .eq('user_id', user.id)
         .eq('status', 'friends');
         
-      if (friendsError) throw friendsError;
+      if (friendsError) {
+        console.error("Error fetching friends:", friendsError);
+        throw friendsError;
+      }
       
       // Fetch received pending requests (where the current user is the friend_id)
       const { data: receivedRequests, error: receivedError } = await supabase
@@ -69,7 +99,10 @@ const Friends = () => {
         .eq('friend_id', user.id)
         .eq('status', 'pending');
         
-      if (receivedError) throw receivedError;
+      if (receivedError) {
+        console.error("Error fetching received requests:", receivedError);
+        throw receivedError;
+      }
       
       // Fetch sent pending requests
       const { data: sentData, error: sentError } = await supabase
@@ -84,7 +117,14 @@ const Friends = () => {
         .eq('user_id', user.id)
         .eq('status', 'pending');
         
-      if (sentError) throw sentError;
+      if (sentError) {
+        console.error("Error fetching sent requests:", sentError);
+        throw sentError;
+      }
+      
+      console.log("Friends data:", friendsData);
+      console.log("Received requests:", receivedRequests);
+      console.log("Sent requests:", sentData);
       
       setFriends(friendsData || []);
       setPendingRequests(receivedRequests || []);
@@ -94,7 +134,7 @@ const Friends = () => {
       console.error('Error fetching friends:', error);
       toast({
         title: "Failed to load friends",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
     } finally {
