@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -171,6 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         display_name: displayName,
         avatar_url: "/placeholder.svg",
         coins: 100,
+        invite_code: "", // Adding empty invite_code to satisfy the type constraint
         school,
         password_hash: password // In a real app, hash this!
       };
@@ -189,6 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: newUserData.display_name,
         avatar: newUserData.avatar_url,
         coins: newUserData.coins,
+        inviteCode: newUserData.invite_code,
         createdAt: new Date(),
         school: newUserData.school,
         friends: []
