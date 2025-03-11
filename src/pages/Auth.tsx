@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -84,7 +83,7 @@ const Auth = () => {
               </div>
               <div className="flex items-center justify-center gap-2 mt-2">
                 <Users className="h-4 w-4" />
-                <span>Invite-only community</span>
+                <span>Connect with your classmates</span>
               </div>
             </div>
           </CardFooter>

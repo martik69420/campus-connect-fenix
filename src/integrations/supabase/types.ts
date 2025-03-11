@@ -306,6 +306,7 @@ export type Database = {
           coins: number
           created_at: string
           display_name: string
+          email: string | null
           id: string
           invite_code: string
           password_hash: string | null
@@ -318,8 +319,9 @@ export type Database = {
           coins?: number
           created_at?: string
           display_name: string
+          email?: string | null
           id: string
-          invite_code?: string
+          invite_code: string
           password_hash?: string | null
           school: string
           username: string
@@ -330,6 +332,7 @@ export type Database = {
           coins?: number
           created_at?: string
           display_name?: string
+          email?: string | null
           id?: string
           invite_code?: string
           password_hash?: string | null

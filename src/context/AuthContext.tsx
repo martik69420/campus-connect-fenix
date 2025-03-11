@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +10,7 @@ export type User = {
   displayName: string;
   avatar: string;
   coins: number;
-  inviteCode: string;
+  inviteCode?: string;
   createdAt: Date;
   school: string;
   bio?: string;
@@ -43,7 +42,7 @@ const mapProfileToUser = (profile: any): User => {
     displayName: profile.display_name,
     avatar: profile.avatar_url || "/placeholder.svg",
     coins: profile.coins || 0,
-    inviteCode: profile.invite_code || "test",
+    inviteCode: profile.invite_code,
     createdAt: new Date(profile.created_at),
     school: profile.school || "",
     bio: profile.bio || "",
@@ -164,33 +163,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // Create auth user first with the provided email
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            username: username,
-            display_name: displayName,
-            school: school
-          }
-        }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) {
-        throw new Error("Failed to create user account");
-      }
-
-      // Now create the profile with the auth user's ID
+      // Create new user directly in profiles table
       const newUserData = {
-        id: authData.user.id,
+        id: crypto.randomUUID(), // Generate a UUID for the new user
         username,
         email,
         display_name: displayName,
         avatar_url: "/placeholder.svg",
         coins: 100,
-        invite_code: "test",
         school,
         password_hash: password // In a real app, hash this!
       };
@@ -209,7 +189,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         displayName: newUserData.display_name,
         avatar: newUserData.avatar_url,
         coins: newUserData.coins,
-        inviteCode: newUserData.invite_code,
         createdAt: new Date(),
         school: newUserData.school,
         friends: []
