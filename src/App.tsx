@@ -15,6 +15,7 @@ import Friends from "./pages/Friends";
 import AddFriends from "./pages/AddFriends";
 import Games from "./pages/Games";
 import Notifications from "./pages/Notifications";
+import Leaderboard from "./pages/Leaderboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +38,7 @@ const App = () => (
                   <Route path="/add-friends" element={<AddFriends />} />
                   <Route path="/games" element={<Games />} />
                   <Route path="/notifications" element={<Notifications />} />
+                  <Route path="/leaderboard" element={<Leaderboard />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

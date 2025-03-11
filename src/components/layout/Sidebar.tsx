@@ -13,7 +13,7 @@ const Sidebar: React.FC = () => {
 
   const navItems = [
     { path: "/", icon: Home, label: "Home" },
-    { path: "/profile", icon: User, label: "Profile" },
+    { path: `/profile/${user?.username}`, icon: User, label: "Profile" },
     { path: "/notifications", icon: Bell, label: "Notifications" },
     { path: "/messages", icon: MessageSquare, label: "Messages" },
     { path: "/friends", icon: Users, label: "Friends" },
@@ -83,11 +83,11 @@ const Sidebar: React.FC = () => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <NavLink to="/profile" className="transition-transform hover:scale-105">
+              <NavLink to={`/profile/${user?.username}`} className="transition-transform hover:scale-105">
                 <Avatar className="h-12 w-12 border-2 border-background">
                   <AvatarImage src={user?.avatar} alt={user?.displayName} />
                   <AvatarFallback className="bg-fenix text-white">
-                    {user?.displayName.split(' ').map(n => n[0]).join('')}
+                    {user?.displayName ? user.displayName.split(' ').map(n => n[0]).join('') : 'U'}
                   </AvatarFallback>
                 </Avatar>
               </NavLink>
