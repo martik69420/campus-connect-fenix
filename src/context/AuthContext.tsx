@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 export type User = {
   id: string;
   username: string;
+  email: string;
   displayName: string;
   avatar: string;
   coins: number;
@@ -23,7 +24,7 @@ type AuthContextType = {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (username: string, password: string) => Promise<boolean>;
-  register: (username: string, displayName: string, school: string, password: string) => Promise<boolean>;
+  register: (username: string, email: string, displayName: string, school: string, password: string) => Promise<boolean>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   addCoins: (amount: number, reason?: string) => void;
@@ -38,6 +39,7 @@ const mapProfileToUser = (profile: any): User => {
   return {
     id: profile.id,
     username: profile.username,
+    email: profile.email || "",
     displayName: profile.display_name,
     avatar: profile.avatar_url || "/placeholder.svg",
     coins: profile.coins || 0,
@@ -135,9 +137,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return false;
   };
 
-  // Register function with password - UPDATED to work with Supabase properly
+  // Register function - updated to include email and proper Supabase registration
   const register = async (
     username: string, 
+    email: string,
     displayName: string, 
     school: string, 
     password: string
@@ -161,13 +164,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
-      // First, create an auth user with a random email (since we're only using username/password)
-      // In a real app, you'd collect email too
-      const tempEmail = `${username}_${Date.now()}@example.com`;
-      
-      // Create auth user first
+      // Create auth user first with the provided email
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: tempEmail,
+        email: email,
         password: password,
         options: {
           data: {
@@ -187,6 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newUserData = {
         id: authData.user.id,
         username,
+        email,
         display_name: displayName,
         avatar_url: "/placeholder.svg",
         coins: 100,
@@ -205,6 +205,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newUser: User = {
         id: newUserData.id,
         username: newUserData.username,
+        email: newUserData.email,
         displayName: newUserData.display_name,
         avatar: newUserData.avatar_url,
         coins: newUserData.coins,

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -104,7 +105,6 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,19 +169,6 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
         />
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="invite-code">Invite Code</Label>
-        <Input
-          id="invite-code"
-          type="text"
-          placeholder="Enter invite code"
-          value={inviteCode}
-          onChange={(e) => setInviteCode(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      
       <Button
         type="submit"
         disabled={loading}
@@ -198,16 +185,16 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
   const { toast } = useToast();
   const { register } = useAuth();
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [school, setSchool] = useState('');
-  const [inviteCode, setInviteCode] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !displayName.trim() || !school.trim() || !password.trim()) {
+    if (!username.trim() || !displayName.trim() || !school.trim() || !password.trim() || !email.trim()) {
       toast({
         title: "Please fill all fields",
         description: "All fields are required to create an account",
@@ -227,7 +214,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
     
     try {
       setLoading(true);
-      const success = await register(username, displayName, school, password);
+      const success = await register(username, email, displayName, school, password);
       
       if (success) {
         navigate('/', { replace: true });
@@ -264,6 +251,20 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       </div>
       
       <div className="space-y-2">
+        <Label htmlFor="email">Email</Label>
+        <Input
+          id="email"
+          type="email"
+          placeholder="john@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+          disabled={loading}
+        />
+      </div>
+      
+      <div className="space-y-2">
         <Label htmlFor="displayName">Display Name</Label>
         <Input
           id="displayName"
@@ -285,19 +286,6 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           placeholder="Example University"
           value={school}
           onChange={(e) => setSchool(e.target.value)}
-          required
-          disabled={loading}
-        />
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="invite-code">Invite Code</Label>
-        <Input
-          id="invite-code"
-          type="text"
-          placeholder="Enter invite code"
-          value={inviteCode}
-          onChange={(e) => setInviteCode(e.target.value)}
           required
           disabled={loading}
         />
