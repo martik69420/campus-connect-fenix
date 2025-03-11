@@ -11,22 +11,22 @@ export type Database = {
     Tables: {
       comment_likes: {
         Row: {
-          comment_id: string
-          created_at: string
+          comment_id: string | null
+          created_at: string | null
           id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          comment_id: string
-          created_at?: string
+          comment_id?: string | null
+          created_at?: string | null
           id?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          comment_id?: string
-          created_at?: string
+          comment_id?: string | null
+          created_at?: string | null
           id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -48,24 +48,24 @@ export type Database = {
       comments: {
         Row: {
           content: string
-          created_at: string
+          created_at: string | null
           id: string
-          post_id: string
-          user_id: string
+          post_id: string | null
+          user_id: string | null
         }
         Insert: {
           content: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          post_id: string
-          user_id: string
+          post_id?: string | null
+          user_id?: string | null
         }
         Update: {
           content?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          post_id?: string
-          user_id?: string
+          post_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -87,21 +87,21 @@ export type Database = {
       daily_rewards: {
         Row: {
           coins_rewarded: number
-          created_at: string
+          created_at: string | null
           id: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           coins_rewarded: number
-          created_at?: string
+          created_at?: string | null
           id?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           coins_rewarded?: number
-          created_at?: string
+          created_at?: string | null
           id?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -115,28 +115,28 @@ export type Database = {
       }
       friends: {
         Row: {
-          created_at: string
-          friend_id: string
+          created_at: string | null
+          friend_id: string | null
           id: string
-          status: string
-          updated_at: string
-          user_id: string
+          status: string | null
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
-          friend_id: string
+          created_at?: string | null
+          friend_id?: string | null
           id?: string
-          status?: string
-          updated_at?: string
-          user_id: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
-          friend_id?: string
+          created_at?: string | null
+          friend_id?: string | null
           id?: string
-          status?: string
-          updated_at?: string
-          user_id?: string
+          status?: string | null
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -157,25 +157,25 @@ export type Database = {
       }
       game_history: {
         Row: {
-          created_at: string
+          created_at: string | null
           game_type: string
           id: string
           score: number
-          user_id: string
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           game_type: string
           id?: string
           score: number
-          user_id: string
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           game_type?: string
           id?: string
           score?: number
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -189,22 +189,22 @@ export type Database = {
       }
       likes: {
         Row: {
-          created_at: string
+          created_at: string | null
           id: string
-          post_id: string
-          user_id: string
+          post_id: string | null
+          user_id: string | null
         }
         Insert: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          post_id: string
-          user_id: string
+          post_id?: string | null
+          user_id?: string | null
         }
         Update: {
-          created_at?: string
+          created_at?: string | null
           id?: string
-          post_id?: string
-          user_id?: string
+          post_id?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -226,30 +226,30 @@ export type Database = {
       notifications: {
         Row: {
           content: string
-          created_at: string
+          created_at: string | null
           id: string
-          is_read: boolean
+          is_read: boolean | null
           related_id: string | null
           type: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           content: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          is_read?: boolean
+          is_read?: boolean | null
           related_id?: string | null
           type: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           content?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
-          is_read?: boolean
+          is_read?: boolean | null
           related_id?: string | null
           type?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -264,30 +264,30 @@ export type Database = {
       posts: {
         Row: {
           content: string
-          created_at: string
+          created_at: string | null
           id: string
           images: string[] | null
           is_professional: boolean | null
-          updated_at: string
-          user_id: string
+          updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           content: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           images?: string[] | null
           is_professional?: boolean | null
-          updated_at?: string
-          user_id: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           content?: string
-          created_at?: string
+          created_at?: string | null
           id?: string
           images?: string[] | null
           is_professional?: boolean | null
-          updated_at?: string
-          user_id?: string
+          updated_at?: string | null
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -303,12 +303,12 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
-          coins: number
-          created_at: string
+          coins: number | null
+          created_at: string | null
           display_name: string
           email: string | null
           id: string
-          invite_code: string
+          invite_code: string | null
           password_hash: string | null
           school: string
           username: string
@@ -316,12 +316,12 @@ export type Database = {
         Insert: {
           avatar_url?: string | null
           bio?: string | null
-          coins?: number
-          created_at?: string
+          coins?: number | null
+          created_at?: string | null
           display_name: string
           email?: string | null
           id: string
-          invite_code: string
+          invite_code?: string | null
           password_hash?: string | null
           school: string
           username: string
@@ -329,12 +329,12 @@ export type Database = {
         Update: {
           avatar_url?: string | null
           bio?: string | null
-          coins?: number
-          created_at?: string
+          coins?: number | null
+          created_at?: string | null
           display_name?: string
           email?: string | null
           id?: string
-          invite_code?: string
+          invite_code?: string | null
           password_hash?: string | null
           school?: string
           username?: string

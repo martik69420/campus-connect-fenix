@@ -172,7 +172,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         display_name: displayName,
         avatar_url: "/placeholder.svg",
         coins: 100,
-        invite_code: "", // Adding empty invite_code to satisfy the type constraint
+        invite_code: "", // Required field in the profiles table
         school,
         password_hash: password // In a real app, hash this!
       };
