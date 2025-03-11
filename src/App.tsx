@@ -11,6 +11,8 @@ import { PostProvider } from "@/context/PostContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
+import Friends from "./pages/Friends";
+import AddFriends from "./pages/AddFriends";
 import Games from "./pages/Games";
 import Notifications from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
@@ -31,6 +33,8 @@ const App = () => (
                   <Route path="/" element={<Index />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/profile/:username" element={<Profile />} />
+                  <Route path="/friends" element={<Friends />} />
+                  <Route path="/add-friends" element={<AddFriends />} />
                   <Route path="/games" element={<Games />} />
                   <Route path="/notifications" element={<Notifications />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
