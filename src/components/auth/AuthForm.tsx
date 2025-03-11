@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -25,6 +26,9 @@ const loginFormSchema = z.object({
 const registerFormSchema = z.object({
   username: z.string().min(2, {
     message: "Username must be at least 2 characters.",
+  }),
+  email: z.string().email({
+    message: "Please enter a valid email address.",
   }),
   displayName: z.string().min(2, {
     message: "Display Name must be at least 2 characters.",
@@ -58,6 +62,7 @@ export function AuthForm() {
     resolver: zodResolver(registerFormSchema),
     defaultValues: {
       username: "",
+      email: "",
       displayName: "",
       school: "",
       password: "",
@@ -87,6 +92,7 @@ export function AuthForm() {
     try {
       const success = await registerUser(
         data.username,
+        data.email,
         data.displayName,
         data.school,
         data.password
@@ -164,7 +170,20 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="shadcn" {...field} />
+                        <Input placeholder="johndoe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={registerForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="john@example.com" type="email" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -177,7 +196,7 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Display Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="shadcn" {...field} />
+                        <Input placeholder="John Doe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

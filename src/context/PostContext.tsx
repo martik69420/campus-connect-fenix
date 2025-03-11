@@ -47,6 +47,7 @@ let MOCK_USERS = [
   {
     id: "1",
     username: "john_doe",
+    email: "john@example.com",
     displayName: "John Doe",
     avatar: "/placeholder.svg",
     coins: 500,
@@ -59,6 +60,7 @@ let MOCK_USERS = [
   {
     id: "2",
     username: "jane_smith",
+    email: "jane@example.com",
     displayName: "Jane Smith",
     avatar: "/placeholder.svg",
     coins: 750,
@@ -71,6 +73,7 @@ let MOCK_USERS = [
   {
     id: "3",
     username: "alex_johnson",
+    email: "alex@example.com",
     displayName: "Alex Johnson",
     avatar: "/placeholder.svg",
     coins: 350,
