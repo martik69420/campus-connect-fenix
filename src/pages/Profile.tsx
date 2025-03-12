@@ -66,84 +66,31 @@ const Profile = () => {
         .eq('username', username)
         .single();
       
-      if (error || !profileData) {
-        // Fallback to mock data if not found
-        const mockUsers = [
-          {
-            id: "1",
-            username: "john_doe",
-            displayName: "John Doe",
-            avatar: "/placeholder.svg",
-            coins: 500,
-            inviteCode: "test",
-            createdAt: new Date(),
-            school: "Example University",
-            bio: "Computer Science student and tech enthusiast.",
-            friends: ["2", "3"]
-          },
-          {
-            id: "2",
-            username: "jane_smith",
-            displayName: "Jane Smith",
-            avatar: "/placeholder.svg",
-            coins: 750,
-            inviteCode: "test",
-            createdAt: new Date(),
-            school: "Example University",
-            bio: "Psychology major, love reading and coffee.",
-            friends: ["1"]
-          },
-          {
-            id: "3",
-            username: "alex_johnson",
-            displayName: "Alex Johnson",
-            avatar: "/placeholder.svg",
-            coins: 350,
-            inviteCode: "test",
-            createdAt: new Date(),
-            school: "Example University",
-            friends: ["1"]
-          }
-        ];
+      if (error) {
+        console.error("Error fetching profile:", error);
         
-        const foundProfile = mockUsers.find(u => u.username === username);
-        
-        if (!foundProfile) {
+        if (error.code === 'PGRST116') {
           toast({
             title: "Profile not found",
-            description: "This user doesn't exist",
+            description: `The user @${username} doesn't exist`,
             variant: "destructive"
           });
           navigate('/');
           return;
         }
         
-        // Convert to format expected by components
-        const profileData = {
-          id: foundProfile.id,
-          username: foundProfile.username,
-          display_name: foundProfile.displayName,
-          avatar_url: foundProfile.avatar,
-          coins: foundProfile.coins,
-          invite_code: foundProfile.inviteCode,
-          created_at: foundProfile.createdAt.toISOString(),
-          school: foundProfile.school,
-          bio: foundProfile.bio,
-        };
-        
-        setProfile(profileData);
-      } else {
-        setProfile(profileData);
+        throw error;
       }
       
+      setProfile(profileData);
+      
       // Check if this user is a friend
-      if (user.id !== profile?.id) {
+      if (profileData && user.id !== profileData.id) {
         const { data: friendData } = await supabase
           .from('friends')
           .select('status, user_id')
-          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-          .or(`user_id.eq.${profile?.id},friend_id.eq.${profile?.id}`)
-          .single();
+          .or(`and(user_id.eq.${user.id},friend_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},friend_id.eq.${user.id})`)
+          .maybeSingle();
           
         if (friendData) {
           if (friendData.status === 'accepted') {
@@ -159,7 +106,9 @@ const Profile = () => {
       }
       
       // Fetch posts for this profile
-      fetchProfilePosts(profileData?.id || profile?.id);
+      if (profileData) {
+        fetchProfilePosts(profileData.id);
+      }
       
     } catch (error: any) {
       console.error("Error fetching profile:", error);
@@ -202,7 +151,7 @@ const Profile = () => {
       
       if (error) {
         console.error("Error fetching posts:", error);
-        // We'll fall back to mock data below
+        throw error;
       }
       
       if (postsData && postsData.length > 0) {
@@ -226,39 +175,7 @@ const Profile = () => {
         
         setPosts(formattedPosts);
       } else {
-        // Fallback to mock posts if none found
-        const mockPosts = [
-          {
-            id: "post1",
-            content: "Just attended an amazing workshop on AI!",
-            created_at: new Date().toISOString(),
-            user_id: userId,
-            is_professional: true,
-            profiles: {
-              username: username,
-              display_name: profile?.display_name || "User",
-              avatar_url: profile?.avatar_url || "/placeholder.svg"
-            },
-            likes: [],
-            comments: []
-          },
-          {
-            id: "post2",
-            content: "Looking forward to the campus event this weekend!",
-            created_at: new Date(Date.now() - 86400000).toISOString(),
-            user_id: userId,
-            is_professional: false,
-            profiles: {
-              username: username,
-              display_name: profile?.display_name || "User",
-              avatar_url: profile?.avatar_url || "/placeholder.svg"
-            },
-            likes: [],
-            comments: []
-          }
-        ];
-        
-        setPosts(mockPosts);
+        setPosts([]);
       }
       
     } catch (error) {
@@ -299,8 +216,7 @@ const Profile = () => {
         const { error } = await supabase
           .from('friends')
           .update({ status: 'accepted' })
-          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-          .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`);
+          .or(`and(user_id.eq.${user.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${user.id})`);
           
         if (error) throw error;
         setFriendStatus('friends');
@@ -315,8 +231,7 @@ const Profile = () => {
         const { error } = await supabase
           .from('friends')
           .delete()
-          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-          .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`);
+          .or(`and(user_id.eq.${user.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${user.id})`);
           
         if (error) throw error;
         setFriendStatus('not_friend');

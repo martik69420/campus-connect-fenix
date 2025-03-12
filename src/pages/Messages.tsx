@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -44,6 +44,7 @@ type Conversation = {
 
 const Messages = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -55,8 +56,17 @@ const Messages = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingConversations, setLoadingConversations] = useState(false);
   
-  // Use our new custom hook for messages
-  const { messages, isLoading: loadingMessages, sendMessage } = useMessages(activeUserId, user?.id || null);
+  // Use our custom hook for messages
+  const { messages, isLoading: loadingMessages, sendMessage, markMessagesAsRead } = useMessages(activeUserId, user?.id || null);
+
+  // Parse URL params to get initial active user
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const userId = params.get('userId');
+    if (userId) {
+      setActiveUserId(userId);
+    }
+  }, [location]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -78,6 +88,13 @@ const Messages = () => {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Mark messages as read when viewing a conversation
+  useEffect(() => {
+    if (activeUserId && messages.length > 0) {
+      markMessagesAsRead();
+    }
+  }, [activeUserId, messages]);
   
   const fetchConversations = async () => {
     if (!user) return;
@@ -105,11 +122,27 @@ const Messages = () => {
       }
       
       if (friendsData && friendsData.length > 0) {
-        const conversationsFromFriends: Conversation[] = friendsData.map(friendship => {
+        // Create conversations from friends
+        const conversationsPromises = friendsData.map(async (friendship) => {
           // Determine which profile is the friend (not the current user)
           const friendProfile = friendship.user_id === user.id 
             ? friendship.friend_profile
             : friendship.user_profile;
+          
+          // Get last message and unread count
+          const { data: lastMessageData } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friendProfile.id}),and(sender_id.eq.${friendProfile.id},receiver_id.eq.${user.id})`)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          
+          const { count: unreadCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('sender_id', friendProfile.id)
+            .eq('receiver_id', user.id)
+            .eq('is_read', false);
             
           return {
             id: friendship.id,
@@ -117,15 +150,26 @@ const Messages = () => {
             username: friendProfile.username,
             displayName: friendProfile.display_name,
             avatar: friendProfile.avatar_url || '/placeholder.svg',
-            lastMessage: "No messages yet",
-            lastMessageTime: new Date(),
-            unread: 0
+            lastMessage: lastMessageData && lastMessageData.length > 0 
+              ? lastMessageData[0].content 
+              : "No messages yet",
+            lastMessageTime: lastMessageData && lastMessageData.length > 0 
+              ? new Date(lastMessageData[0].created_at) 
+              : new Date(),
+            unread: unreadCount || 0
           };
         });
         
+        const conversationsFromFriends = await Promise.all(conversationsPromises);
         setConversations(conversationsFromFriends);
         
-        if (conversationsFromFriends.length > 0 && !activeConversation) {
+        // Set active conversation if specified in URL param
+        if (activeUserId) {
+          const conversation = conversationsFromFriends.find(conv => conv.userId === activeUserId);
+          if (conversation) {
+            setActiveConversation(conversation.id);
+          }
+        } else if (conversationsFromFriends.length > 0 && !activeConversation) {
           setActiveConversation(conversationsFromFriends[0].id);
           setActiveUserId(conversationsFromFriends[0].userId);
         }
@@ -145,6 +189,9 @@ const Messages = () => {
     
     await sendMessage(newMessage);
     setNewMessage('');
+    
+    // Refresh conversations to update last message
+    fetchConversations();
   };
   
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -167,6 +214,12 @@ const Messages = () => {
   const handleConversationClick = (conv: Conversation) => {
     setActiveConversation(conv.id);
     setActiveUserId(conv.userId);
+    
+    // Update URL to include userId parameter without navigation
+    const params = new URLSearchParams(location.search);
+    params.set('userId', conv.userId);
+    const newUrl = `${location.pathname}?${params.toString()}`;
+    window.history.replaceState({}, '', newUrl);
   };
   
   // Create a new conversation

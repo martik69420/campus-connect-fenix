@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
-import { User, UserPlus, UserCheck, UserX, Search, Users } from 'lucide-react';
+import { User, UserPlus, UserCheck, UserX, Search, Users, MessageCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Friends = () => {
@@ -79,7 +78,7 @@ const Friends = () => {
           profiles:friend_id (*)
         `)
         .eq('user_id', user.id)
-        .eq('status', 'friends');
+        .eq('status', 'accepted');
         
       if (friendsError) {
         console.error("Error fetching friends:", friendsError);
@@ -243,6 +242,10 @@ const Friends = () => {
     }
   };
   
+  const handleMessageFriend = (friendId: string) => {
+    navigate(`/messages?userId=${friendId}`);
+  };
+  
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto p-4">
@@ -311,6 +314,14 @@ const Friends = () => {
                           </div>
                         </div>
                         <div className="flex gap-2">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => handleMessageFriend(friend.profiles.id)}
+                          >
+                            <MessageCircle className="h-4 w-4 mr-1" />
+                            Message
+                          </Button>
                           <Button 
                             variant="outline" 
                             size="sm"

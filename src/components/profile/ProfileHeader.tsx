@@ -1,7 +1,7 @@
 
 import React from "react";
-import { Link } from "react-router-dom";
-import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +28,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   loadingFriendAction = false
 }) => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   
   const getFriendButtonText = () => {
     switch (friendStatus) {
@@ -59,6 +60,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     }
   };
 
+  const handleMessageClick = () => {
+    navigate(`/messages?userId=${profileUser.id}`);
+  };
+
   return (
     <Card className="overflow-hidden mb-6">
       <div className="h-32 bg-gradient-to-r from-primary/30 to-primary/10"></div>
@@ -85,22 +90,34 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             </div>
           </div>
           
-          <div className="ml-auto sm:ml-0">
+          <div className="ml-auto sm:ml-0 flex gap-2 flex-wrap">
             {isOwnProfile ? (
               <Button variant="outline" className="gap-1.5">
                 <Edit className="h-4 w-4" />
                 Edit Profile
               </Button>
             ) : (
-              <Button
-                variant={getFriendButtonVariant()}
-                className="gap-1.5"
-                onClick={onFriendAction}
-                disabled={loadingFriendAction}
-              >
-                {getFriendButtonIcon()}
-                {getFriendButtonText()}
-              </Button>
+              <>
+                {friendStatus === 'friends' && (
+                  <Button 
+                    variant="outline" 
+                    className="gap-1.5"
+                    onClick={handleMessageClick}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Message
+                  </Button>
+                )}
+                <Button
+                  variant={getFriendButtonVariant()}
+                  className="gap-1.5"
+                  onClick={onFriendAction}
+                  disabled={loadingFriendAction}
+                >
+                  {getFriendButtonIcon()}
+                  {getFriendButtonText()}
+                </Button>
+              </>
             )}
           </div>
         </div>

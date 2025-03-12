@@ -1,6 +1,7 @@
 
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from './use-toast';
 
 interface Message {
   id: string;
@@ -14,12 +15,17 @@ interface Message {
 export const useMessages = (chatPartnerId: string | null, userId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (!chatPartnerId || !userId) return;
+    if (!chatPartnerId || !userId) {
+      setIsLoading(false);
+      return;
+    }
 
     const fetchMessages = async () => {
       try {
+        setIsLoading(true);
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -28,13 +34,23 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
         if (error) {
           console.error('Error fetching messages:', error);
+          toast({
+            title: 'Error loading messages',
+            description: error.message,
+            variant: 'destructive'
+          });
           return;
         }
 
         setMessages(data || []);
-        setIsLoading(false);
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error in fetchMessages:', error);
+        toast({
+          title: 'Error loading messages',
+          description: error.message,
+          variant: 'destructive'
+        });
+      } finally {
         setIsLoading(false);
       }
     };
@@ -43,7 +59,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
     // Subscribe to new messages
     const channel = supabase
-      .channel('messages_channel')
+      .channel('messages_changes')
       .on(
         'postgres_changes',
         {
@@ -68,12 +84,28 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           setMessages((current) => [...current, payload.new as Message]);
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+          filter: `sender_id=eq.${chatPartnerId},receiver_id=eq.${userId}`,
+        },
+        (payload) => {
+          setMessages((current) => 
+            current.map(msg => 
+              msg.id === payload.new.id ? payload.new as Message : msg
+            )
+          );
+        }
+      )
       .subscribe();
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [chatPartnerId, userId]);
+  }, [chatPartnerId, userId, toast]);
 
   const sendMessage = async (content: string) => {
     if (!chatPartnerId || !userId || !content.trim()) return;
@@ -87,9 +119,19 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
       if (error) {
         console.error('Error sending message:', error);
+        toast({
+          title: 'Error sending message',
+          description: error.message,
+          variant: 'destructive'
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error in sendMessage:', error);
+      toast({
+        title: 'Error sending message',
+        description: error.message,
+        variant: 'destructive'
+      });
     }
   };
 

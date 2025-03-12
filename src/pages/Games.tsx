@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -5,9 +6,8 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import TriviaGame from '@/components/game/TriviaGame';
 import SnakeGame from '@/components/game/SnakeGame';
-import { BrainCircuit, Calendar, CoinsIcon, Gift, Trophy, Gamepad2 } from 'lucide-react';
+import { Calendar, CoinsIcon, Gift, Gamepad2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
 
@@ -17,7 +17,6 @@ const Games = () => {
   const { user, isAuthenticated, isLoading, addCoins } = useAuth();
   const { hasDailyRewardAvailable, claimDailyReward, progress } = useGame();
   
-  const [showTriviaGame, setShowTriviaGame] = useState(false);
   const [showSnakeGame, setShowSnakeGame] = useState(false);
   const [loading, setLoading] = useState(true);
   
@@ -29,37 +28,12 @@ const Games = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  const handleTriviaGameEnd = async (score: number) => {
-    if (!user) return;
-    
-    try {
-      const coinsToAward = score > progress.trivia.highScore 
-        ? score * 2 // Bonus for high score
-        : Math.floor(score / 2);
-      
-      addCoins(coinsToAward, score > progress.trivia.highScore 
-        ? "New trivia high score!" 
-        : "Trivia game completed");
-      
-      toast({
-        title: score > progress.trivia.highScore ? "New high score!" : "Game completed!",
-        description: `You've earned ${coinsToAward} coins!`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Error saving game results",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-  
   const handleSnakeGameEnd = async (score: number) => {
     if (!user) return;
     
     try {
-      // Calculate coins based on score (1 coin per 10 points)
-      const coinsToAward = Math.floor(score / 10) + 5;
+      // Calculate coins based on score (1 coin per 5 points) + bonus
+      const coinsToAward = Math.floor(score / 5) + 10;
       
       addCoins(coinsToAward, "Snake game completed");
       
@@ -105,21 +79,7 @@ const Games = () => {
           </div>
         </div>
 
-        {showTriviaGame ? (
-          <Card className="mb-6">
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Trivia Game</CardTitle>
-                <Button variant="outline" onClick={() => setShowTriviaGame(false)}>
-                  Exit Game
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <TriviaGame onGameEnd={handleTriviaGameEnd} />
-            </CardContent>
-          </Card>
-        ) : showSnakeGame ? (
+        {showSnakeGame ? (
           <Card className="mb-6">
             <CardHeader>
               <div className="flex justify-between items-center">
@@ -142,41 +102,6 @@ const Games = () => {
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2">
-                    <BrainCircuit className="h-5 w-5 text-primary" />
-                    Trivia Challenge
-                  </CardTitle>
-                  <CardDescription>Test your knowledge</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex justify-between text-sm mb-2">
-                    <div className="flex items-center gap-1">
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                      <span>High Score: {progress.trivia.highScore}</span>
-                    </div>
-                    <div>Games Played: {progress.trivia.gamesPlayed}</div>
-                  </div>
-                  <p className="text-sm mb-4">
-                    Answer trivia questions correctly to earn coins! The faster you answer, the more points you get.
-                  </p>
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    className="w-full" 
-                    onClick={() => setShowTriviaGame(true)}
-                  >
-                    Play Now
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              whileHover={{ scale: 1.03 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            >
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2">
                     <Gamepad2 className="h-5 w-5 text-primary" />
                     Snake Game
                   </CardTitle>
@@ -185,13 +110,12 @@ const Games = () => {
                 <CardContent>
                   <div className="flex justify-between text-sm mb-2">
                     <div className="flex items-center gap-1">
-                      <Trophy className="h-4 w-4 text-yellow-500" />
-                      <span>High Score: 0</span>
+                      <CoinsIcon className="h-4 w-4 text-yellow-500" />
+                      <span>Earn up to 50 coins per game</span>
                     </div>
-                    <div>Games Played: 0</div>
                   </div>
                   <p className="text-sm mb-4">
-                    Control the snake to eat food and grow longer! Avoid hitting walls and yourself to score points.
+                    Control the snake with arrow keys to eat food and grow longer! Avoid hitting walls and yourself to score points.
                   </p>
                 </CardContent>
                 <CardFooter>
