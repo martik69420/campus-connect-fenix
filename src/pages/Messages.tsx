@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -96,8 +97,8 @@ const Messages = () => {
           user_id,
           friend_id,
           status,
-          profiles!friends_friend_id_fkey:friend_id(id, username, display_name, avatar_url),
-          friend:profiles!friends_user_id_fkey(id, username, display_name, avatar_url)
+          friend_profile:profiles!friends_friend_id_fkey(id, username, display_name, avatar_url),
+          user_profile:profiles!friends_user_id_fkey(id, username, display_name, avatar_url)
         `)
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
         .eq('status', 'accepted');
@@ -110,9 +111,10 @@ const Messages = () => {
       
       if (friendsData && friendsData.length > 0) {
         const conversationsFromFriends: Conversation[] = friendsData.map(friendship => {
+          // Determine which profile is the friend (not the current user)
           const friendProfile = friendship.user_id === user.id 
-            ? friendship.profiles
-            : friendship.friend;
+            ? friendship.friend_profile
+            : friendship.user_profile;
             
           return {
             id: friendship.id,
