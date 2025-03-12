@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -28,15 +29,6 @@ const safeParseDate = (dateString: string | null): Date => {
     console.warn("Error parsing date:", dateString, error);
     return new Date(); // Return current date as fallback
   }
-};
-
-type Message = {
-  id: string;
-  sender_id: string;
-  receiver_id: string;
-  content: string;
-  created_at: Date;
-  is_read: boolean;
 };
 
 type Conversation = {
@@ -135,16 +127,10 @@ const Messages = () => {
         
         if (conversationsFromFriends.length > 0 && !activeConversation) {
           setActiveConversation(conversationsFromFriends[0].id);
-          fetchMessages(conversationsFromFriends[0].id, conversationsFromFriends[0].userId);
+          setActiveUserId(conversationsFromFriends[0].userId);
         }
       } else {
-        const mockConversations = getMockConversations();
-        setConversations(mockConversations);
-        
-        if (mockConversations.length > 0 && !activeConversation) {
-          setActiveConversation(mockConversations[0].id);
-          setMessages(SAMPLE_MESSAGES[mockConversations[0].id] || []);
-        }
+        setConversations(getMockConversations());
       }
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -152,13 +138,6 @@ const Messages = () => {
     } finally {
       setLoadingConversations(false);
     }
-  };
-  
-  const fetchMessages = async (conversationId: string, friendId: string) => {
-    if (!user) return;
-    
-    setActiveConversation(conversationId);
-    setActiveUserId(friendId);
   };
   
   const handleSendMessage = async () => {
@@ -263,9 +242,7 @@ const Messages = () => {
                         <div className="flex justify-between items-center">
                           <span className="font-medium truncate">{conv.displayName}</span>
                           <span className="text-xs text-muted-foreground">
-                            {typeof conv.lastMessageTime.toLocaleTimeString === 'function' 
-                              ? conv.lastMessageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                              : ''}
+                            {conv.lastMessageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </span>
                         </div>
                         <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
@@ -441,69 +418,5 @@ const getMockConversations = (): Conversation[] => [
     unread: 0
   }
 ];
-
-// Sample messages for a conversation (fallback)
-const SAMPLE_MESSAGES: Record<string, Message[]> = {
-  'conv1': [
-    {
-      id: 'm1',
-      sender_id: '2',
-      content: 'Hey there!',
-      created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
-      receiver_id: '1',
-      is_read: true,
-    },
-    {
-      id: 'm2',
-      sender_id: '1',
-      content: 'Hi! How are you?',
-      created_at: new Date(Date.now() - 3600000 * 2.5).toISOString(),
-      receiver_id: '2',
-      is_read: true,
-    },
-    {
-      id: 'm3',
-      sender_id: '2',
-      content: 'I\'m good, thanks! Just wondering if you\'re going to the study group tomorrow?',
-      created_at: new Date(Date.now() - 3600000 * 2.3).toISOString(),
-      receiver_id: '1',
-      is_read: true,
-    },
-    {
-      id: 'm4',
-      sender_id: '2',
-      content: 'Hey, how are you doing?',
-      created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-      receiver_id: '1',
-      is_read: true,
-    }
-  ],
-  'conv2': [
-    {
-      id: 'm5',
-      sender_id: '3',
-      content: 'Hi, have you started on the project yet?',
-      created_at: new Date(Date.now() - 3600000 * 25).toISOString(),
-      receiver_id: '1',
-      is_read: true,
-    },
-    {
-      id: 'm6',
-      sender_id: '1',
-      content: 'Yes, I\'ve completed the first part. How about you?',
-      created_at: new Date(Date.now() - 3600000 * 24.5).toISOString(),
-      receiver_id: '3',
-      is_read: true,
-    },
-    {
-      id: 'm7',
-      sender_id: '3',
-      content: 'Did you finish the assignment?',
-      created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-      receiver_id: '1',
-      is_read: true,
-    }
-  ]
-};
 
 export default Messages;

@@ -19,19 +19,24 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     if (!chatPartnerId || !userId) return;
 
     const fetchMessages = async () => {
-      const { data, error } = await supabase
-        .from('messages')
-        .select('*')
-        .or(`and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`)
-        .order('created_at', { ascending: true });
+      try {
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .or(`and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`)
+          .order('created_at', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching messages:', error);
-        return;
+        if (error) {
+          console.error('Error fetching messages:', error);
+          return;
+        }
+
+        setMessages(data || []);
+        setIsLoading(false);
+      } catch (error) {
+        console.error('Error in fetchMessages:', error);
+        setIsLoading(false);
       }
-
-      setMessages(data || []);
-      setIsLoading(false);
     };
 
     fetchMessages();
@@ -73,16 +78,37 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   const sendMessage = async (content: string) => {
     if (!chatPartnerId || !userId || !content.trim()) return;
 
-    const { error } = await supabase.from('messages').insert({
-      sender_id: userId,
-      receiver_id: chatPartnerId,
-      content: content.trim(),
-    });
+    try {
+      const { error } = await supabase.from('messages').insert({
+        sender_id: userId,
+        receiver_id: chatPartnerId,
+        content: content.trim(),
+      });
 
-    if (error) {
-      console.error('Error sending message:', error);
+      if (error) {
+        console.error('Error sending message:', error);
+      }
+    } catch (error) {
+      console.error('Error in sendMessage:', error);
     }
   };
 
-  return { messages, isLoading, sendMessage };
+  const markMessagesAsRead = async () => {
+    if (!chatPartnerId || !userId) return;
+    
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .match({ sender_id: chatPartnerId, receiver_id: userId, is_read: false });
+        
+      if (error) {
+        console.error('Error marking messages as read:', error);
+      }
+    } catch (error) {
+      console.error('Error in markMessagesAsRead:', error);
+    }
+  };
+
+  return { messages, isLoading, sendMessage, markMessagesAsRead };
 };
