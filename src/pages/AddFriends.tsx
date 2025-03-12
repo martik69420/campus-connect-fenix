@@ -1,4 +1,5 @@
-import { useState } from 'react';
+
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,18 @@ const AddFriends = () => {
     try {
       console.log("Searching for users with term:", searchTerm);
       console.log("Current user ID:", user.id);
+      
+      // Check if user's profile exists
+      const { data: userProfile, error: userError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('id', user.id)
+        .single();
+        
+      if (userError) {
+        console.error("User profile error:", userError);
+        throw new Error("Your profile was not found. Please try logging out and back in.");
+      }
       
       // Search users by username or display_name
       const { data, error } = await supabase

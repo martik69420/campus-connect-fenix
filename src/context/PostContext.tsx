@@ -3,6 +3,23 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth, User } from "./AuthContext";
 import { toast } from "@/hooks/use-toast";
 
+// Helper function to safely parse dates
+const safeParseDate = (dateString: string | null): Date => {
+  if (!dateString) return new Date();
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn("Invalid date encountered:", dateString);
+      return new Date(); // Return current date as fallback
+    }
+    return date;
+  } catch (error) {
+    console.warn("Error parsing date:", dateString, error);
+    return new Date(); // Return current date as fallback
+  }
+};
+
 // Post type definition
 export type Post = {
   id: string;

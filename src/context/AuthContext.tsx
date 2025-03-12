@@ -1,6 +1,24 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
+// Helper function to safely parse dates
+const safeParseDate = (dateString: string | null): Date => {
+  if (!dateString) return new Date();
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn("Invalid date encountered:", dateString);
+      return new Date(); // Return current date as fallback
+    }
+    return date;
+  } catch (error) {
+    console.warn("Error parsing date:", dateString, error);
+    return new Date(); // Return current date as fallback
+  }
+};
 
 // User type definition
 export type User = {
@@ -43,7 +61,7 @@ const mapProfileToUser = (profile: any): User => {
     avatar: profile.avatar_url || "/placeholder.svg",
     coins: profile.coins || 0,
     inviteCode: profile.invite_code,
-    createdAt: new Date(profile.created_at),
+    createdAt: safeParseDate(profile.created_at),
     school: profile.school || "",
     bio: profile.bio || "",
     friends: []

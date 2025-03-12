@@ -1,7 +1,7 @@
 
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { Home, User, Bell, MessageSquare, Users, Gamepad2, Award, BarChart3 } from "lucide-react";
+import { Home, User, Bell, MessageSquare, Users, Gamepad2, Award, BarChart3, Settings, PenSquare } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -14,12 +14,13 @@ const Sidebar: React.FC = () => {
   const navItems = [
     { path: "/", icon: Home, label: "Home" },
     { path: `/profile/${user?.username}`, icon: User, label: "Profile" },
-    { path: "/notifications", icon: Bell, label: "Notifications" },
     { path: "/messages", icon: MessageSquare, label: "Messages" },
+    { path: "/notifications", icon: Bell, label: "Notifications" },
     { path: "/friends", icon: Users, label: "Friends" },
     { path: "/games", icon: Gamepad2, label: "Games" },
     { path: "/leaderboard", icon: Award, label: "Leaderboard" },
     { path: "/earn", icon: BarChart3, label: "Earn Coins" },
+    { path: "/settings", icon: Settings, label: "Settings" },
   ];
 
   const sidebarVariants = {
