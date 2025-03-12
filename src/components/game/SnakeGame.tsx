@@ -39,6 +39,7 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
   const [level, setLevel] = useState(1);
   const [showBonus, setShowBonus] = useState(false);
   const [bonusTimeLeft, setBonusTimeLeft] = useState(0);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
   
   // Refs to access latest state values in callbacks
   const directionRef = useRef(direction);
@@ -48,6 +49,16 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
   const snakeRef = useRef(snake);
   const foodRef = useRef(food);
   const currentSpeedRef = useRef(currentSpeed);
+  
+  // Detect mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor;
+      return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    };
+    
+    setIsMobileDevice(checkMobile() || window.innerWidth < 768);
+  }, []);
   
   // Update refs when state changes
   useEffect(() => {
@@ -530,6 +541,74 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
     }
   };
   
+  // Handle touch swipe for mobile
+  useEffect(() => {
+    if (!isMobileDevice || !canvasRef.current) return;
+    
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    const handleTouchStart = (e: TouchEvent) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    };
+    
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!gameStarted || gameOver) return;
+      
+      // Prevent scrolling when playing
+      e.preventDefault();
+      
+      const touchEndX = e.touches[0].clientX;
+      const touchEndY = e.touches[0].clientY;
+      
+      const dx = touchEndX - touchStartX;
+      const dy = touchEndY - touchStartY;
+      
+      // Determine swipe direction based on which axis had the larger movement
+      if (Math.abs(dx) > Math.abs(dy)) {
+        // Horizontal swipe
+        if (dx > 20) {
+          // Right swipe
+          if (directionRef.current !== "LEFT") {
+            setDirection("RIGHT");
+          }
+        } else if (dx < -20) {
+          // Left swipe
+          if (directionRef.current !== "RIGHT") {
+            setDirection("LEFT");
+          }
+        }
+      } else {
+        // Vertical swipe
+        if (dy > 20) {
+          // Down swipe
+          if (directionRef.current !== "UP") {
+            setDirection("DOWN");
+          }
+        } else if (dy < -20) {
+          // Up swipe
+          if (directionRef.current !== "DOWN") {
+            setDirection("UP");
+          }
+        }
+      }
+      
+      // Reset touch start position for continuous swiping
+      touchStartX = touchEndX;
+      touchStartY = touchEndY;
+    };
+    
+    const canvasElement = canvasRef.current;
+    canvasElement.addEventListener('touchstart', handleTouchStart, { passive: false });
+    canvasElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+    
+    return () => {
+      canvasElement.removeEventListener('touchstart', handleTouchStart);
+      canvasElement.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [gameStarted, gameOver, isMobileDevice]);
+  
   return (
     <div className="flex flex-col items-center">
       <div className="flex justify-between w-full mb-2">
@@ -601,7 +680,12 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
                     </span>
                   </div>
                 </div>
-                <p>Use arrow keys or buttons to control the snake.<br />Collect food to grow and earn points!</p>
+                <p>
+                  {isMobileDevice 
+                    ? "Swipe to change direction on mobile." 
+                    : "Use arrow keys or buttons to control the snake."}
+                  <br />Collect food to grow and earn points!
+                </p>
               </div>
               <Button onClick={startGame} className="w-full">
                 <Play className="mr-2 h-4 w-4" />
@@ -638,15 +722,15 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
         )}
       </div>
       
-      {/* Game controls */}
-      <div className="grid grid-cols-3 gap-2 mb-4">
+      {/* Game controls - optimized for mobile */}
+      <div className={`grid grid-cols-3 gap-2 mb-4 ${isMobileDevice ? 'scale-125 my-6' : ''}`}>
         <div className="col-start-2">
           <Button
             variant="outline"
-            size="icon"
+            size={isMobileDevice ? "default" : "icon"}
             onClick={() => handleDirectionClick("UP")}
             disabled={!gameStarted || gameOver}
-            className="shadow-sm hover:shadow"
+            className="shadow-sm hover:shadow w-full"
           >
             <ArrowUp />
           </Button>
@@ -654,10 +738,10 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
         <div className="col-start-1 row-start-2">
           <Button
             variant="outline"
-            size="icon"
+            size={isMobileDevice ? "default" : "icon"}
             onClick={() => handleDirectionClick("LEFT")}
             disabled={!gameStarted || gameOver}
-            className="shadow-sm hover:shadow"
+            className="shadow-sm hover:shadow w-full"
           >
             <ArrowLeft />
           </Button>
@@ -665,10 +749,10 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
         <div className="col-start-2 row-start-2">
           <Button
             variant={gamePaused ? "default" : "outline"}
-            size="icon"
+            size={isMobileDevice ? "default" : "icon"}
             onClick={() => setGamePaused(!gamePaused)}
             disabled={!gameStarted || gameOver}
-            className="shadow-sm hover:shadow"
+            className="shadow-sm hover:shadow w-full"
           >
             {gamePaused ? <Play /> : <Pause />}
           </Button>
@@ -676,10 +760,10 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
         <div className="col-start-3 row-start-2">
           <Button
             variant="outline"
-            size="icon"
+            size={isMobileDevice ? "default" : "icon"}
             onClick={() => handleDirectionClick("RIGHT")}
             disabled={!gameStarted || gameOver}
-            className="shadow-sm hover:shadow"
+            className="shadow-sm hover:shadow w-full"
           >
             <ArrowRight />
           </Button>
@@ -687,19 +771,27 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
         <div className="col-start-2 row-start-3">
           <Button
             variant="outline"
-            size="icon"
+            size={isMobileDevice ? "default" : "icon"}
             onClick={() => handleDirectionClick("DOWN")}
             disabled={!gameStarted || gameOver}
-            className="shadow-sm hover:shadow"
+            className="shadow-sm hover:shadow w-full"
           >
             <ArrowDown />
           </Button>
         </div>
       </div>
       
-      <div className="text-sm text-muted-foreground text-center">
-        <p>Tips: Use keyboard arrow keys for better control.<br />Press Space to pause/resume the game.</p>
-      </div>
+      {!isMobileDevice && (
+        <div className="text-sm text-muted-foreground text-center">
+          <p>Tips: Use keyboard arrow keys for better control.<br />Press Space to pause/resume the game.</p>
+        </div>
+      )}
+      
+      {isMobileDevice && (
+        <div className="text-sm text-muted-foreground text-center">
+          <p>Tip: You can also swipe on the game area to control the snake.</p>
+        </div>
+      )}
     </div>
   );
 };

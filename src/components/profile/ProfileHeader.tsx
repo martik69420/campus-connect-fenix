@@ -98,16 +98,14 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </Button>
             ) : (
               <>
-                {friendStatus === 'friends' && (
-                  <Button 
-                    variant="outline" 
-                    className="gap-1.5"
-                    onClick={handleMessageClick}
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Message
-                  </Button>
-                )}
+                <Button 
+                  variant="outline" 
+                  className="gap-1.5"
+                  onClick={handleMessageClick}
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Message
+                </Button>
                 <Button
                   variant={getFriendButtonVariant()}
                   className="gap-1.5"

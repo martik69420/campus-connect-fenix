@@ -14,23 +14,6 @@ import { Search, Send, Plus, User, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
 
-// Helper function to safely parse dates
-const safeParseDate = (dateString: string | null): Date => {
-  if (!dateString) return new Date();
-  try {
-    const date = new Date(dateString);
-    // Check if date is valid
-    if (isNaN(date.getTime())) {
-      console.warn("Invalid date encountered:", dateString);
-      return new Date(); // Return current date as fallback
-    }
-    return date;
-  } catch (error) {
-    console.warn("Error parsing date:", dateString, error);
-    return new Date(); // Return current date as fallback
-  }
-};
-
 type Conversation = {
   id: string;
   userId: string;
@@ -94,7 +77,7 @@ const Messages = () => {
     if (activeUserId && messages.length > 0) {
       markMessagesAsRead();
     }
-  }, [activeUserId, messages]);
+  }, [activeUserId, messages, markMessagesAsRead]);
   
   const fetchConversations = async () => {
     if (!user) return;
@@ -102,6 +85,7 @@ const Messages = () => {
     setLoadingConversations(true);
     
     try {
+      // Get all friends
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
         .select(`
@@ -117,8 +101,7 @@ const Messages = () => {
         
       if (friendsError) {
         console.error("Error fetching friends:", friendsError);
-        setConversations(getMockConversations());
-        return;
+        throw friendsError;
       }
       
       if (friendsData && friendsData.length > 0) {
@@ -174,11 +157,15 @@ const Messages = () => {
           setActiveUserId(conversationsFromFriends[0].userId);
         }
       } else {
-        setConversations(getMockConversations());
+        // If no friends, use sample conversations
+        const sampleConversations = getSampleConversations();
+        setConversations(sampleConversations);
       }
     } catch (error) {
       console.error("Error fetching conversations:", error);
-      setConversations(getMockConversations());
+      // Fallback to sample conversations
+      const sampleConversations = getSampleConversations();
+      setConversations(sampleConversations);
     } finally {
       setLoadingConversations(false);
     }
@@ -226,6 +213,20 @@ const Messages = () => {
   const handleNewConversation = () => {
     navigate('/friends'); // Redirect to friends page to select someone
   };
+  
+  // Sample conversations (fallback)
+  const getSampleConversations = (): Conversation[] => [
+    {
+      id: 'conv1',
+      userId: '2',
+      username: 'jane_smith',
+      displayName: 'Jane Smith',
+      avatar: '/placeholder.svg',
+      lastMessage: 'You have no friends yet. Add some friends to start messaging!',
+      lastMessageTime: new Date(),
+      unread: 0
+    }
+  ];
   
   return (
     <AppLayout>
@@ -447,29 +448,5 @@ const Messages = () => {
     </AppLayout>
   );
 };
-
-// Sample conversations (fallback)
-const getMockConversations = (): Conversation[] => [
-  {
-    id: 'conv1',
-    userId: '2',
-    username: 'jane_smith',
-    displayName: 'Jane Smith',
-    avatar: '/placeholder.svg',
-    lastMessage: 'Hey, how are you doing?',
-    lastMessageTime: new Date(Date.now() - 3600000 * 2),
-    unread: 2
-  },
-  {
-    id: 'conv2',
-    userId: '3',
-    username: 'alex_johnson',
-    displayName: 'Alex Johnson',
-    avatar: '/placeholder.svg',
-    lastMessage: 'Did you finish the assignment?',
-    lastMessageTime: new Date(Date.now() - 3600000 * 24),
-    unread: 0
-  }
-];
 
 export default Messages;

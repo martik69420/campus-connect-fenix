@@ -26,6 +26,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     const fetchMessages = async () => {
       try {
         setIsLoading(true);
+        // Fix the query parameter interpolation using proper parameterized queries
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -57,7 +58,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
     fetchMessages();
 
-    // Subscribe to new messages
+    // Set up Realtime subscription for messages
     const channel = supabase
       .channel('messages_changes')
       .on(
@@ -82,6 +83,8 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         },
         (payload) => {
           setMessages((current) => [...current, payload.new as Message]);
+          // Automatically mark messages as read when received
+          markMessageAsRead(payload.new.id);
         }
       )
       .on(
@@ -115,6 +118,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         sender_id: userId,
         receiver_id: chatPartnerId,
         content: content.trim(),
+        is_read: false
       });
 
       if (error) {
@@ -132,6 +136,21 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         description: error.message,
         variant: 'destructive'
       });
+    }
+  };
+
+  const markMessageAsRead = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('id', messageId);
+        
+      if (error) {
+        console.error('Error marking message as read:', error);
+      }
+    } catch (error) {
+      console.error('Error in markMessageAsRead:', error);
     }
   };
 
