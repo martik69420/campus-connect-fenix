@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +9,24 @@ import AppLayout from '@/components/layout/AppLayout';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import PostCard from '@/components/post/PostCard';
 import { useAuth } from '@/context/AuthContext';
+import { usePost } from '@/context/PostContext';
+
+// Helper function to safely parse dates
+const safeParseDate = (dateString: string | null): Date => {
+  if (!dateString) return new Date();
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn("Invalid date encountered:", dateString);
+      return new Date(); // Return current date as fallback
+    }
+    return date;
+  } catch (error) {
+    console.warn("Error parsing date:", dateString, error);
+    return new Date(); // Return current date as fallback
+  }
+};
 
 type FriendStatus = 'not_friend' | 'pending_sent' | 'pending_received' | 'friends';
 
@@ -16,6 +35,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { fetchPosts } = usePost();
   
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -40,7 +60,7 @@ const Profile = () => {
     try {
       setLoading(true);
       
-      // Try to fetch profile from Supabase first
+      // Try to fetch profile from Supabase
       const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
@@ -119,17 +139,31 @@ const Profile = () => {
       
       // Check if this user is a friend
       if (user.id !== profile?.id) {
-        if (user.friends && user.friends.includes(profile?.id)) {
-          setFriendStatus('friends');
+        const { data: friendData } = await supabase
+          .from('friends')
+          .select('status')
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+          .or(`user_id.eq.${profile?.id},friend_id.eq.${profile?.id}`)
+          .single();
+          
+        if (friendData) {
+          if (friendData.status === 'accepted') {
+            setFriendStatus('friends');
+          } else if (friendData.user_id === user.id) {
+            setFriendStatus('pending_sent');
+          } else {
+            setFriendStatus('pending_received');
+          }
         } else {
           setFriendStatus('not_friend');
         }
       }
       
       // Fetch posts for this profile
-      fetchPosts(profileData?.id || profile?.id);
+      fetchProfilePosts(profileData?.id || profile?.id);
       
     } catch (error: any) {
+      console.error("Error fetching profile:", error);
       toast({
         title: "Error fetching profile",
         description: error.message,
@@ -140,7 +174,7 @@ const Profile = () => {
     }
   };
   
-  const fetchPosts = async (userId: string) => {
+  const fetchProfilePosts = async (userId: string) => {
     if (!userId) return;
     
     setLoadingPosts(true);
@@ -150,31 +184,61 @@ const Profile = () => {
       const { data: postsData, error } = await supabase
         .from('posts')
         .select(`
-          *,
+          id,
+          content,
+          images,
+          is_professional,
+          created_at,
+          user_id,
           profiles:user_id (
             username,
             display_name,
             avatar_url
           ),
-          likes:id (id),
-          comments:id (id)
+          likes:likes(id, user_id),
+          comments:comments(id, content, user_id, created_at)
         `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
       
-      if (error || !postsData || postsData.length === 0) {
+      if (error) {
+        console.error("Error fetching posts:", error);
+        // We'll fall back to mock data below
+      }
+      
+      if (postsData && postsData.length > 0) {
+        // Process the posts data
+        const formattedPosts = postsData.map(post => ({
+          id: post.id,
+          content: post.content,
+          images: post.images || [],
+          created_at: post.created_at,
+          is_professional: post.is_professional,
+          user_id: post.user_id,
+          profiles: post.profiles,
+          likes: (post.likes || []).map(like => like.user_id || like.id),
+          comments: (post.comments || []).map(comment => ({
+            id: comment.id,
+            content: comment.content,
+            user_id: comment.user_id,
+            created_at: safeParseDate(comment.created_at)
+          }))
+        }));
+        
+        setPosts(formattedPosts);
+      } else {
         // Fallback to mock posts if none found
         const mockPosts = [
           {
             id: "post1",
             content: "Just attended an amazing workshop on AI!",
             created_at: new Date().toISOString(),
-            user_id: "1",
+            user_id: userId,
             is_professional: true,
             profiles: {
-              username: "john_doe",
-              display_name: "John Doe",
-              avatar_url: "/placeholder.svg"
+              username: username,
+              display_name: profile?.display_name || "User",
+              avatar_url: profile?.avatar_url || "/placeholder.svg"
             },
             likes: [],
             comments: []
@@ -183,12 +247,12 @@ const Profile = () => {
             id: "post2",
             content: "Looking forward to the campus event this weekend!",
             created_at: new Date(Date.now() - 86400000).toISOString(),
-            user_id: "1",
+            user_id: userId,
             is_professional: false,
             profiles: {
-              username: "john_doe",
-              display_name: "John Doe",
-              avatar_url: "/placeholder.svg"
+              username: username,
+              display_name: profile?.display_name || "User",
+              avatar_url: profile?.avatar_url || "/placeholder.svg"
             },
             likes: [],
             comments: []
@@ -196,12 +260,11 @@ const Profile = () => {
         ];
         
         setPosts(mockPosts);
-      } else {
-        setPosts(postsData);
       }
       
     } catch (error) {
       console.error("Error fetching posts:", error);
+      setPosts([]);
     } finally {
       setLoadingPosts(false);
     }
@@ -213,24 +276,62 @@ const Profile = () => {
     try {
       setLoadingFriendAction(true);
       
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      // Different actions based on current friend status
       if (friendStatus === 'not_friend') {
-        setFriendStatus('friends');
+        // Send friend request
+        const { error } = await supabase
+          .from('friends')
+          .insert({
+            user_id: user.id,
+            friend_id: profile.id,
+            status: 'pending'
+          });
+          
+        if (error) throw error;
+        setFriendStatus('pending_sent');
+        
         toast({
-          title: "Friend added",
+          title: "Friend request sent",
+          description: `Friend request sent to ${profile.display_name}`
+        });
+      } 
+      else if (friendStatus === 'pending_received') {
+        // Accept friend request
+        const { error } = await supabase
+          .from('friends')
+          .update({ status: 'accepted' })
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+          .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`);
+          
+        if (error) throw error;
+        setFriendStatus('friends');
+        
+        toast({
+          title: "Friend request accepted",
           description: `You are now friends with ${profile.display_name}`
         });
-      } else {
+      }
+      else if (friendStatus === 'friends' || friendStatus === 'pending_sent') {
+        // Remove friend or cancel request
+        const { error } = await supabase
+          .from('friends')
+          .delete()
+          .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+          .or(`user_id.eq.${profile.id},friend_id.eq.${profile.id}`);
+          
+        if (error) throw error;
         setFriendStatus('not_friend');
+        
         toast({
-          title: "Friend removed",
-          description: `You are no longer friends with ${profile.display_name}`
+          title: friendStatus === 'friends' ? "Friend removed" : "Request canceled",
+          description: friendStatus === 'friends' 
+            ? `You are no longer friends with ${profile.display_name}` 
+            : `Friend request to ${profile.display_name} was canceled`
         });
       }
       
     } catch (error: any) {
+      console.error("Friend action failed:", error);
       toast({
         title: "Action failed",
         description: error.message,
@@ -238,6 +339,14 @@ const Profile = () => {
       });
     } finally {
       setLoadingFriendAction(false);
+    }
+  };
+  
+  const refreshPosts = () => {
+    if (profile) {
+      fetchProfilePosts(profile.id);
+      // Also refresh global posts
+      fetchPosts();
     }
   };
   
@@ -306,8 +415,18 @@ const Profile = () => {
               posts.map((post) => (
                 <PostCard 
                   key={post.id} 
-                  post={post} 
-                  onAction={() => {}} 
+                  post={{
+                    id: post.id,
+                    userId: post.user_id,
+                    content: post.content,
+                    images: post.images,
+                    createdAt: safeParseDate(post.created_at),
+                    likes: post.likes || [],
+                    comments: post.comments || [],
+                    shares: 0,
+                    isProfessional: post.is_professional
+                  }} 
+                  onAction={refreshPosts} 
                 />
               ))
             ) : (
@@ -343,8 +462,18 @@ const Profile = () => {
               posts.filter(p => p.is_professional).map((post) => (
                 <PostCard 
                   key={post.id} 
-                  post={post} 
-                  onAction={() => {}} 
+                  post={{
+                    id: post.id,
+                    userId: post.user_id,
+                    content: post.content,
+                    images: post.images,
+                    createdAt: safeParseDate(post.created_at),
+                    likes: post.likes || [],
+                    comments: post.comments || [],
+                    shares: 0,
+                    isProfessional: post.is_professional
+                  }} 
+                  onAction={refreshPosts}
                 />
               ))
             ) : (

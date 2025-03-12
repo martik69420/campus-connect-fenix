@@ -1,7 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth, User } from "./AuthContext";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 // Helper function to safely parse dates
 const safeParseDate = (dateString: string | null): Date => {
@@ -49,14 +49,15 @@ type PostContextType = {
   posts: Post[];
   userPosts: Post[];
   feedPosts: Post[];
-  createPost: (content: string, images?: string[], isProfessional?: boolean) => void;
-  likePost: (postId: string) => void;
-  commentOnPost: (postId: string, content: string) => void;
-  sharePost: (postId: string) => void;
-  deletePost: (postId: string) => void;
-  likeComment: (postId: string, commentId: string) => void;
+  createPost: (content: string, images?: string[], isProfessional?: boolean) => Promise<void>;
+  likePost: (postId: string) => Promise<void>;
+  commentOnPost: (postId: string, content: string) => Promise<void>;
+  sharePost: (postId: string) => Promise<void>;
+  deletePost: (postId: string) => Promise<void>;
+  likeComment: (postId: string, commentId: string) => Promise<void>;
   getPostById: (postId: string) => Post | undefined;
   getUserById: (userId: string) => User | undefined;
+  fetchPosts: () => Promise<void>;
 };
 
 // Sample users (we'll sync with AuthContext)
@@ -101,7 +102,7 @@ let MOCK_USERS = [
   }
 ];
 
-// Sample posts
+// Sample posts (fallback)
 const INITIAL_POSTS: Post[] = [
   {
     id: "1",
@@ -169,6 +170,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [posts, setPosts] = useState<Post[]>(INITIAL_POSTS);
   const { user, addCoins } = useAuth();
 
+  useEffect(() => {
+    if (user) {
+      fetchPosts();
+    }
+  }, [user]);
+
   // Get user posts
   const userPosts = user 
     ? posts.filter(post => post.userId === user.id)
@@ -182,129 +189,306 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
     : [];
 
+  // Fetch posts from database
+  const fetchPosts = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('posts')
+        .select(`
+          id,
+          content,
+          images,
+          user_id,
+          is_professional,
+          created_at,
+          profiles:user_id (username, display_name, avatar_url),
+          likes:likes(id, user_id),
+          comments:comments(id, content, user_id, created_at)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error("Error fetching posts:", error);
+        return;
+      }
+
+      // Transform database posts to our format
+      if (data && data.length > 0) {
+        const formattedPosts: Post[] = data.map((dbPost: any) => ({
+          id: dbPost.id,
+          userId: dbPost.user_id,
+          content: dbPost.content,
+          images: dbPost.images || [],
+          createdAt: safeParseDate(dbPost.created_at),
+          likes: (dbPost.likes || []).map((like: any) => like.user_id),
+          comments: (dbPost.comments || []).map((comment: any) => ({
+            id: comment.id,
+            userId: comment.user_id,
+            content: comment.content,
+            createdAt: safeParseDate(comment.created_at),
+            likes: []
+          })),
+          shares: 0, // Implement shares later
+          isProfessional: dbPost.is_professional
+        }));
+
+        setPosts(formattedPosts);
+      } else {
+        // If no posts, keep the fallback posts
+        console.log("No posts found in database, using fallback data");
+      }
+    } catch (error) {
+      console.error("Error in fetchPosts:", error);
+    }
+  };
+
   // Create a new post
-  const createPost = (content: string, images?: string[], isProfessional?: boolean) => {
+  const createPost = async (content: string, images?: string[], isProfessional?: boolean) => {
     if (!user) return;
 
-    const newPost: Post = {
-      id: `post_${Date.now()}`,
-      userId: user.id,
-      content,
-      images,
-      createdAt: new Date(),
-      likes: [],
-      comments: [],
-      shares: 0,
-      isProfessional
-    };
+    try {
+      // Insert post into the database
+      const { data, error } = await supabase
+        .from('posts')
+        .insert({
+          content,
+          images,
+          user_id: user.id,
+          is_professional: isProfessional || false
+        })
+        .select('id, created_at');
 
-    setPosts([newPost, ...posts]);
-    
-    // Reward user with coins for posting
-    addCoins(10, "Post created");
+      if (error) {
+        console.error("Error creating post:", error);
+        toast({
+          title: "Error creating post",
+          description: error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data && data[0]) {
+        const newPost: Post = {
+          id: data[0].id,
+          userId: user.id,
+          content,
+          images,
+          createdAt: safeParseDate(data[0].created_at),
+          likes: [],
+          comments: [],
+          shares: 0,
+          isProfessional
+        };
+
+        setPosts(prev => [newPost, ...prev]);
+        
+        // Reward user with coins for posting
+        addCoins(10, "Post created");
+        
+        toast({
+          title: "Post created",
+          description: "Your post has been published successfully!",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error in createPost:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create post: " + error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   // Like a post
-  const likePost = (postId: string) => {
+  const likePost = async (postId: string) => {
     if (!user) return;
 
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        // Check if user already liked the post
-        const alreadyLiked = post.likes.includes(user.id);
-        
-        if (alreadyLiked) {
-          // Unlike
-          return {
-            ...post,
-            likes: post.likes.filter(id => id !== user.id)
-          };
-        } else {
-          // Like
-          return {
-            ...post,
-            likes: [...post.likes, user.id]
-          };
+    try {
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+
+      const alreadyLiked = post.likes.includes(user.id);
+      
+      if (alreadyLiked) {
+        // Unlike the post
+        const { error } = await supabase
+          .from('likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error("Error removing like:", error);
+          return;
         }
+
+        setPosts(posts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              likes: p.likes.filter(id => id !== user.id)
+            };
+          }
+          return p;
+        }));
+      } else {
+        // Like the post
+        const { error } = await supabase
+          .from('likes')
+          .insert({
+            post_id: postId,
+            user_id: user.id
+          });
+
+        if (error) {
+          console.error("Error adding like:", error);
+          return;
+        }
+
+        setPosts(posts.map(p => {
+          if (p.id === postId) {
+            return {
+              ...p,
+              likes: [...p.likes, user.id]
+            };
+          }
+          return p;
+        }));
       }
-      return post;
-    }));
+    } catch (error) {
+      console.error("Error in likePost:", error);
+    }
   };
 
   // Comment on a post
-  const commentOnPost = (postId: string, content: string) => {
+  const commentOnPost = async (postId: string, content: string) => {
     if (!user || !content.trim()) return;
 
-    const newComment: Comment = {
-      id: `comment_${Date.now()}`,
-      userId: user.id,
-      content,
-      createdAt: new Date(),
-      likes: []
-    };
+    try {
+      const { data, error } = await supabase
+        .from('comments')
+        .insert({
+          post_id: postId,
+          user_id: user.id,
+          content
+        })
+        .select('id, created_at');
 
-    setPosts(posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          comments: [...post.comments, newComment]
-        };
+      if (error) {
+        console.error("Error adding comment:", error);
+        return;
       }
-      return post;
-    }));
-    
-    // Reward user with coins for commenting
-    addCoins(2, "Comment added");
+
+      if (data && data[0]) {
+        const newComment: Comment = {
+          id: data[0].id,
+          userId: user.id,
+          content,
+          createdAt: safeParseDate(data[0].created_at),
+          likes: []
+        };
+
+        setPosts(posts.map(post => {
+          if (post.id === postId) {
+            return {
+              ...post,
+              comments: [...post.comments, newComment]
+            };
+          }
+          return post;
+        }));
+        
+        // Reward user with coins for commenting
+        addCoins(2, "Comment added");
+      }
+    } catch (error) {
+      console.error("Error in commentOnPost:", error);
+    }
   };
 
   // Share a post
-  const sharePost = (postId: string) => {
+  const sharePost = async (postId: string) => {
     if (!user) return;
 
     const originalPost = posts.find(post => post.id === postId);
     if (!originalPost) return;
 
-    const sharedPost: Post = {
-      id: `post_${Date.now()}`,
-      userId: user.id,
-      content: originalPost.content,
-      images: originalPost.images,
-      createdAt: new Date(),
-      likes: [],
-      comments: [],
-      shares: 0,
-      isShared: true,
-      originalPostId: originalPost.id,
-      isProfessional: originalPost.isProfessional
-    };
+    try {
+      // In a real app, this would create a new post with a reference to the original
+      // For now, we'll just update the UI
+      const sharedPost: Post = {
+        id: `post_${Date.now()}`,
+        userId: user.id,
+        content: originalPost.content,
+        images: originalPost.images,
+        createdAt: new Date(),
+        likes: [],
+        comments: [],
+        shares: 0,
+        isShared: true,
+        originalPostId: originalPost.id,
+        isProfessional: originalPost.isProfessional
+      };
 
-    setPosts([sharedPost, ...posts.map(post => {
-      if (post.id === postId) {
-        return {
-          ...post,
-          shares: post.shares + 1
-        };
-      }
-      return post;
-    })]);
-    
-    // Reward user with coins for sharing
-    addCoins(5, "Post shared");
+      setPosts([sharedPost, ...posts.map(post => {
+        if (post.id === postId) {
+          return {
+            ...post,
+            shares: post.shares + 1
+          };
+        }
+        return post;
+      })]);
+      
+      // Reward user with coins for sharing
+      addCoins(5, "Post shared");
+    } catch (error) {
+      console.error("Error in sharePost:", error);
+    }
   };
 
   // Delete a post
-  const deletePost = (postId: string) => {
+  const deletePost = async (postId: string) => {
     if (!user) return;
 
-    setPosts(posts.filter(post => 
-      post.id !== postId && post.originalPostId !== postId
-    ));
+    try {
+      const { error } = await supabase
+        .from('posts')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error("Error deleting post:", error);
+        toast({
+          title: "Error",
+          description: "Could not delete post: " + error.message,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setPosts(posts.filter(post => 
+        post.id !== postId && post.originalPostId !== postId
+      ));
+
+      toast({
+        title: "Post deleted",
+        description: "Your post has been removed",
+      });
+    } catch (error) {
+      console.error("Error in deletePost:", error);
+    }
   };
 
   // Like a comment
-  const likeComment = (postId: string, commentId: string) => {
+  const likeComment = async (postId: string, commentId: string) => {
     if (!user) return;
 
+    // For now, just updating the UI
+    // In a real app, this would update the database
     setPosts(posts.map(post => {
       if (post.id === postId) {
         return {
@@ -342,6 +526,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Get user by ID
   const getUserById = (userId: string): User | undefined => {
+    // If the current user's ID matches, return that user
+    if (user && user.id === userId) {
+      return user;
+    }
+    
+    // Otherwise look in MOCK_USERS
     return MOCK_USERS.find(user => user.id === userId);
   };
 
@@ -359,6 +549,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         likeComment,
         getPostById,
         getUserById,
+        fetchPosts,
       }}
     >
       {children}

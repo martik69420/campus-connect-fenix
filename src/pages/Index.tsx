@@ -1,6 +1,7 @@
+
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { supabase, Post } from '@/integrations/supabase/client';
+import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
@@ -10,12 +11,31 @@ import CreatePostForm from '@/components/post/CreatePostForm';
 import PostCard from '@/components/post/PostCard';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { usePost } from '@/context/PostContext';
+
+// Helper function to safely parse dates
+const safeParseDate = (dateString: string | null): Date => {
+  if (!dateString) return new Date();
+  try {
+    const date = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn("Invalid date encountered:", dateString);
+      return new Date(); // Return current date as fallback
+    }
+    return date;
+  } catch (error) {
+    console.warn("Error parsing date:", dateString, error);
+    return new Date(); // Return current date as fallback
+  }
+};
 
 const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
+  const { fetchPosts, posts } = usePost();
+  
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [feedType, setFeedType] = useState<'all' | 'professional'>('all');
 
@@ -30,53 +50,16 @@ const Index = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  const fetchPosts = async () => {
-    try {
-      setLoadingPosts(true);
-      
-      let query = supabase
-        .from('posts')
-        .select(`
-          id,
-          content,
-          images,
-          is_professional,
-          created_at,
-          profiles (
-            username,
-            display_name,
-            avatar_url
-          ),
-          likes: likes(id),
-          comments: comments(id)
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (feedType === 'professional') {
-        query = query.eq('is_professional', true);
-      }
-      
-      const { data, error } = await query;
-      
-      if (error) throw error;
-      
-      // Explicitly cast the data to the Post type
-      const typedPosts = (data || []) as unknown as Post[];
-      setPosts(typedPosts);
-    } catch (error: any) {
-      toast({
-        title: "Error fetching posts",
-        description: error.message,
-        variant: "destructive"
-      });
-    } finally {
-      setLoadingPosts(false);
-    }
+  const refreshFeed = () => {
+    setLoadingPosts(true);
+    fetchPosts()
+      .finally(() => setLoadingPosts(false));
   };
 
-  const refreshFeed = () => {
-    fetchPosts();
-  };
+  // Filter posts based on the selected feed type
+  const filteredPosts = feedType === 'professional' 
+    ? posts.filter(post => post.isProfessional)
+    : posts;
 
   return (
     <AppLayout>
@@ -92,10 +75,10 @@ const Index = () => {
             </Button>
           </div>
           
-          <CreatePostForm onPostCreated={refreshFeed as any} />
+          <CreatePostForm onPostCreated={refreshFeed} />
           
           <TabsContent value="all" className="mt-6 space-y-6">
-            {loadingPosts ? (
+            {isLoading || loadingPosts ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <div key={i} className="rounded-lg border shadow-sm p-4 space-y-4">
                   <div className="flex items-center space-x-2">
@@ -113,8 +96,14 @@ const Index = () => {
                   </div>
                 </div>
               ))
-            ) : posts.length > 0 ? (
-              posts.map((post) => <PostCard key={post.id} post={post as any} onAction={refreshFeed} />)
+            ) : filteredPosts.length > 0 ? (
+              filteredPosts.map((post) => (
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  onAction={refreshFeed} 
+                />
+              ))
             ) : (
               <div className="text-center py-10">
                 <h3 className="text-lg font-medium">No posts yet</h3>
@@ -124,7 +113,7 @@ const Index = () => {
           </TabsContent>
           
           <TabsContent value="professional" className="mt-6 space-y-6">
-            {loadingPosts ? (
+            {isLoading || loadingPosts ? (
               Array.from({ length: 2 }).map((_, i) => (
                 <div key={i} className="rounded-lg border shadow-sm p-4 space-y-4">
                   <div className="flex items-center space-x-2">
@@ -142,9 +131,13 @@ const Index = () => {
                   </div>
                 </div>
               ))
-            ) : posts.filter(p => p.is_professional).length > 0 ? (
-              posts.filter(p => p.is_professional).map((post) => (
-                <PostCard key={post.id} post={post as any} onAction={refreshFeed} />
+            ) : filteredPosts.length > 0 ? (
+              filteredPosts.map((post) => (
+                <PostCard 
+                  key={post.id} 
+                  post={post} 
+                  onAction={refreshFeed} 
+                />
               ))
             ) : (
               <div className="text-center py-10">

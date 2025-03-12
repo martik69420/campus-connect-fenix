@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
@@ -13,6 +14,26 @@ import { useAuth } from "@/context/AuthContext";
 import CommentSection from "./CommentSection";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+
+// Helper function to safely format dates
+const safeFormatDate = (date: Date | string | null | undefined) => {
+  if (!date) return "recently";
+  
+  try {
+    // If it's a string, try to convert it to a Date object
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    
+    // Check if date is valid
+    if (isNaN(dateObj.getTime())) {
+      return "recently";
+    }
+    
+    return formatDistanceToNow(dateObj, { addSuffix: true });
+  } catch (error) {
+    console.error("Error formatting date:", error, date);
+    return "recently";
+  }
+};
 
 interface PostCardProps {
   post: Post;
@@ -73,18 +94,18 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
       <Card className="overflow-hidden mb-4 border-border">
         <CardHeader className="p-4 pb-0 flex flex-row items-start justify-between space-y-0">
           <div className="flex items-start gap-3">
-            <Link to={`/profile/${post.userId}`}>
+            <Link to={`/profile/${postUser?.username || post.userId}`}>
               <Avatar className="h-10 w-10 border border-border">
                 <AvatarImage src={postUser?.avatar} alt={postUser?.displayName} />
                 <AvatarFallback className="bg-muted text-foreground font-medium">
-                  {postUser?.displayName.split(' ').map(n => n[0]).join('')}
+                  {postUser?.displayName ? postUser.displayName.split(' ').map(n => n[0]).join('') : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <Link to={`/profile/${post.userId}`} className="font-medium hover:underline">
-                  {postUser?.displayName}
+                <Link to={`/profile/${postUser?.username || post.userId}`} className="font-medium hover:underline">
+                  {postUser?.displayName || "User"}
                 </Link>
                 {post.isProfessional && (
                   <Badge variant="outline" className="px-1.5 py-0 h-5 text-xs flex items-center gap-0.5 border-fenix/30 text-fenix-dark">
@@ -94,9 +115,9 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
                 )}
               </div>
               <div className="flex items-center text-xs text-muted-foreground">
-                <span>@{postUser?.username}</span>
+                <span>@{postUser?.username || "user"}</span>
                 <span className="px-1">•</span>
-                <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
+                <span>{safeFormatDate(post.createdAt)}</span>
               </div>
             </div>
           </div>
