@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -6,13 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { Search, Send, Plus, User, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useMessages } from '@/hooks/use-messages';
 
 // Helper function to safely parse dates
 const safeParseDate = (dateString: string | null): Date => {
@@ -33,9 +32,11 @@ const safeParseDate = (dateString: string | null): Date => {
 
 type Message = {
   id: string;
-  senderId: string;
+  sender_id: string;
+  receiver_id: string;
   content: string;
-  timestamp: Date;
+  created_at: Date;
+  is_read: boolean;
 };
 
 type Conversation = {
@@ -57,12 +58,14 @@ const Messages = () => {
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [activeUserId, setActiveUserId] = useState<string | null>(null);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingConversations, setLoadingConversations] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
   
+  // Use our new custom hook for messages
+  const { messages, isLoading: loadingMessages, sendMessage } = useMessages(activeUserId, user?.id || null);
+
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -154,41 +157,14 @@ const Messages = () => {
   const fetchMessages = async (conversationId: string, friendId: string) => {
     if (!user) return;
     
-    setLoadingMessages(true);
     setActiveConversation(conversationId);
-    
-    // For now, use mock messages
-    // In a real app, fetch from database
-    setMessages(SAMPLE_MESSAGES[conversationId] || []);
-    setLoadingMessages(false);
+    setActiveUserId(friendId);
   };
   
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !activeConversation || !user) return;
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !activeUserId || !user) return;
     
-    // Create new message
-    const message: Message = {
-      id: `m${Date.now()}`,
-      senderId: user.id,
-      content: newMessage,
-      timestamp: new Date()
-    };
-    
-    // Add message to the conversation
-    setMessages(prev => [...prev, message]);
-    
-    // Update last message in conversation list
-    setConversations(prev => prev.map(conv => 
-      conv.id === activeConversation 
-        ? { 
-            ...conv, 
-            lastMessage: newMessage, 
-            lastMessageTime: new Date() 
-          }
-        : conv
-    ));
-    
-    // Reset input
+    await sendMessage(newMessage);
     setNewMessage('');
   };
   
@@ -208,6 +184,11 @@ const Messages = () => {
     conv.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     conv.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const handleConversationClick = (conv: Conversation) => {
+    setActiveConversation(conv.id);
+    setActiveUserId(conv.userId);
+  };
   
   // Create a new conversation
   const handleNewConversation = () => {
@@ -263,7 +244,7 @@ const Messages = () => {
                           ? 'bg-secondary'
                           : 'hover:bg-secondary/50'
                       }`}
-                      onClick={() => fetchMessages(conv.id, conv.userId)}
+                      onClick={() => handleConversationClick(conv)}
                     >
                       <div className="relative">
                         <Avatar>
@@ -349,7 +330,7 @@ const Messages = () => {
                   ) : messages.length > 0 ? (
                     <div className="space-y-4">
                       {messages.map((message) => {
-                        const isOwnMessage = message.senderId === user?.id;
+                        const isOwnMessage = message.sender_id === user?.id;
                         
                         return (
                           <div 
@@ -379,7 +360,10 @@ const Messages = () => {
                                   {message.content}
                                 </div>
                                 <div className="text-xs text-muted-foreground mt-1">
-                                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  {new Date(message.created_at).toLocaleTimeString([], { 
+                                    hour: '2-digit', 
+                                    minute: '2-digit' 
+                                  })}
                                 </div>
                               </div>
                             </div>
@@ -463,47 +447,61 @@ const SAMPLE_MESSAGES: Record<string, Message[]> = {
   'conv1': [
     {
       id: 'm1',
-      senderId: '2',
+      sender_id: '2',
       content: 'Hey there!',
-      timestamp: new Date(Date.now() - 3600000 * 3)
+      created_at: new Date(Date.now() - 3600000 * 3).toISOString(),
+      receiver_id: '1',
+      is_read: true,
     },
     {
       id: 'm2',
-      senderId: '1',
+      sender_id: '1',
       content: 'Hi! How are you?',
-      timestamp: new Date(Date.now() - 3600000 * 2.5)
+      created_at: new Date(Date.now() - 3600000 * 2.5).toISOString(),
+      receiver_id: '2',
+      is_read: true,
     },
     {
       id: 'm3',
-      senderId: '2',
+      sender_id: '2',
       content: 'I\'m good, thanks! Just wondering if you\'re going to the study group tomorrow?',
-      timestamp: new Date(Date.now() - 3600000 * 2.3)
+      created_at: new Date(Date.now() - 3600000 * 2.3).toISOString(),
+      receiver_id: '1',
+      is_read: true,
     },
     {
       id: 'm4',
-      senderId: '2',
+      sender_id: '2',
       content: 'Hey, how are you doing?',
-      timestamp: new Date(Date.now() - 3600000 * 2)
+      created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+      receiver_id: '1',
+      is_read: true,
     }
   ],
   'conv2': [
     {
       id: 'm5',
-      senderId: '3',
+      sender_id: '3',
       content: 'Hi, have you started on the project yet?',
-      timestamp: new Date(Date.now() - 3600000 * 25)
+      created_at: new Date(Date.now() - 3600000 * 25).toISOString(),
+      receiver_id: '1',
+      is_read: true,
     },
     {
       id: 'm6',
-      senderId: '1',
+      sender_id: '1',
       content: 'Yes, I\'ve completed the first part. How about you?',
-      timestamp: new Date(Date.now() - 3600000 * 24.5)
+      created_at: new Date(Date.now() - 3600000 * 24.5).toISOString(),
+      receiver_id: '3',
+      is_read: true,
     },
     {
       id: 'm7',
-      senderId: '3',
+      sender_id: '3',
       content: 'Did you finish the assignment?',
-      timestamp: new Date(Date.now() - 3600000 * 24)
+      created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
+      receiver_id: '1',
+      is_read: true,
     }
   ]
 };
