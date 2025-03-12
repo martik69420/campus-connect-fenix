@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -141,7 +140,7 @@ const Profile = () => {
       if (user.id !== profile?.id) {
         const { data: friendData } = await supabase
           .from('friends')
-          .select('status')
+          .select('status, user_id')
           .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
           .or(`user_id.eq.${profile?.id},friend_id.eq.${profile?.id}`)
           .single();

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -90,7 +89,6 @@ const Messages = () => {
     setLoadingConversations(true);
     
     try {
-      // Check if we have friends in the database
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
         .select(`
@@ -98,26 +96,23 @@ const Messages = () => {
           user_id,
           friend_id,
           status,
-          profiles!friends_user_id_fkey (id, username, display_name, avatar_url),
-          profiles!friends_friend_id_fkey (id, username, display_name, avatar_url)
+          profiles!friends_friend_id_fkey:friend_id(id, username, display_name, avatar_url),
+          friend:profiles!friends_user_id_fkey(id, username, display_name, avatar_url)
         `)
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
         .eq('status', 'accepted');
         
       if (friendsError) {
         console.error("Error fetching friends:", friendsError);
-        // Fall back to mock data
         setConversations(getMockConversations());
         return;
       }
       
       if (friendsData && friendsData.length > 0) {
-        // Process friends data into conversations
         const conversationsFromFriends: Conversation[] = friendsData.map(friendship => {
-          // Determine which profile is the friend (not the current user)
           const friendProfile = friendship.user_id === user.id 
-            ? friendship.profiles.friends_friend_id_fkey
-            : friendship.profiles.friends_user_id_fkey;
+            ? friendship.profiles
+            : friendship.friend;
             
           return {
             id: friendship.id,
@@ -133,13 +128,11 @@ const Messages = () => {
         
         setConversations(conversationsFromFriends);
         
-        // Set first conversation as active by default
         if (conversationsFromFriends.length > 0 && !activeConversation) {
           setActiveConversation(conversationsFromFriends[0].id);
           fetchMessages(conversationsFromFriends[0].id, conversationsFromFriends[0].userId);
         }
       } else {
-        // No friends found, use mock data
         const mockConversations = getMockConversations();
         setConversations(mockConversations);
         
