@@ -68,7 +68,7 @@ const Friends = () => {
         }
       }
       
-      // Fetch friends (status = 'friends') - FIXED: changed from 'accepted' to 'friends'
+      // Fetch friends (status = 'friends')
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
         .select(`
@@ -84,6 +84,24 @@ const Friends = () => {
       if (friendsError) {
         console.error("Error fetching friends:", friendsError);
         throw friendsError;
+      }
+      
+      // Also fetch friends where the current user is the friend_id
+      const { data: reverseFriendsData, error: reverseFriendsError } = await supabase
+        .from('friends')
+        .select(`
+          id,
+          status,
+          created_at,
+          user_id,
+          profiles:user_id (*)
+        `)
+        .eq('friend_id', user.id)
+        .eq('status', 'friends');
+        
+      if (reverseFriendsError) {
+        console.error("Error fetching reverse friends:", reverseFriendsError);
+        throw reverseFriendsError;
       }
       
       // Fetch received pending requests (where the current user is the friend_id)
@@ -122,11 +140,21 @@ const Friends = () => {
         throw sentError;
       }
       
-      console.log("Friends data:", friendsData);
+      // Combine both friend lists (where user is user_id and where user is friend_id)
+      const allFriends = [
+        ...(friendsData || []),
+        ...(reverseFriendsData || []).map(item => ({
+          ...item,
+          friend_id: item.user_id,
+          profiles: item.profiles
+        }))
+      ];
+      
+      console.log("All friends combined:", allFriends);
       console.log("Received requests:", receivedRequests);
       console.log("Sent requests:", sentData);
       
-      setFriends(friendsData || []);
+      setFriends(allFriends);
       setPendingRequests(receivedRequests || []);
       setSentRequests(sentData || []);
       

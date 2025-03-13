@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -43,28 +44,22 @@ const Messages = () => {
 
   // Parse URL params to get initial active user
   useEffect(() => {
+    if (!user) return;
+    
     const params = new URLSearchParams(location.search);
     const userId = params.get('userId');
     if (userId) {
       console.log('URL parameter userId found:', userId);
       setActiveUserId(userId);
-      // Find the conversation for this userId
-      if (conversations.length > 0) {
-        const conversation = conversations.find(conv => conv.userId === userId);
-        if (conversation) {
-          setActiveConversation(conversation.id);
-          console.log('Setting active conversation from URL parameter:', conversation.id);
-        } else {
-          console.log('Conversation not found for userId:', userId);
-          // We need to fetch this user's details to create a conversation
-          fetchUserDetails(userId);
-        }
-      }
+      // We'll fetch this user's details regardless of whether they're in conversations
+      fetchUserDetails(userId);
     }
-  }, [location, conversations]);
+  }, [location, user]);
 
   // Add function to fetch user details when directly accessing via URL
   const fetchUserDetails = async (userId: string) => {
+    if (!user || !userId) return;
+    
     try {
       console.log('Fetching user details for:', userId);
       const { data, error } = await supabase
@@ -80,6 +75,15 @@ const Messages = () => {
       
       if (data) {
         console.log('User details fetched:', data);
+        
+        // Check if a conversation with this user already exists
+        const existingConv = conversations.find(conv => conv.userId === userId);
+        if (existingConv) {
+          console.log('Conversation already exists:', existingConv);
+          setActiveConversation(existingConv.id);
+          return;
+        }
+        
         // Create a temporary conversation object
         const tempConversation = {
           id: `temp-${userId}`,
@@ -93,9 +97,16 @@ const Messages = () => {
         };
         
         // Add this to conversations
-        setConversations(prev => [tempConversation, ...prev]);
+        setConversations(prev => {
+          // Only add if it doesn't already exist
+          if (!prev.some(conv => conv.userId === userId)) {
+            return [tempConversation, ...prev];
+          }
+          return prev;
+        });
+        
         // Set as active
-        setActiveConversation(tempConversation.id);
+        setActiveConversation(`temp-${userId}`);
       }
     } catch (err) {
       console.error('Error in fetchUserDetails:', err);
@@ -149,12 +160,14 @@ const Messages = () => {
           user_profile:profiles!friends_user_id_fkey(id, username, display_name, avatar_url)
         `)
         .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-        .eq('status', 'accepted');
+        .eq('status', 'friends');
         
       if (friendsError) {
         console.error("Error fetching friends:", friendsError);
         throw friendsError;
       }
+      
+      console.log("Friends data fetched:", friendsData);
       
       if (friendsData && friendsData.length > 0) {
         // Create conversations from friends
@@ -196,23 +209,31 @@ const Messages = () => {
         });
         
         const conversationsFromFriends = await Promise.all(conversationsPromises);
+        console.log("Conversations created from friends:", conversationsFromFriends);
+        
         setConversations(conversationsFromFriends);
         
-        // Set active conversation if specified in URL param
-        if (activeUserId && conversationsFromFriends.length > 0) {
-          const conversation = conversationsFromFriends.find(conv => conv.userId === activeUserId);
+        // Process URL parameter if present
+        const params = new URLSearchParams(location.search);
+        const urlUserId = params.get('userId');
+        
+        if (urlUserId) {
+          const conversation = conversationsFromFriends.find(conv => conv.userId === urlUserId);
           if (conversation) {
-            console.log('Setting active conversation from URL:', conversation.id);
+            console.log('Setting active conversation from URL parameter:', conversation.id);
             setActiveConversation(conversation.id);
           } else {
-            console.log('Conversation from URL not found in friends list, fetching user details');
-            fetchUserDetails(activeUserId);
+            // If not found in friends, fetch user details to create a temp conversation
+            console.log('Friend not found in conversations, fetching details');
+            fetchUserDetails(urlUserId);
           }
         } else if (conversationsFromFriends.length > 0 && !activeConversation) {
+          // Set first conversation as active if none selected
           setActiveConversation(conversationsFromFriends[0].id);
           setActiveUserId(conversationsFromFriends[0].userId);
         }
       } else {
+        console.log("No friends found, using sample conversations");
         // If no friends, use sample conversations
         const sampleConversations = getSampleConversations();
         setConversations(sampleConversations);

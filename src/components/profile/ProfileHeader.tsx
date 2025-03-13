@@ -62,6 +62,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   const handleMessageClick = () => {
     if (profileUser && profileUser.id) {
+      console.log("Navigating to messages with user:", profileUser.id);
       navigate(`/messages?userId=${profileUser.id}`);
     }
   };

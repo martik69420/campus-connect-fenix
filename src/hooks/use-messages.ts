@@ -26,7 +26,8 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     const fetchMessages = async () => {
       try {
         setIsLoading(true);
-        // Use parameters instead of string interpolation to avoid SQL injection
+        console.log(`Fetching messages between ${userId} and ${chatPartnerId}`);
+        
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -43,7 +44,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           return;
         }
 
-        console.log('Fetched messages between', userId, 'and', chatPartnerId, ':', data);
+        console.log('Fetched messages:', data);
         setMessages(data || []);
       } catch (error: any) {
         console.error('Error in fetchMessages:', error);
@@ -61,55 +62,40 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
     // Set up Realtime subscription for messages
     const channel = supabase
-      .channel('messages_changes')
+      .channel('messages-channel-' + chatPartnerId)
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'messages',
-          filter: `sender_id=eq.${userId}`,
+          filter: `or(and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId}))`,
         },
         (payload) => {
-          console.log('Received sender message:', payload.new);
-          setMessages((current) => [...current, payload.new as Message]);
+          console.log('Realtime message update:', payload);
+          if (payload.eventType === 'INSERT') {
+            // Add new message to the list
+            setMessages((current) => [...current, payload.new as Message]);
+            
+            // Mark as read if we're the receiver
+            if (payload.new.receiver_id === userId) {
+              markMessageAsRead(payload.new.id);
+            }
+          } else if (payload.eventType === 'UPDATE') {
+            // Update existing message
+            setMessages((current) => 
+              current.map(msg => 
+                msg.id === payload.new.id ? payload.new as Message : msg
+              )
+            );
+          }
         }
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${userId}`,
-        },
-        (payload) => {
-          console.log('Received receiver message:', payload.new);
-          setMessages((current) => [...current, payload.new as Message]);
-          // Automatically mark messages as read when received
-          markMessageAsRead(payload.new.id);
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${userId}`,
-        },
-        (payload) => {
-          console.log('Message updated:', payload.new);
-          setMessages((current) => 
-            current.map(msg => 
-              msg.id === payload.new.id ? payload.new as Message : msg
-            )
-          );
-        }
-      )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
-    console.log('Subscribed to messages channel');
+    console.log('Subscribed to messages channel for', chatPartnerId);
 
     return () => {
       console.log('Unsubscribing from messages channel');
@@ -136,8 +122,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           description: error.message,
           variant: 'destructive'
         });
+        return null;
       } else {
         console.log('Message sent successfully:', data);
+        return data[0];
       }
     } catch (error: any) {
       console.error('Error in sendMessage:', error);
@@ -146,6 +134,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         description: error.message,
         variant: 'destructive'
       });
+      return null;
     }
   };
 
