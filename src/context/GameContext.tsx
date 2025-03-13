@@ -9,6 +9,11 @@ export type GameProgress = {
     gamesPlayed: number;
     lastPlayed?: Date;
   };
+  snake: {
+    highScore: number;
+    gamesPlayed: number;
+    lastPlayed?: Date;
+  };
   // Add more games as needed
 };
 
@@ -16,6 +21,7 @@ export type GameProgress = {
 type GameContextType = {
   progress: GameProgress;
   updateTriviaScore: (score: number) => void;
+  updateSnakeScore: (score: number) => void;
   hasDailyRewardAvailable: boolean;
   claimDailyReward: () => boolean;
   lastRewardClaimed: Date | null;
@@ -29,6 +35,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { user, addCoins } = useAuth();
   const [progress, setProgress] = useState<GameProgress>({
     trivia: {
+      highScore: 0,
+      gamesPlayed: 0,
+    },
+    snake: {
       highScore: 0,
       gamesPlayed: 0,
     }
@@ -86,11 +96,38 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  // Update snake game score
+  const updateSnakeScore = (score: number) => {
+    if (!user) return;
+    
+    setProgress(prev => {
+      const newHighScore = score > prev.snake.highScore;
+      
+      if (newHighScore) {
+        // Award coins for new high score
+        addCoins(score * 2, "New snake high score");
+      } else {
+        // Award some coins for playing
+        addCoins(Math.floor(score / 2), "Snake game played");
+      }
+      
+      return {
+        ...prev,
+        snake: {
+          highScore: newHighScore ? score : prev.snake.highScore,
+          gamesPlayed: prev.snake.gamesPlayed + 1,
+          lastPlayed: new Date()
+        }
+      };
+    });
+  };
+
   return (
     <GameContext.Provider
       value={{
         progress,
         updateTriviaScore,
+        updateSnakeScore,
         hasDailyRewardAvailable: hasDailyRewardAvailable(),
         claimDailyReward,
         lastRewardClaimed
