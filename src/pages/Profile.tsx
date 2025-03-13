@@ -84,7 +84,7 @@ const Profile = () => {
       
       setProfile(profileData);
       
-      // Check if this user is a friend
+      // Check if this user is a friend - FIXED: changed from 'accepted' to 'friends'
       if (profileData && user.id !== profileData.id) {
         const { data: friendData } = await supabase
           .from('friends')
@@ -93,7 +93,7 @@ const Profile = () => {
           .maybeSingle();
           
         if (friendData) {
-          if (friendData.status === 'accepted') {
+          if (friendData.status === 'friends') {
             setFriendStatus('friends');
           } else if (friendData.user_id === user.id) {
             setFriendStatus('pending_sent');
@@ -212,10 +212,10 @@ const Profile = () => {
         });
       } 
       else if (friendStatus === 'pending_received') {
-        // Accept friend request
+        // Accept friend request - FIXED: changed from 'accepted' to 'friends'
         const { error } = await supabase
           .from('friends')
-          .update({ status: 'accepted' })
+          .update({ status: 'friends' })
           .or(`and(user_id.eq.${user.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${user.id})`);
           
         if (error) throw error;

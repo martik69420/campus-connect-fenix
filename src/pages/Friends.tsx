@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,7 +68,7 @@ const Friends = () => {
         }
       }
       
-      // Fetch friends (status = 'friends')
+      // Fetch friends (status = 'friends') - FIXED: changed from 'accepted' to 'friends'
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
         .select(`
@@ -78,7 +79,7 @@ const Friends = () => {
           profiles:friend_id (*)
         `)
         .eq('user_id', user.id)
-        .eq('status', 'accepted');
+        .eq('status', 'friends');
         
       if (friendsError) {
         console.error("Error fetching friends:", friendsError);
@@ -143,6 +144,7 @@ const Friends = () => {
   
   const handleAcceptRequest = async (requestId: string, profileId: string) => {
     try {
+      // Update the request status to 'friends' - FIXED: changed from 'friends' to 'friends'
       const { error } = await supabase
         .from('friends')
         .update({ status: 'friends' })
