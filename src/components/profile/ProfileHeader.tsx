@@ -61,7 +61,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
 
   const handleMessageClick = () => {
-    navigate(`/messages?userId=${profileUser.id}`);
+    if (profileUser && profileUser.id) {
+      navigate(`/messages?userId=${profileUser.id}`);
+    }
   };
 
   return (
@@ -98,14 +100,16 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               </Button>
             ) : (
               <>
-                <Button 
-                  variant="outline" 
-                  className="gap-1.5"
-                  onClick={handleMessageClick}
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Message
-                </Button>
+                {friendStatus === 'friends' && (
+                  <Button 
+                    variant="outline" 
+                    className="gap-1.5"
+                    onClick={handleMessageClick}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    Message
+                  </Button>
+                )}
                 <Button
                   variant={getFriendButtonVariant()}
                   className="gap-1.5"

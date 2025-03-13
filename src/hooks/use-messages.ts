@@ -26,7 +26,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     const fetchMessages = async () => {
       try {
         setIsLoading(true);
-        // Fix the query parameter interpolation using proper parameterized queries
+        // Use parameters instead of string interpolation to avoid SQL injection
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -43,6 +43,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           return;
         }
 
+        console.log('Fetched messages between', userId, 'and', chatPartnerId, ':', data);
         setMessages(data || []);
       } catch (error: any) {
         console.error('Error in fetchMessages:', error);
@@ -67,9 +68,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `sender_id=eq.${userId},receiver_id=eq.${chatPartnerId}`,
+          filter: `sender_id=eq.${userId}`,
         },
         (payload) => {
+          console.log('Received sender message:', payload.new);
           setMessages((current) => [...current, payload.new as Message]);
         }
       )
@@ -79,9 +81,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           event: 'INSERT',
           schema: 'public',
           table: 'messages',
-          filter: `sender_id=eq.${chatPartnerId},receiver_id=eq.${userId}`,
+          filter: `receiver_id=eq.${userId}`,
         },
         (payload) => {
+          console.log('Received receiver message:', payload.new);
           setMessages((current) => [...current, payload.new as Message]);
           // Automatically mark messages as read when received
           markMessageAsRead(payload.new.id);
@@ -93,9 +96,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           event: 'UPDATE',
           schema: 'public',
           table: 'messages',
-          filter: `sender_id=eq.${chatPartnerId},receiver_id=eq.${userId}`,
+          filter: `receiver_id=eq.${userId}`,
         },
         (payload) => {
+          console.log('Message updated:', payload.new);
           setMessages((current) => 
             current.map(msg => 
               msg.id === payload.new.id ? payload.new as Message : msg
@@ -105,7 +109,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
       )
       .subscribe();
 
+    console.log('Subscribed to messages channel');
+
     return () => {
+      console.log('Unsubscribing from messages channel');
       supabase.removeChannel(channel);
     };
   }, [chatPartnerId, userId, toast]);
@@ -114,12 +121,13 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     if (!chatPartnerId || !userId || !content.trim()) return;
 
     try {
-      const { error } = await supabase.from('messages').insert({
+      console.log('Sending message from', userId, 'to', chatPartnerId, ':', content);
+      const { data, error } = await supabase.from('messages').insert({
         sender_id: userId,
         receiver_id: chatPartnerId,
         content: content.trim(),
         is_read: false
-      });
+      }).select();
 
       if (error) {
         console.error('Error sending message:', error);
@@ -128,6 +136,8 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           description: error.message,
           variant: 'destructive'
         });
+      } else {
+        console.log('Message sent successfully:', data);
       }
     } catch (error: any) {
       console.error('Error in sendMessage:', error);
@@ -141,6 +151,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
   const markMessageAsRead = async (messageId: string) => {
     try {
+      console.log('Marking message as read:', messageId);
       const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
@@ -158,6 +169,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     if (!chatPartnerId || !userId) return;
     
     try {
+      console.log('Marking all messages from', chatPartnerId, 'as read');
       const { error } = await supabase
         .from('messages')
         .update({ is_read: true })

@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card } from '@/components/ui/card';
@@ -47,10 +46,62 @@ const Messages = () => {
     const params = new URLSearchParams(location.search);
     const userId = params.get('userId');
     if (userId) {
+      console.log('URL parameter userId found:', userId);
       setActiveUserId(userId);
+      // Find the conversation for this userId
+      if (conversations.length > 0) {
+        const conversation = conversations.find(conv => conv.userId === userId);
+        if (conversation) {
+          setActiveConversation(conversation.id);
+          console.log('Setting active conversation from URL parameter:', conversation.id);
+        } else {
+          console.log('Conversation not found for userId:', userId);
+          // We need to fetch this user's details to create a conversation
+          fetchUserDetails(userId);
+        }
+      }
     }
-  }, [location]);
+  }, [location, conversations]);
 
+  // Add function to fetch user details when directly accessing via URL
+  const fetchUserDetails = async (userId: string) => {
+    try {
+      console.log('Fetching user details for:', userId);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+        
+      if (error) {
+        console.error('Error fetching user details:', error);
+        return;
+      }
+      
+      if (data) {
+        console.log('User details fetched:', data);
+        // Create a temporary conversation object
+        const tempConversation = {
+          id: `temp-${userId}`,
+          userId: userId,
+          username: data.username,
+          displayName: data.display_name,
+          avatar: data.avatar_url || '/placeholder.svg',
+          lastMessage: "No messages yet",
+          lastMessageTime: new Date(),
+          unread: 0
+        };
+        
+        // Add this to conversations
+        setConversations(prev => [tempConversation, ...prev]);
+        // Set as active
+        setActiveConversation(tempConversation.id);
+      }
+    } catch (err) {
+      console.error('Error in fetchUserDetails:', err);
+    }
+  };
+  
   // Redirect if not authenticated
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -85,6 +136,7 @@ const Messages = () => {
     setLoadingConversations(true);
     
     try {
+      console.log('Fetching conversations for user:', user.id);
       // Get all friends
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
@@ -147,10 +199,14 @@ const Messages = () => {
         setConversations(conversationsFromFriends);
         
         // Set active conversation if specified in URL param
-        if (activeUserId) {
+        if (activeUserId && conversationsFromFriends.length > 0) {
           const conversation = conversationsFromFriends.find(conv => conv.userId === activeUserId);
           if (conversation) {
+            console.log('Setting active conversation from URL:', conversation.id);
             setActiveConversation(conversation.id);
+          } else {
+            console.log('Conversation from URL not found in friends list, fetching user details');
+            fetchUserDetails(activeUserId);
           }
         } else if (conversationsFromFriends.length > 0 && !activeConversation) {
           setActiveConversation(conversationsFromFriends[0].id);
