@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from './use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 interface Message {
   id: string;
@@ -16,9 +17,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (!chatPartnerId || !userId) {
+    if (!chatPartnerId || !userId || !isAuthenticated) {
       setIsLoading(false);
       return;
     }
@@ -101,10 +103,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
       console.log('Unsubscribing from messages channel');
       supabase.removeChannel(channel);
     };
-  }, [chatPartnerId, userId, toast]);
+  }, [chatPartnerId, userId, toast, isAuthenticated]);
 
   const sendMessage = async (content: string) => {
-    if (!chatPartnerId || !userId || !content.trim()) return;
+    if (!chatPartnerId || !userId || !content.trim() || !isAuthenticated) return null;
 
     try {
       console.log('Sending message from', userId, 'to', chatPartnerId, ':', content);
@@ -139,6 +141,8 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   };
 
   const markMessageAsRead = async (messageId: string) => {
+    if (!isAuthenticated) return;
+    
     try {
       console.log('Marking message as read:', messageId);
       const { error } = await supabase
@@ -155,7 +159,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   };
 
   const markMessagesAsRead = async () => {
-    if (!chatPartnerId || !userId) return;
+    if (!chatPartnerId || !userId || !isAuthenticated) return;
     
     try {
       console.log('Marking all messages from', chatPartnerId, 'as read');
