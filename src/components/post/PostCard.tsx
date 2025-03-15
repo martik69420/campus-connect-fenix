@@ -2,18 +2,18 @@
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, MoreHorizontal, Briefcase } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Post, usePost } from "@/context/PostContext";
 import { useAuth } from "@/context/AuthContext";
 import CommentSection from "./CommentSection";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 // Helper function to safely format dates
 const safeFormatDate = (date: Date | string | null | undefined) => {
@@ -35,19 +35,73 @@ const safeFormatDate = (date: Date | string | null | undefined) => {
   }
 };
 
+// Function to parse content and convert @mentions to links
+const parseContent = (content: string) => {
+  const mentionRegex = /@(\w+)/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(content)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      parts.push(content.substring(lastIndex, match.index));
+    }
+    
+    // Add the mention as a link
+    const username = match[1];
+    parts.push(
+      <Link 
+        key={`mention-${match.index}`} 
+        to={`/profile/${username}`} 
+        className="text-primary font-medium hover:underline"
+      >
+        @{username}
+      </Link>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add any remaining text
+  if (lastIndex < content.length) {
+    parts.push(content.substring(lastIndex));
+  }
+  
+  return parts.length > 0 ? parts : content;
+};
+
 interface PostCardProps {
   post: Post;
   onAction?: () => void | Promise<void>;
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
-  const { getUserById, likePost, commentOnPost, sharePost, deletePost } = usePost();
+  const { likePost, commentOnPost, sharePost, deletePost } = usePost();
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [postUser, setPostUser] = useState<any>(null);
   
-  const postUser = getUserById(post.userId);
+  React.useEffect(() => {
+    const fetchPostUser = async () => {
+      if (post.userId) {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('username, display_name, avatar_url')
+          .eq('id', post.userId)
+          .single();
+          
+        if (!error && data) {
+          setPostUser(data);
+        }
+      }
+    };
+    
+    fetchPostUser();
+  }, [post.userId]);
+  
   const isLiked = user ? post.likes.includes(user.id) : false;
   
   const handleLike = () => {
@@ -94,25 +148,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
       <Card className="overflow-hidden mb-4 border-border">
         <CardHeader className="p-4 pb-0 flex flex-row items-start justify-between space-y-0">
           <div className="flex items-start gap-3">
-            <Link to={`/profile/${postUser?.username || post.userId}`}>
+            <Link to={postUser ? `/profile/${postUser.username}` : "#"}>
               <Avatar className="h-10 w-10 border border-border">
-                <AvatarImage src={postUser?.avatar} alt={postUser?.displayName} />
+                <AvatarImage src={postUser?.avatar_url || "/placeholder.svg"} alt={postUser?.display_name || "User"} />
                 <AvatarFallback className="bg-muted text-foreground font-medium">
-                  {postUser?.displayName ? postUser.displayName.split(' ').map(n => n[0]).join('') : 'U'}
+                  {postUser?.display_name ? postUser.display_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
                 </AvatarFallback>
               </Avatar>
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <Link to={`/profile/${postUser?.username || post.userId}`} className="font-medium hover:underline">
-                  {postUser?.displayName || "User"}
+                <Link to={postUser ? `/profile/${postUser.username}` : "#"} className="font-medium hover:underline">
+                  {postUser?.display_name || "User"}
                 </Link>
-                {post.isProfessional && (
-                  <Badge variant="outline" className="px-1.5 py-0 h-5 text-xs flex items-center gap-0.5 border-fenix/30 text-fenix-dark">
-                    <Briefcase className="h-3 w-3" />
-                    <span>Pro</span>
-                  </Badge>
-                )}
               </div>
               <div className="flex items-center text-xs text-muted-foreground">
                 <span>@{postUser?.username || "user"}</span>
@@ -142,7 +190,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
         </CardHeader>
         
         <CardContent className="p-4">
-          <p className="whitespace-pre-wrap">{post.content}</p>
+          <p className="whitespace-pre-wrap">{parseContent(post.content)}</p>
           
           {post.images && post.images.length > 0 && (
             <div className={cn(

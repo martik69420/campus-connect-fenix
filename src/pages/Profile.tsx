@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -84,7 +85,7 @@ const Profile = () => {
       
       setProfile(profileData);
       
-      // Check if this user is a friend - FIXED: changed from 'accepted' to 'friends'
+      // Check if this user is a friend
       if (profileData && user.id !== profileData.id) {
         const { data: friendData } = await supabase
           .from('friends')
@@ -135,14 +136,8 @@ const Profile = () => {
           id,
           content,
           images,
-          is_professional,
           created_at,
           user_id,
-          profiles:user_id (
-            username,
-            display_name,
-            avatar_url
-          ),
           likes:likes(id, user_id),
           comments:comments(id, content, user_id, created_at)
         `)
@@ -161,9 +156,7 @@ const Profile = () => {
           content: post.content,
           images: post.images || [],
           created_at: post.created_at,
-          is_professional: post.is_professional,
           user_id: post.user_id,
-          profiles: post.profiles,
           likes: (post.likes || []).map(like => like.user_id || like.id),
           comments: (post.comments || []).map(comment => ({
             id: comment.id,
@@ -212,7 +205,7 @@ const Profile = () => {
         });
       } 
       else if (friendStatus === 'pending_received') {
-        // Accept friend request - FIXED: changed from 'accepted' to 'friends'
+        // Accept friend request
         const { error } = await supabase
           .from('friends')
           .update({ status: 'friends' })
@@ -302,7 +295,6 @@ const Profile = () => {
         <Tabs defaultValue="posts" className="w-full mt-6">
           <TabsList className="mb-4">
             <TabsTrigger value="posts">Posts</TabsTrigger>
-            <TabsTrigger value="professional">Professional</TabsTrigger>
             {isOwnProfile && <TabsTrigger value="saved">Saved</TabsTrigger>}
           </TabsList>
           
@@ -337,8 +329,7 @@ const Profile = () => {
                     createdAt: safeParseDate(post.created_at),
                     likes: post.likes || [],
                     comments: post.comments || [],
-                    shares: 0,
-                    isProfessional: post.is_professional
+                    shares: 0
                   }} 
                   onAction={refreshPosts} 
                 />
@@ -348,55 +339,6 @@ const Profile = () => {
                 <h3 className="text-lg font-medium">No posts yet</h3>
                 <p className="text-muted-foreground mt-1">
                   {isOwnProfile ? "You haven't posted anything yet." : `${profile.display_name} hasn't posted anything yet.`}
-                </p>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="professional" className="space-y-6">
-            {loadingPosts ? (
-              Array.from({ length: 2 }).map((_, i) => (
-                <div key={i} className="rounded-lg border shadow-sm p-4 space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Skeleton className="h-12 w-12 rounded-full" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-32" />
-                      <Skeleton className="h-3 w-20" />
-                    </div>
-                  </div>
-                  <Skeleton className="h-24 w-full" />
-                  <div className="flex space-x-4">
-                    <Skeleton className="h-8 w-16" />
-                    <Skeleton className="h-8 w-16" />
-                    <Skeleton className="h-8 w-16" />
-                  </div>
-                </div>
-              ))
-            ) : posts.filter(p => p.is_professional).length > 0 ? (
-              posts.filter(p => p.is_professional).map((post) => (
-                <PostCard 
-                  key={post.id} 
-                  post={{
-                    id: post.id,
-                    userId: post.user_id,
-                    content: post.content,
-                    images: post.images,
-                    createdAt: safeParseDate(post.created_at),
-                    likes: post.likes || [],
-                    comments: post.comments || [],
-                    shares: 0,
-                    isProfessional: post.is_professional
-                  }} 
-                  onAction={refreshPosts}
-                />
-              ))
-            ) : (
-              <div className="text-center py-10">
-                <h3 className="text-lg font-medium">No professional posts yet</h3>
-                <p className="text-muted-foreground mt-1">
-                  {isOwnProfile 
-                    ? "Share your professional achievements and insights!" 
-                    : `${profile.display_name} hasn't shared any professional posts yet.`}
                 </p>
               </div>
             )}

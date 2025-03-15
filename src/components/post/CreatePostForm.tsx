@@ -4,10 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Image as ImageIcon, X, Loader2 } from 'lucide-react';
+import { Image as ImageIcon, X, Loader2, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { usePost } from '@/context/PostContext';
@@ -18,11 +16,12 @@ interface CreatePostFormProps {
 
 const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
-  const [isProfessional, setIsProfessional] = useState(false);
   const [images, setImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showMentions, setShowMentions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -58,6 +57,25 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
   
+  // Insert mention
+  const insertMention = () => {
+    if (textareaRef.current) {
+      const cursorPos = textareaRef.current.selectionStart;
+      const textBefore = content.substring(0, cursorPos);
+      const textAfter = content.substring(cursorPos);
+      
+      setContent(textBefore + '@' + textAfter);
+      
+      // Focus and place cursor after the @
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = cursorPos + 1;
+        }
+      }, 0);
+    }
+  };
+  
   // Handle post submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,12 +92,11 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     setIsSubmitting(true);
     
     // Create post
-    createPost(content, images.length > 0 ? images : undefined, isProfessional);
+    createPost(content, images.length > 0 ? images : undefined);
     
     // Reset form
     setContent('');
     setImages([]);
-    setIsProfessional(false);
     setIsSubmitting(false);
     
     toast({
@@ -109,6 +126,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 className="min-h-[100px] resize-none"
+                ref={textareaRef}
               />
               
               <AnimatePresence>
@@ -128,7 +146,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
                         exit={{ opacity: 0, scale: 0.8 }}
                         transition={{ duration: 0.2 }}
                       >
-                        <img src={img} alt={`Selected ${index}`} className="w-full h-32 object-cover" />
+                        <img src={img} alt={`Selected ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
                         <Button
                           type="button"
                           variant="destructive"
@@ -170,16 +188,16 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
                     onChange={handleImageSelect}
                   />
                   
-                  <div className="flex items-center space-x-2">
-                    <Switch
-                      id="pro-mode"
-                      checked={isProfessional}
-                      onCheckedChange={setIsProfessional}
-                    />
-                    <Label htmlFor="pro-mode" className="text-sm cursor-pointer">
-                      Professional
-                    </Label>
-                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-muted-foreground"
+                    onClick={insertMention}
+                  >
+                    <AtSign className="h-4 w-4 mr-2" />
+                    Mention
+                  </Button>
                 </div>
                 
                 <Button

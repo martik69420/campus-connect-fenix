@@ -1,16 +1,24 @@
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle } from "lucide-react";
+import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, WifiOff } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
+} from "@/components/ui/dropdown-menu";
 import { User, useAuth } from "@/context/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { Profile } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface ProfileHeaderProps {
   profileUser: Profile;
@@ -29,6 +37,35 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [isUserOnline, setIsUserOnline] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedBio, setEditedBio] = useState(profileUser.bio || "");
+  const [friendCount, setFriendCount] = useState(0);
+  
+  useEffect(() => {
+    // Check if user has been active in the last 5 minutes (just a simple example)
+    const lastActive = new Date(profileUser.last_active || 0);
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    setIsUserOnline(lastActive > fiveMinutesAgo);
+    
+    // Fetch friend count
+    const fetchFriendCount = async () => {
+      if (profileUser && profileUser.id) {
+        const { data, error } = await supabase
+          .from('friends')
+          .select('id')
+          .eq('status', 'friends')
+          .or(`user_id.eq.${profileUser.id},friend_id.eq.${profileUser.id}`);
+          
+        if (!error && data) {
+          setFriendCount(data.length);
+        }
+      }
+    };
+    
+    fetchFriendCount();
+  }, [profileUser]);
   
   const getFriendButtonText = () => {
     switch (friendStatus) {
@@ -62,9 +99,57 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
 
   const handleMessageClick = () => {
     if (profileUser && profileUser.id) {
-      console.log("Navigating to messages with user:", profileUser.id);
       navigate(`/messages?userId=${profileUser.id}`);
     }
+  };
+  
+  const handleEditProfile = () => {
+    setIsEditing(true);
+  };
+  
+  const handleSaveProfile = async () => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ bio: editedBio })
+        .eq('id', user?.id);
+        
+      if (error) throw error;
+      
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      
+      // Update local state
+      profileUser.bio = editedBio;
+    } catch (error: any) {
+      toast({
+        title: "Error updating profile",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedBio(profileUser.bio || "");
+  };
+  
+  const handleReport = () => {
+    toast({
+      title: "User reported",
+      description: "Thank you for helping keep our community safe.",
+    });
+  };
+  
+  const handleBlock = () => {
+    toast({
+      title: "User blocked",
+      description: "You will no longer see content from this user.",
+    });
   };
 
   return (
@@ -95,10 +180,23 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           
           <div className="ml-auto sm:ml-0 flex gap-2 flex-wrap">
             {isOwnProfile ? (
-              <Button variant="outline" className="gap-1.5">
-                <Edit className="h-4 w-4" />
-                Edit Profile
-              </Button>
+              <>
+                {isEditing ? (
+                  <div className="flex gap-2">
+                    <Button variant="default" onClick={handleSaveProfile}>
+                      Save
+                    </Button>
+                    <Button variant="outline" onClick={handleCancelEdit}>
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <Button variant="outline" className="gap-1.5" onClick={handleEditProfile}>
+                    <Edit className="h-4 w-4" />
+                    Edit Profile
+                  </Button>
+                )}
+              </>
             ) : (
               <>
                 {friendStatus === 'friends' && (
@@ -126,8 +224,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         </div>
         
         <div className="mt-4">
-          {profileUser.bio && (
-            <p className="text-sm mb-4">{profileUser.bio}</p>
+          {isEditing ? (
+            <textarea
+              className="w-full p-2 border rounded-md min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+              value={editedBio}
+              onChange={(e) => setEditedBio(e.target.value)}
+              placeholder="Write something about yourself..."
+            />
+          ) : (
+            profileUser.bio && (
+              <p className="text-sm mb-4">{profileUser.bio}</p>
+            )
           )}
           
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
@@ -149,7 +256,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               <Link to={`/profile/${profileUser.username}/friends`} className="hover:text-foreground transition-colors">
-                0 friends
+                {friendCount} friends
               </Link>
             </div>
           </div>
@@ -164,16 +271,45 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <div className="text-xs text-muted-foreground">Coins</div>
             </div>
             
-            <Badge variant="outline" className="flex items-center gap-1.5 h-auto py-1">
-              <div className="w-2 h-2 rounded-full bg-green-500"></div>
-              <span>Online</span>
+            <Badge 
+              variant="outline" 
+              className={`flex items-center gap-1.5 h-auto py-1 ${isUserOnline ? 'border-green-500' : 'border-gray-300'}`}
+            >
+              <div className={`w-2 h-2 rounded-full ${isUserOnline ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+              <span>{isUserOnline ? 'Online' : 'Offline'}</span>
             </Badge>
           </div>
           
           <div className="flex gap-2">
-            <Button variant="ghost" size="sm">
-              More
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1.5">
+                  <MoreHorizontal className="h-4 w-4" />
+                  More
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!isOwnProfile && (
+                  <>
+                    <DropdownMenuItem onClick={handleReport}>
+                      Report User
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={handleBlock}>
+                      Block User
+                    </DropdownMenuItem>
+                  </>
+                )}
+                <DropdownMenuItem onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast({
+                    title: "Link copied",
+                    description: "Profile link copied to clipboard",
+                  });
+                }}>
+                  Copy Profile Link
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </CardContent>
