@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, WifiOff } from "lucide-react";
+import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, ShieldAlert, UserX } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +19,7 @@ import { motion } from "framer-motion";
 import { Profile } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import ReportModal from "../ReportModal";
 
 export interface ProfileHeaderProps {
   profileUser: Profile;
@@ -41,11 +43,47 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedBio, setEditedBio] = useState(profileUser.bio || "");
   const [friendCount, setFriendCount] = useState(0);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [lastActive, setLastActive] = useState<Date | null>(null);
   
   useEffect(() => {
-    // For now, let's set a default online status since last_active isn't available
-    // We can update this with actual online status logic when the field is added to the database
-    setIsUserOnline(false);
+    // Fetch online status and last active time
+    const fetchOnlineStatus = async () => {
+      if (profileUser && profileUser.id) {
+        const { data, error } = await supabase
+          .from('user_status')
+          .select('is_online, last_active')
+          .eq('user_id', profileUser.id)
+          .single();
+          
+        if (!error && data) {
+          setIsUserOnline(data.is_online);
+          setLastActive(data.last_active ? new Date(data.last_active) : null);
+        }
+      }
+    };
+    
+    fetchOnlineStatus();
+    
+    // Setup real-time subscriptions for online status changes
+    const statusChannel = supabase
+      .channel('user-status-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_status',
+          filter: `user_id=eq.${profileUser.id}`
+        },
+        (payload) => {
+          if (payload.new) {
+            setIsUserOnline(payload.new.is_online);
+            setLastActive(payload.new.last_active ? new Date(payload.new.last_active) : null);
+          }
+        }
+      )
+      .subscribe();
     
     // Fetch friend count
     const fetchFriendCount = async () => {
@@ -63,7 +101,32 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     };
     
     fetchFriendCount();
-  }, [profileUser]);
+    
+    // Set our own online status when viewing profiles
+    const updateMyOnlineStatus = async () => {
+      if (user && user.id) {
+        const { error } = await supabase
+          .from('user_status')
+          .upsert({
+            user_id: user.id,
+            is_online: true,
+            last_active: new Date().toISOString()
+          }, { onConflict: 'user_id' });
+          
+        if (error) console.error('Error updating online status:', error);
+      }
+    };
+    
+    updateMyOnlineStatus();
+    
+    // Set up interval to update last_active
+    const interval = setInterval(updateMyOnlineStatus, 2 * 60 * 1000);
+    
+    return () => {
+      supabase.removeChannel(statusChannel);
+      clearInterval(interval);
+    };
+  }, [profileUser.id, user?.id]);
   
   const getFriendButtonText = () => {
     switch (friendStatus) {
@@ -137,181 +200,221 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   };
   
   const handleReport = () => {
-    toast({
-      title: "User reported",
-      description: "Thank you for helping keep our community safe.",
-    });
+    setShowReportModal(true);
   };
   
-  const handleBlock = () => {
-    toast({
-      title: "User blocked",
-      description: "You will no longer see content from this user.",
-    });
+  const handleBlock = async () => {
+    if (!user || !profileUser) return;
+    
+    try {
+      const { error } = await supabase
+        .from('user_blocks')
+        .insert({
+          user_id: user.id,
+          blocked_user_id: profileUser.id
+        });
+        
+      if (error) throw error;
+      
+      toast({
+        title: "User blocked",
+        description: `You've blocked ${profileUser.display_name}. You won't see their content anymore.`,
+      });
+      
+      // Navigate away from the profile
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: "Error blocking user",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   return (
-    <Card className="overflow-hidden mb-6">
-      <div className="h-32 bg-gradient-to-r from-primary/30 to-primary/10"></div>
-      
-      <CardContent className="pt-0">
-        <div className="-mt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div className="flex items-end gap-4">
-            <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Avatar className="h-24 w-24 border-4 border-background">
-                <AvatarImage src={profileUser.avatar_url || "/placeholder.svg"} alt={profileUser.display_name} />
-                <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
-                  {profileUser.display_name.split(' ').map(n => n[0]).join('')}
-                </AvatarFallback>
-              </Avatar>
-            </motion.div>
-            
-            <div className="pb-1">
-              <h2 className="text-2xl font-bold">{profileUser.display_name}</h2>
-              <p className="text-muted-foreground">@{profileUser.username}</p>
-            </div>
-          </div>
-          
-          <div className="ml-auto sm:ml-0 flex gap-2 flex-wrap">
-            {isOwnProfile ? (
-              <>
-                {isEditing ? (
-                  <div className="flex gap-2">
-                    <Button variant="default" onClick={handleSaveProfile}>
-                      Save
-                    </Button>
-                    <Button variant="outline" onClick={handleCancelEdit}>
-                      Cancel
-                    </Button>
-                  </div>
-                ) : (
-                  <Button variant="outline" className="gap-1.5" onClick={handleEditProfile}>
-                    <Edit className="h-4 w-4" />
-                    Edit Profile
-                  </Button>
+    <>
+      <Card className="overflow-hidden mb-6">
+        <div className="h-32 bg-gradient-to-r from-primary/30 to-primary/10"></div>
+        
+        <CardContent className="pt-0">
+          <div className="-mt-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div className="flex items-end gap-4">
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+              >
+                <Avatar className="h-24 w-24 border-4 border-background">
+                  <AvatarImage src={profileUser.avatar_url || "/placeholder.svg"} alt={profileUser.display_name} />
+                  <AvatarFallback className="text-2xl font-bold bg-primary text-primary-foreground">
+                    {profileUser.display_name.split(' ').map(n => n[0]).join('')}
+                  </AvatarFallback>
+                </Avatar>
+                
+                {isUserOnline && (
+                  <div className="absolute w-5 h-5 bg-green-500 rounded-full border-2 border-background right-0 bottom-0"></div>
                 )}
-              </>
-            ) : (
-              <>
-                {friendStatus === 'friends' && (
-                  <Button 
-                    variant="outline" 
+              </motion.div>
+              
+              <div className="pb-1">
+                <h2 className="text-2xl font-bold">{profileUser.display_name}</h2>
+                <p className="text-muted-foreground">@{profileUser.username}</p>
+              </div>
+            </div>
+            
+            <div className="ml-auto sm:ml-0 flex gap-2 flex-wrap">
+              {isOwnProfile ? (
+                <>
+                  {isEditing ? (
+                    <div className="flex gap-2">
+                      <Button variant="default" onClick={handleSaveProfile}>
+                        Save
+                      </Button>
+                      <Button variant="outline" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button variant="outline" className="gap-1.5" onClick={handleEditProfile}>
+                      <Edit className="h-4 w-4" />
+                      Edit Profile
+                    </Button>
+                  )}
+                </>
+              ) : (
+                <>
+                  {friendStatus === 'friends' && (
+                    <Button 
+                      variant="outline" 
+                      className="gap-1.5"
+                      onClick={handleMessageClick}
+                    >
+                      <MessageCircle className="h-4 w-4" />
+                      Message
+                    </Button>
+                  )}
+                  <Button
+                    variant={getFriendButtonVariant()}
                     className="gap-1.5"
-                    onClick={handleMessageClick}
+                    onClick={onFriendAction}
+                    disabled={loadingFriendAction}
                   >
-                    <MessageCircle className="h-4 w-4" />
-                    Message
+                    {getFriendButtonIcon()}
+                    {getFriendButtonText()}
                   </Button>
-                )}
-                <Button
-                  variant={getFriendButtonVariant()}
-                  className="gap-1.5"
-                  onClick={onFriendAction}
-                  disabled={loadingFriendAction}
-                >
-                  {getFriendButtonIcon()}
-                  {getFriendButtonText()}
-                </Button>
-              </>
+                </>
+              )}
+            </div>
+          </div>
+          
+          <div className="mt-4">
+            {isEditing ? (
+              <textarea
+                className="w-full p-2 border rounded-md min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                value={editedBio}
+                onChange={(e) => setEditedBio(e.target.value)}
+                placeholder="Write something about yourself..."
+              />
+            ) : (
+              profileUser.bio && (
+                <p className="text-sm mb-4">{profileUser.bio}</p>
+              )
             )}
-          </div>
-        </div>
-        
-        <div className="mt-4">
-          {isEditing ? (
-            <textarea
-              className="w-full p-2 border rounded-md min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-              value={editedBio}
-              onChange={(e) => setEditedBio(e.target.value)}
-              placeholder="Write something about yourself..."
-            />
-          ) : (
-            profileUser.bio && (
-              <p className="text-sm mb-4">{profileUser.bio}</p>
-            )
-          )}
-          
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-            <div className="flex items-center gap-1">
-              <Briefcase className="h-4 w-4" />
-              <span>Student at {profileUser.school}</span>
-            </div>
             
-            <div className="flex items-center gap-1">
-              <MapPin className="h-4 w-4" />
-              <span>Campus</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <Briefcase className="h-4 w-4" />
+                <span>Student at {profileUser.school}</span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <MapPin className="h-4 w-4" />
+                <span>Campus</span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                <span>Joined {formatDistanceToNow(new Date(profileUser.created_at), { addSuffix: true })}</span>
+              </div>
+              
+              <div className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                <Link to={`/profile/${profileUser.username}/friends`} className="hover:text-foreground transition-colors">
+                  {friendCount} friends
+                </Link>
+              </div>
             </div>
-            
-            <div className="flex items-center gap-1">
-              <Calendar className="h-4 w-4" />
-              <span>Joined {formatDistanceToNow(new Date(profileUser.created_at), { addSuffix: true })}</span>
-            </div>
-            
-            <div className="flex items-center gap-1">
-              <Users className="h-4 w-4" />
-              <Link to={`/profile/${profileUser.username}/friends`} className="hover:text-foreground transition-colors">
-                {friendCount} friends
-              </Link>
-            </div>
-          </div>
-        </div>
-        
-        <Separator className="my-4" />
-        
-        <div className="flex justify-between items-center">
-          <div className="flex gap-6">
-            <div className="text-center">
-              <div className="font-semibold">{profileUser.coins}</div>
-              <div className="text-xs text-muted-foreground">Coins</div>
-            </div>
-            
-            <Badge 
-              variant="outline" 
-              className={`flex items-center gap-1.5 h-auto py-1 ${isUserOnline ? 'border-green-500' : 'border-gray-300'}`}
-            >
-              <div className={`w-2 h-2 rounded-full ${isUserOnline ? 'bg-green-500' : 'bg-gray-300'}`}></div>
-              <span>{isUserOnline ? 'Online' : 'Offline'}</span>
-            </Badge>
           </div>
           
-          <div className="flex gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1.5">
-                  <MoreHorizontal className="h-4 w-4" />
-                  More
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {!isOwnProfile && (
-                  <>
-                    <DropdownMenuItem onClick={handleReport}>
-                      Report User
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleBlock}>
-                      Block User
-                    </DropdownMenuItem>
-                  </>
-                )}
-                <DropdownMenuItem onClick={() => {
-                  navigator.clipboard.writeText(window.location.href);
-                  toast({
-                    title: "Link copied",
-                    description: "Profile link copied to clipboard",
-                  });
-                }}>
-                  Copy Profile Link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <Separator className="my-4" />
+          
+          <div className="flex justify-between items-center">
+            <div className="flex gap-6">
+              <div className="text-center">
+                <div className="font-semibold">{profileUser.coins}</div>
+                <div className="text-xs text-muted-foreground">Coins</div>
+              </div>
+              
+              <Badge 
+                variant="outline" 
+                className={`flex items-center gap-1.5 h-auto py-1 ${isUserOnline ? 'border-green-500' : 'border-gray-300'}`}
+              >
+                <div className={`w-2 h-2 rounded-full ${isUserOnline ? 'bg-green-500' : 'bg-gray-300'}`}></div>
+                <span>
+                  {isUserOnline ? 'Online' : lastActive 
+                    ? `Last seen ${formatDistanceToNow(lastActive, { addSuffix: true })}` 
+                    : 'Offline'}
+                </span>
+              </Badge>
+            </div>
+            
+            <div className="flex gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="gap-1.5">
+                    <MoreHorizontal className="h-4 w-4" />
+                    More
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {!isOwnProfile && (
+                    <>
+                      <DropdownMenuItem onClick={handleReport}>
+                        <ShieldAlert className="h-4 w-4 mr-2" />
+                        Report User
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={handleBlock}>
+                        <UserX className="h-4 w-4 mr-2" />
+                        Block User
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => {
+                    navigator.clipboard.writeText(window.location.href);
+                    toast({
+                      title: "Link copied",
+                      description: "Profile link copied to clipboard",
+                    });
+                  }}>
+                    Copy Profile Link
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      
+      {/* Report Modal */}
+      <ReportModal
+        open={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        type="user"
+        targetId={profileUser.id}
+        targetName={profileUser.display_name}
+      />
+    </>
   );
 };
 
