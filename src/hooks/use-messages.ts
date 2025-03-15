@@ -30,7 +30,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         setIsLoading(true);
         console.log(`Fetching messages between ${userId} and ${chatPartnerId}`);
         
-        // Use parameterized query format
+        // Use a simpler query approach with explicit filter after fetching
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -127,13 +127,20 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     try {
       console.log('Sending message from', userId, 'to', chatPartnerId, ':', content);
       
-      // Make sure IDs are strings to match RLS policy expectations
-      const { data, error } = await supabase.from('messages').insert({
-        sender_id: userId.toString(),
-        receiver_id: chatPartnerId.toString(),
+      // Create the message object without explicit type conversion
+      const messageData = {
+        sender_id: userId,
+        receiver_id: chatPartnerId,
         content: content.trim(),
         is_read: false
-      }).select();
+      };
+      
+      console.log('Message data being sent:', messageData);
+      
+      const { data, error } = await supabase
+        .from('messages')
+        .insert(messageData)
+        .select();
 
       if (error) {
         console.error('Error sending message:', error);

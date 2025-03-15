@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { toast } from "@/hooks/use-toast";
 import { User, AuthContextType } from "./types";
@@ -103,6 +102,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUser = (userData: Partial<User>) => {
     if (user) {
       setUser({ ...user, ...userData });
+      // Update localStorage to ensure consistency
+      localStorage.setItem("fenixUser", JSON.stringify({ ...user, ...userData }));
     }
   };
 
@@ -110,7 +111,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addCoins = (amount: number, reason?: string) => {
     if (user) {
       const newCoins = user.coins + amount;
-      setUser({ ...user, coins: newCoins });
+      const updatedUser = { ...user, coins: newCoins };
+      setUser(updatedUser);
+      
+      // Update localStorage to ensure consistency
+      localStorage.setItem("fenixUser", JSON.stringify(updatedUser));
       
       toast({
         title: `+${amount} coins`,
