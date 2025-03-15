@@ -30,10 +30,12 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         setIsLoading(true);
         console.log(`Fetching messages between ${userId} and ${chatPartnerId}`);
         
+        // Use parameterized query format
         const { data, error } = await supabase
           .from('messages')
           .select('*')
-          .or(`and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`)
+          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+          .or(`sender_id.eq.${chatPartnerId},receiver_id.eq.${chatPartnerId}`)
           .order('created_at', { ascending: true });
 
         if (error) {
@@ -46,8 +48,14 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           return;
         }
 
-        console.log('Fetched messages:', data);
-        setMessages(data || []);
+        // Filter messages to only include those between the user and chat partner
+        const filteredMessages = data?.filter(msg => 
+          (msg.sender_id === userId && msg.receiver_id === chatPartnerId) || 
+          (msg.sender_id === chatPartnerId && msg.receiver_id === userId)
+        ) || [];
+
+        console.log('Fetched messages:', filteredMessages);
+        setMessages(filteredMessages);
       } catch (error: any) {
         console.error('Error in fetchMessages:', error);
         toast({
@@ -106,14 +114,23 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   }, [chatPartnerId, userId, toast, isAuthenticated]);
 
   const sendMessage = async (content: string) => {
-    if (!chatPartnerId || !userId || !content.trim() || !isAuthenticated) return null;
+    if (!chatPartnerId || !userId || !content.trim() || !isAuthenticated) {
+      console.error('Cannot send message: missing required data or not authenticated');
+      toast({
+        title: 'Error sending message',
+        description: 'Missing required data or not authenticated',
+        variant: 'destructive'
+      });
+      return null;
+    }
 
     try {
       console.log('Sending message from', userId, 'to', chatPartnerId, ':', content);
-      // Use parameterized query to fix the security issue
+      
+      // Make sure IDs are strings to match RLS policy expectations
       const { data, error } = await supabase.from('messages').insert({
-        sender_id: userId,
-        receiver_id: chatPartnerId,
+        sender_id: userId.toString(),
+        receiver_id: chatPartnerId.toString(),
         content: content.trim(),
         is_read: false
       }).select();
@@ -142,7 +159,10 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   };
 
   const markMessageAsRead = async (messageId: string) => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      console.error('Cannot mark message as read: not authenticated');
+      return;
+    }
     
     try {
       console.log('Marking message as read:', messageId);
@@ -160,14 +180,19 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   };
 
   const markMessagesAsRead = async () => {
-    if (!chatPartnerId || !userId || !isAuthenticated) return;
+    if (!chatPartnerId || !userId || !isAuthenticated) {
+      console.error('Cannot mark messages as read: missing required data or not authenticated');
+      return;
+    }
     
     try {
       console.log('Marking all messages from', chatPartnerId, 'as read');
       const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
-        .match({ sender_id: chatPartnerId, receiver_id: userId, is_read: false });
+        .eq('sender_id', chatPartnerId)
+        .eq('receiver_id', userId)
+        .eq('is_read', false);
         
       if (error) {
         console.error('Error marking messages as read:', error);
