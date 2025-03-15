@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, WifiOff } from "lucide-react";
@@ -44,10 +43,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const [friendCount, setFriendCount] = useState(0);
   
   useEffect(() => {
-    // Check if user has been active in the last 5 minutes (just a simple example)
-    const lastActive = new Date(profileUser.last_active || 0);
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    setIsUserOnline(lastActive > fiveMinutesAgo);
+    // For now, let's set a default online status since last_active isn't available
+    // We can update this with actual online status logic when the field is added to the database
+    setIsUserOnline(false);
     
     // Fetch friend count
     const fetchFriendCount = async () => {
