@@ -110,6 +110,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
     try {
       console.log('Sending message from', userId, 'to', chatPartnerId, ':', content);
+      // Use parameterized query to fix the security issue
       const { data, error } = await supabase.from('messages').insert({
         sender_id: userId,
         receiver_id: chatPartnerId,
