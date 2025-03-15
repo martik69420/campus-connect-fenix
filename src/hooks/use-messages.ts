@@ -30,7 +30,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         setIsLoading(true);
         console.log(`Fetching messages between ${userId} and ${chatPartnerId}`);
         
-        // Use a simpler query approach with explicit filter after fetching
+        // Since RLS is disabled, we can use a simpler query
         const { data, error } = await supabase
           .from('messages')
           .select('*')
@@ -127,7 +127,6 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     try {
       console.log('Sending message from', userId, 'to', chatPartnerId, ':', content);
       
-      // Create the message object without explicit type conversion
       const messageData = {
         sender_id: userId,
         receiver_id: chatPartnerId,
