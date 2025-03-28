@@ -1,5 +1,5 @@
-import * as React from "react";
-import { createContext, useState, useEffect, useCallback } from "react";
+
+import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, AuthContextType } from "./types";
 import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
