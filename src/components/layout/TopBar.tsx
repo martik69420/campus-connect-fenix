@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Search, Bell, User, Menu, X, Home, MessageSquare, Users, Gamepad2, Award, BarChart3, LogOut } from "lucide-react";
@@ -27,7 +26,7 @@ const TopBar: React.FC = () => {
 
   const mobileNavItems = [
     { path: "/", icon: Home, label: "Home" },
-    { path: "/profile", icon: User, label: "Profile" },
+    { path: `/profile/${user?.username}`, icon: User, label: "Profile" },
     { path: "/notifications", icon: Bell, label: "Notifications" },
     { path: "/messages", icon: MessageSquare, label: "Messages" },
     { path: "/friends", icon: Users, label: "Friends" },
@@ -135,7 +134,7 @@ const TopBar: React.FC = () => {
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.avatar} alt={user?.displayName} />
                   <AvatarFallback className="bg-fenix text-white">
-                    {user?.displayName.split(' ').map(n => n[0]).join('')}
+                    {user?.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
                   </AvatarFallback>
                 </Avatar>
               </Button>
@@ -145,7 +144,7 @@ const TopBar: React.FC = () => {
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.avatar} alt={user?.displayName} />
                   <AvatarFallback className="bg-fenix text-white">
-                    {user?.displayName.split(' ').map(n => n[0]).join('')}
+                    {user?.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col">
@@ -154,7 +153,7 @@ const TopBar: React.FC = () => {
                 </div>
               </div>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate('/profile')}>
+              <DropdownMenuItem onClick={() => navigate(`/profile/${user?.username}`)}>
                 <User className="mr-2 h-4 w-4" />
                 <span>Profile</span>
               </DropdownMenuItem>

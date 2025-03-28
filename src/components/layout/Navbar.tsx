@@ -21,7 +21,9 @@ import {
   X, 
   Gamepad2, 
   Search,
-  CheckCircle
+  CheckCircle,
+  Award,
+  BarChart3
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -43,6 +45,10 @@ const Navbar = () => {
     { icon: <MessageSquare className="h-5 w-5" />, label: 'Messages', path: '/messages' },
     { icon: <Gamepad2 className="h-5 w-5" />, label: 'Games', path: '/games' },
     { icon: <Search className="h-5 w-5" />, label: 'Search', path: '/search' },
+    { icon: <Bell className="h-5 w-5" />, label: 'Notifications', path: '/notifications' },
+    { icon: <User className="h-5 w-5" />, label: 'Friends', path: '/friends' },
+    { icon: <Award className="h-5 w-5" />, label: 'Leaderboard', path: '/leaderboard' },
+    { icon: <BarChart3 className="h-5 w-5" />, label: 'Earn', path: '/earn' }
   ];
   
   const closeMobileMenu = () => {
@@ -106,7 +112,7 @@ const Navbar = () => {
                   <Button variant="ghost" size="icon" className="relative rounded-full">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.avatar} alt={user.displayName} />
-                      <AvatarFallback>{user.displayName.charAt(0)}</AvatarFallback>
+                      <AvatarFallback>{user.displayName?.charAt(0) || 'U'}</AvatarFallback>
                     </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
