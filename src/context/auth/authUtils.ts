@@ -35,6 +35,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     avatar: profile.avatar_url,
     coins: profile.coins,
     createdAt: profile.created_at ? new Date(profile.created_at) : new Date(),
+    friends: [], // Add empty friends array
   };
 };
 
@@ -73,6 +74,7 @@ export const loginUser = async (
       avatar: user.avatar_url,
       coins: user.coins,
       createdAt: user.created_at ? new Date(user.created_at) : new Date(),
+      friends: [], // Add empty friends array
     };
   } catch (error: any) {
     console.error("Login failed:", error.message);
@@ -143,6 +145,7 @@ export const registerUser = async (
       avatar: newUser.avatar_url,
       coins: newUser.coins,
       createdAt: newUser.created_at ? new Date(newUser.created_at) : new Date(),
+      friends: [], // Add empty friends array
     };
 
     return { success: true, user: user };
