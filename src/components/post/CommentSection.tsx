@@ -65,7 +65,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
       </form>
       
       <AnimatePresence>
-        {post.comments.length > 0 ? (
+        {post.comments && post.comments.length > 0 ? (
           <div className="space-y-3">
             {post.comments.map((comment) => {
               const commentUser = getUserById(comment.userId);

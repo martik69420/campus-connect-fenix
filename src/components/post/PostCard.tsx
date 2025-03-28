@@ -204,7 +204,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
                   alt={`Post image ${index + 1}`} 
                   className={cn(
                     "w-full h-auto object-cover rounded-lg", 
-                    post.images!.length === 1 && "max-h-[350px]"
+                    post.images && post.images.length === 1 && "max-h-[350px]"
                   )}
                 />
               ))}

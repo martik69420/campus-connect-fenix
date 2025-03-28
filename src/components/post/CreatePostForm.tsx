@@ -92,22 +92,25 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     setIsSubmitting(true);
     
     // Create post
-    createPost(content, images.length > 0 ? images : undefined);
-    
-    // Reset form
-    setContent('');
-    setImages([]);
-    setIsSubmitting(false);
-    
-    toast({
-      title: "Post created!",
-      description: "Your post has been published.",
-    });
-    
-    // Notify parent component
-    if (onPostCreated) {
-      onPostCreated();
-    }
+    createPost(content, images.length > 0 ? images : undefined)
+      .then(() => {
+        // Reset form
+        setContent('');
+        setImages([]);
+        
+        toast({
+          title: "Post created!",
+          description: "Your post has been published.",
+        });
+        
+        // Notify parent component
+        if (onPostCreated) {
+          onPostCreated();
+        }
+      })
+      .finally(() => {
+        setIsSubmitting(false);
+      });
   };
   
   return (

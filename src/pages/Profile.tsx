@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -326,7 +325,7 @@ const Profile = () => {
                     userId: post.user_id,
                     content: post.content,
                     images: post.images,
-                    createdAt: safeParseDate(post.created_at),
+                    createdAt: safeParseDate(post.created_at).toISOString(), // Convert Date to string
                     likes: post.likes || [],
                     comments: post.comments || [],
                     shares: 0
