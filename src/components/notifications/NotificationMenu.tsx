@@ -82,7 +82,7 @@ const NotificationMenu = () => {
             {notifications.map((notification) => (
               <DropdownMenuItem
                 key={notification.id}
-                className={`flex items-start p-3 cursor-pointer ${!notification.isRead ? 'bg-muted/50' : ''}`}
+                className={`flex items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted/50' : ''}`}
                 onClick={() => handleNotificationClick(notification)}
               >
                 <div className="flex items-start gap-2">
@@ -90,12 +90,12 @@ const NotificationMenu = () => {
                     {getNotificationIcon(notification.type)}
                   </div>
                   <div className="flex-1 space-y-1">
-                    <p className="text-sm leading-tight">{notification.content}</p>
+                    <p className="text-sm leading-tight">{notification.message}</p>
                     <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
+                      {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
                     </p>
                   </div>
-                  {!notification.isRead && (
+                  {!notification.read && (
                     <Badge variant="secondary" className="ml-auto">New</Badge>
                   )}
                 </div>
