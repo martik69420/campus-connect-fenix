@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User } from './types';
 
@@ -49,7 +48,7 @@ export const loginUser = async (username: string, password: string): Promise<Use
       email: profile.email,
       school: profile.school || '',
       bio: profile.bio || '',
-      friends: profile.friends || [],
+      friends: [] // Default to empty array since it's not in the profile table
     };
 
     // Update online status
@@ -104,7 +103,6 @@ export const registerUser = async (
       coins: 100, // Starting coins
       created_at: new Date().toISOString(), // Using string
       bio: '',
-      friends: []
     };
 
     const { error: profileError } = await supabase
@@ -145,7 +143,7 @@ export const registerUser = async (
       email,
       school,
       bio: '',
-      friends: []
+      friends: [] // Default to empty array
     };
 
     return { success: true, user: userData };
@@ -186,7 +184,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       email: profile.email,
       school: profile.school || '',
       bio: profile.bio || '',
-      friends: profile.friends || []
+      friends: [] // Default to empty array
     };
     
     return userData;
