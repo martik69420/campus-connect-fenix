@@ -10,7 +10,7 @@ import Games from './pages/Games';
 import Search from './pages/Search';
 import NotFound from './pages/NotFound';
 import { Toaster } from './components/ui/toaster';
-import { AuthProvider } from './context/auth';
+import { AuthProvider } from './context/auth/AuthProvider';
 import { PostProvider } from './context/PostContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { LanguageProvider } from './context/LanguageContext';
