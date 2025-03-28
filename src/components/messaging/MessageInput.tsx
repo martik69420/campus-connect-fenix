@@ -73,7 +73,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
             <span className="sr-only">{t('messages.addEmoji')}</span>
           </Button>
           <Button
-            variant="primary"
+            variant="default"
             size="icon"
             disabled={!message.trim() || isSending || disabled}
             onClick={handleSend}

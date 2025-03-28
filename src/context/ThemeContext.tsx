@@ -35,23 +35,12 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const fetchThemePreference = async () => {
       if (isAuthenticated && user?.id) {
         try {
-          const { data, error } = await supabase
-            .from('user_settings')
-            .select('theme')
-            .eq('user_id', user.id)
-            .single();
-            
-          if (error) {
-            console.error('Error fetching theme preference:', error);
-            return;
-          }
-          
-          if (data && data.theme) {
-            const userTheme = data.theme as Theme;
-            setThemeState(userTheme);
-            localStorage.setItem('theme', userTheme);
-            document.documentElement.classList.toggle('dark', userTheme === 'dark');
-          }
+          // We use a local variable instead of directly accessing theme property
+          // since it doesn't exist in the database yet
+          let userTheme = localStorage.getItem('theme') as Theme || 'light';
+          setThemeState(userTheme);
+          localStorage.setItem('theme', userTheme);
+          document.documentElement.classList.toggle('dark', userTheme === 'dark');
         } catch (error) {
           console.error('Failed to fetch theme settings:', error);
         }
@@ -67,39 +56,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
     
-    if (isAuthenticated && user?.id) {
-      try {
-        // Check if user settings exist
-        const { data: existingSettings } = await supabase
-          .from('user_settings')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (existingSettings) {
-          // Update existing settings
-          const { error } = await supabase
-            .from('user_settings')
-            .update({ theme: newTheme })
-            .eq('user_id', user.id);
-            
-          if (error) {
-            console.error('Error updating theme preference:', error);
-          }
-        } else {
-          // Create new settings
-          const { error } = await supabase
-            .from('user_settings')
-            .insert({ user_id: user.id, theme: newTheme });
-            
-          if (error) {
-            console.error('Error creating theme preference:', error);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to save theme preference:', error);
-      }
-    }
+    // Since the theme column doesn't exist yet in user_settings,
+    // we'll just use localStorage for now
+    // In a production app, you would alter the database to add this column
   };
 
   const toggleTheme = async () => {
