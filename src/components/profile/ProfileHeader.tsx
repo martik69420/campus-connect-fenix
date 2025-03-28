@@ -103,11 +103,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               <h1 className="text-3xl font-bold mb-1">{user?.displayName}</h1>
               <p className="text-muted-foreground flex items-center">
                 <span className="mr-2">@{user?.username}</span>
-                {user?.verified && (
-                  <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-200 dark:border-blue-800">
-                    Verified
-                  </Badge>
-                )}
+                {/* Remove the verified badge reference since it's not in the User type */}
               </p>
             </div>
 
