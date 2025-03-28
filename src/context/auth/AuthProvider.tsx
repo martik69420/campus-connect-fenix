@@ -1,8 +1,7 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, AuthContextType } from "./types";
-import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus } from "./authUtils";
+import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser } from "./authUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 // Create context
@@ -16,27 +15,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check for existing session on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem("fenixUser");
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setUser(parsedUser);
+    const checkExistingUser = async () => {
+      // Try to get current user from Supabase session
+      const currentUser = await getCurrentUser();
+      
+      if (currentUser) {
+        setUser(currentUser);
         
         // Update online status when session is restored
-        updateOnlineStatus(parsedUser.id, true);
+        await updateOnlineStatus(currentUser.id, true);
         
         // Set up interval to keep online status updated
         const interval = setInterval(() => {
-          updateOnlineStatus(parsedUser.id, true);
+          if (currentUser.id) {
+            updateOnlineStatus(currentUser.id, true)
+              .catch(err => console.error("Failed to update online status:", err));
+          }
         }, 5 * 60 * 1000); // Every 5 minutes
         
         return () => clearInterval(interval);
-      } catch (error) {
-        console.error("Failed to parse stored user:", error);
-        localStorage.removeItem("fenixUser");
+      } else {
+        // Check localStorage as a fallback
+        const storedUser = localStorage.getItem("fenixUser");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setUser(parsedUser);
+            
+            // Update online status when session is restored from localStorage
+            await updateOnlineStatus(parsedUser.id, true);
+            
+            // Set up interval to keep online status updated
+            const interval = setInterval(() => {
+              updateOnlineStatus(parsedUser.id, true)
+                .catch(err => console.error("Failed to update online status:", err));
+            }, 5 * 60 * 1000); // Every 5 minutes
+            
+            return () => clearInterval(interval);
+          } catch (error) {
+            console.error("Failed to parse stored user:", error);
+            localStorage.removeItem("fenixUser");
+          }
+        }
       }
-    }
-    setIsLoading(false);
+      
+      setIsLoading(false);
+    };
+    
+    checkExistingUser().catch(console.error);
   }, []);
 
   // Update localStorage when user changes
@@ -50,7 +76,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (user) {
-        updateOnlineStatus(user.id, false);
+        // Use a synchronous version for better reliability on page unload
+        const navigatorOnLine = typeof navigator !== 'undefined' && navigator.onLine === false ? false : true;
+        if (navigatorOnLine && user.id) {
+          // Create a sync request to update status
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', 'https://nqbklvemcxemhgxlnyyq.supabase.co/rest/v1/user_status', false);
+          xhr.setRequestHeader('apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xYmtsdmVtY3hlbWhneGxueXlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1MTIyMTYsImV4cCI6MjA1NzA4ODIxNn0.4z96U7aHqFkOvK8GbdFSh9s8hYDDhUyo9ypstoKpBgo');
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(JSON.stringify({ 
+            user_id: user.id,
+            is_online: false,
+            last_active: new Date().toISOString()
+          }));
+        }
       }
     };
     
@@ -59,7 +98,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
       if (user) {
-        updateOnlineStatus(user.id, false);
+        updateOnlineStatus(user.id, false).catch(console.error);
       }
     };
   }, [user]);

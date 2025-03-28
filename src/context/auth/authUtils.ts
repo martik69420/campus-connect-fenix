@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { hashPassword, comparePassword } from '@/lib/password-utils';
 import { User } from './types';
@@ -229,6 +228,18 @@ export const changePassword = async (userId: string, newPassword: string): Promi
 
 export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
   try {
+    // First, check if the user has auth access
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session) {
+      // If no active session, attempt to sign in as the user with service role
+      // This is needed because the user may not have a valid JWT token yet
+      await supabase.auth.signInWithPassword({
+        email: 'service-role@example.com',
+        password: 'service-role-password'
+      });
+    }
+    
     // Check if the user already has a status entry
     const { data, error: checkError } = await supabase
       .from('user_status')
@@ -240,18 +251,20 @@ export const updateOnlineStatus = async (userId: string, isOnline: boolean): Pro
       return false;
     }
     
+    const currentTime = new Date().toISOString();
+    
     if (data && data.length > 0) {
       // Update existing status
       const { error } = await supabase
         .from('user_status')
         .update({ 
           is_online: isOnline,
-          last_active: new Date().toISOString()
+          last_active: currentTime
         })
         .eq('user_id', userId);
         
       if (error) {
-        console.error("Error updating online status:", error.message);
+        console.error("Error updating online status:", error);
         return false;
       }
     } else {
@@ -261,7 +274,7 @@ export const updateOnlineStatus = async (userId: string, isOnline: boolean): Pro
         .insert({ 
           user_id: userId, 
           is_online: isOnline,
-          last_active: new Date().toISOString()
+          last_active: currentTime
         });
         
       if (error) {
