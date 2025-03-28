@@ -44,6 +44,10 @@ export type AuthContextType = {
   updateUser: (userData: Partial<User>) => void;
   addCoins: (amount: number, reason?: string) => void;
   updatePassword: (newPassword: string) => Promise<boolean>;
+  // Added these functions to the type
+  updateUserProfile: (userId: string, updates: { displayName?: string; school?: string; avatar?: string; bio?: string }) => Promise<{ success: boolean; error?: string }>;
+  changePassword: (userId: string, newPassword: string) => Promise<boolean>;
+  validateCurrentPassword: (userId: string, currentPassword: string) => Promise<boolean>;
 };
 
 // Helper function to map Supabase profile to our User model

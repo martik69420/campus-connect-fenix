@@ -57,9 +57,9 @@ export const useOnlineStatus = (userIds: string[] = []) => {
         // Set offline when the component unmounts
         const handleBeforeUnload = () => {
           // Use synchronous fetch to make sure it runs before page unload
-          const baseUrl = supabase.getUrl();
+          const supabaseUrl = "https://nqbklvemcxemhgxlnyyq.supabase.co";
           navigator.sendBeacon(
-            `${baseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
+            `${supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
             JSON.stringify({
               is_online: false,
               last_active: new Date().toISOString()

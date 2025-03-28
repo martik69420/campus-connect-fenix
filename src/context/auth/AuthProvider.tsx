@@ -1,7 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+
+import * as React from "react";
+import { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, AuthContextType } from "./types";
-import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser } from "./authUtils";
+import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
 import { supabase } from "@/integrations/supabase/client";
 
 // Create context
@@ -260,7 +262,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         updateUser,
         addCoins,
-        updatePassword
+        updatePassword,
+        updateUserProfile,
+        changePassword,
+        validateCurrentPassword
       }}
     >
       {children}
