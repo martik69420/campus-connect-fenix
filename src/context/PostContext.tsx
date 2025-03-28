@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { User } from "./auth/types";
 import { useAuth } from "./auth";
@@ -174,10 +173,10 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           displayName: user.displayName,
           avatar: user.avatar,
           coins: user.coins,
-          createdAt: user.createdAt, // Now expects string
           email: user.email,
           school: user.school,
-          friends: user.friends,
+          createdAt: user.createdAt || new Date().toISOString(),
+          friends: user.friends || [],
         },
       };
 

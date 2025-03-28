@@ -48,7 +48,7 @@ const Earn = () => {
       description: 'Fill out all fields in your profile',
       reward: 30,
       icon: CheckCircle2,
-      completionRate: user?.bio ? 100 : 0
+      completionRate: user?.bio !== undefined ? 100 : 0
     },
     {
       id: 'invite-friend',

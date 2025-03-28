@@ -7,6 +7,9 @@ export interface User {
   school: string;
   avatar?: string;
   coins: number;
+  createdAt?: string; // Add createdAt property
+  bio?: string; // Add bio property
+  friends?: string[]; // Add friends property
 }
 
 export interface ProfileUpdateData {

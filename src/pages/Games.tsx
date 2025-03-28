@@ -11,6 +11,12 @@ const Games = () => {
   const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('snake');
   
+  // Create an async wrapper function for TriviaGame's onGameEnd
+  const handleTriviaGameEnd = async (score: number) => {
+    // Handle the trivia game end event
+    console.log("Trivia game ended with score:", score);
+  };
+  
   return (
     <AppLayout>
       <div className="container py-6 max-w-4xl">
@@ -28,7 +34,7 @@ const Games = () => {
           </TabsContent>
           
           <TabsContent value="trivia" className="w-full">
-            <TriviaGame onGameEnd={() => {}} />
+            <TriviaGame onGameEnd={handleTriviaGameEnd} />
           </TabsContent>
           
           <TabsContent value="tetris" className="w-full">

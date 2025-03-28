@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from './AuthContext';
@@ -13,6 +12,8 @@ interface Notification {
   content: string;
   url?: string;
   isRead: boolean;
+  read: boolean; // Added for compatibility
+  message: string; // Added for compatibility
   createdAt: Date;
   relatedId?: string;
 }
@@ -21,20 +22,23 @@ interface NotificationFilters {
   showCoinNotifications: boolean;
   showLikeNotifications: boolean;
   showCommentNotifications: boolean;
-  showFriendNotifications: boolean;
   showMessageNotifications: boolean;
+  showSystemNotifications: boolean;
+  showFriendNotifications: boolean;
   showSystemNotifications: boolean;
 }
 
 interface NotificationContextProps {
   notifications: Notification[];
   hasUnread: boolean;
+  unreadCount: number; // Added missing property
   isLoading: boolean;
   filters: NotificationFilters;
   toggleFilter: (type: keyof NotificationFilters) => void;
   markAsRead: (notificationId: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
   refreshNotifications: () => Promise<void>;
+  fetchNotifications: () => Promise<void>; // Added missing property
   hasMore: boolean;
   loadMore: () => Promise<void>;
 }
@@ -53,6 +57,7 @@ const NotificationContext = createContext<NotificationContextProps | undefined>(
 export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnread, setHasUnread] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0); // Add unreadCount state
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<NotificationFilters>(defaultFilters);
   const [hasMore, setHasMore] = useState(false);
@@ -105,8 +110,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
           userId: notification.user_id,
           type: notification.type as NotificationType,
           content: notification.content,
+          message: notification.content, // Map content to message for compatibility
           url: notification.url || undefined,
           isRead: notification.is_read,
+          read: notification.is_read, // Map is_read to read for compatibility
           createdAt: new Date(notification.created_at),
           relatedId: notification.related_id || undefined,
         }));
@@ -122,8 +129,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setHasMore(data.length === pageSize);
         
         // Check if there are any unread notifications
-        const hasAnyUnread = formattedNotifications.some(notif => !notif.isRead);
-        setHasUnread(hasAnyUnread);
+        const unreadNotifications = formattedNotifications.filter(notif => !notif.isRead);
+        setHasUnread(unreadNotifications.length > 0);
+        setUnreadCount(unreadNotifications.length); // Update unreadCount
       }
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -236,8 +244,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             userId: newNotification.user_id,
             type: newNotification.type as NotificationType,
             content: newNotification.content,
+            message: newNotification.content, // Map content to message for compatibility
             url: newNotification.url || undefined,
             isRead: newNotification.is_read,
+            read: newNotification.is_read, // Map is_read to read for compatibility
             createdAt: new Date(newNotification.created_at),
             relatedId: newNotification.related_id || undefined,
           };
@@ -301,12 +311,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
       value={{
         notifications: filteredNotifications,
         hasUnread,
+        unreadCount, // Add unreadCount to the context value
         isLoading,
         filters,
         toggleFilter,
         markAsRead,
         markAllAsRead,
         refreshNotifications,
+        fetchNotifications, // Add fetchNotifications to the context value
         hasMore,
         loadMore,
       }}
