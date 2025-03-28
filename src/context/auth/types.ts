@@ -33,7 +33,7 @@ export type User = {
   friends: string[];
 };
 
-// Context type
+// Context type - explicitly export this type
 export type AuthContextType = {
   user: User | null;
   isAuthenticated: boolean;

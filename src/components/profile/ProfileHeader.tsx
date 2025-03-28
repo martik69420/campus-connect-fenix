@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, ShieldAlert, UserX } from "lucide-react";
@@ -12,7 +13,8 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { User, useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
+import type { User } from "@/context/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 import { Profile } from "@/integrations/supabase/client";
