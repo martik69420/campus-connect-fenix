@@ -60,6 +60,21 @@ export const translations: Translations = {
     nl: 'Nee',
     fr: 'Non',
   },
+  'common.edit': {
+    en: 'Edit',
+    nl: 'Bewerken',
+    fr: 'Modifier',
+  },
+  'common.delete': {
+    en: 'Delete',
+    nl: 'Verwijderen',
+    fr: 'Supprimer',
+  },
+  'common.update': {
+    en: 'Update',
+    nl: 'Bijwerken',
+    fr: 'Mettre à jour',
+  },
 
   // Auth
   'auth.login': {
@@ -118,6 +133,21 @@ export const translations: Translations = {
     en: 'Search',
     nl: 'Zoeken',
     fr: 'Rechercher',
+  },
+  'nav.games': {
+    en: 'Games',
+    nl: 'Spellen',
+    fr: 'Jeux',
+  },
+  'nav.notifications': {
+    en: 'Notifications',
+    nl: 'Meldingen',
+    fr: 'Notifications',
+  },
+  'nav.friends': {
+    en: 'Friends',
+    nl: 'Vrienden',
+    fr: 'Amis',
   },
   
   // Messages
@@ -210,6 +240,11 @@ export const translations: Translations = {
     en: 'Failed to send message',
     nl: 'Bericht versturen mislukt',
     fr: 'Échec de l\'envoi du message',
+  },
+  'messages.clearChat': {
+    en: 'Clear Chat',
+    nl: 'Chat Wissen',
+    fr: 'Effacer le Chat',
   },
   
   // Settings
@@ -393,6 +428,16 @@ export const translations: Translations = {
     nl: 'Vriendmeldingen',
     fr: 'Notifications d\'Amis',
   },
+  'settings.coinNotifications': {
+    en: 'Coin Notifications',
+    nl: 'Muntmeldingen',
+    fr: 'Notifications de Pièces',
+  },
+  'settings.coinNotificationsDesc': {
+    en: 'Get notified when you earn coins',
+    nl: 'Word op de hoogte gesteld wanneer je munten verdient',
+    fr: 'Soyez notifié lorsque vous gagnez des pièces',
+  },
   'settings.friendNotificationsDesc': {
     en: 'Get notified about friend requests',
     nl: 'Word op de hoogte gesteld over vriendschapsverzoeken',
@@ -428,6 +473,11 @@ export const translations: Translations = {
     nl: 'Laat anderen zien wanneer je online bent',
     fr: 'Permettre aux autres de voir quand vous êtes en ligne',
   },
+  'settings.friends': {
+    en: 'Friends',
+    nl: 'Vrienden',
+    fr: 'Amis',
+  },
   
   // Posts
   'post.create': {
@@ -455,6 +505,21 @@ export const translations: Translations = {
     nl: 'Rapporteren',
     fr: 'Signaler',
   },
+  'post.save': {
+    en: 'Save',
+    nl: 'Opslaan',
+    fr: 'Enregistrer',
+  },
+  'post.saved': {
+    en: 'Saved',
+    nl: 'Opgeslagen',
+    fr: 'Enregistré',
+  },
+  'post.unsave': {
+    en: 'Unsave',
+    nl: 'Verwijderen',
+    fr: 'Retirer',
+  },
   
   // Games
   'games.title': {
@@ -477,6 +542,36 @@ export const translations: Translations = {
     nl: 'Beloningen',
     fr: 'Récompenses',
   },
+  'games.tetris': {
+    en: 'Tetris',
+    nl: 'Tetris',
+    fr: 'Tetris',
+  },
+  'games.tetrisDesc': {
+    en: 'Classic block stacking game',
+    nl: 'Klassiek blokken stapelspel',
+    fr: 'Jeu classique d\'empilement de blocs',
+  },
+  'games.score': {
+    en: 'Score',
+    nl: 'Score',
+    fr: 'Score',
+  },
+  'games.gameOver': {
+    en: 'Game Over',
+    nl: 'Spel Voorbij',
+    fr: 'Jeu Terminé',
+  },
+  'games.restart': {
+    en: 'Restart',
+    nl: 'Opnieuw starten',
+    fr: 'Redémarrer',
+  },
+  'games.pause': {
+    en: 'Pause',
+    nl: 'Pauze',
+    fr: 'Pause',
+  },
   
   // Online status
   'profile.online': {
@@ -498,6 +593,51 @@ export const translations: Translations = {
     en: 'User is offline',
     nl: 'Gebruiker is offline',
     fr: 'Utilisateur est hors ligne',
+  },
+  'profile.loading': {
+    en: 'Loading status...',
+    nl: 'Status laden...',
+    fr: 'Chargement du statut...',
+  },
+  'profile.neverActive': {
+    en: 'Never active',
+    nl: 'Nooit actief geweest',
+    fr: 'Jamais actif',
+  },
+  'profile.lastSeen': {
+    en: 'Last seen',
+    nl: 'Laatst gezien',
+    fr: 'Dernière connexion',
+  },
+  'profile.editProfile': {
+    en: 'Edit Profile',
+    nl: 'Profiel Bewerken',
+    fr: 'Modifier le Profil',
+  },
+  'profile.saveChanges': {
+    en: 'Save Changes',
+    nl: 'Wijzigingen Opslaan',
+    fr: 'Enregistrer les Modifications',
+  },
+  'profile.bio': {
+    en: 'Bio',
+    nl: 'Bio',
+    fr: 'Bio',
+  },
+  'profile.displayName': {
+    en: 'Display Name',
+    nl: 'Weergavenaam',
+    fr: 'Nom d\'affichage',
+  },
+  'profile.school': {
+    en: 'School',
+    nl: 'School',
+    fr: 'École',
+  },
+  'profile.location': {
+    en: 'Location',
+    nl: 'Locatie',
+    fr: 'Emplacement',
   },
   
   // Coins
@@ -558,6 +698,53 @@ export const translations: Translations = {
     nl: 'Jouw Rang',
     fr: 'Votre Rang',
   },
+
+  // Notifications
+  'notifications.all': {
+    en: 'All Notifications',
+    nl: 'Alle Meldingen',
+    fr: 'Toutes les Notifications',
+  },
+  'notifications.unread': {
+    en: 'Unread',
+    nl: 'Ongelezen',
+    fr: 'Non lues',
+  },
+  'notifications.markAllRead': {
+    en: 'Mark All as Read',
+    nl: 'Markeer Alles als Gelezen',
+    fr: 'Marquer tout comme lu',
+  },
+  'notifications.empty': {
+    en: 'No notifications yet',
+    nl: 'Nog geen meldingen',
+    fr: 'Pas encore de notifications',
+  },
+  'notifications.friendRequest': {
+    en: 'Friend Request',
+    nl: 'Vriendschapsverzoek',
+    fr: 'Demande d\'ami',
+  },
+  'notifications.message': {
+    en: 'New Message',
+    nl: 'Nieuw Bericht',
+    fr: 'Nouveau Message',
+  },
+  'notifications.like': {
+    en: 'Post Like',
+    nl: 'Bericht Like',
+    fr: 'J\'aime sur Publication',
+  },
+  'notifications.comment': {
+    en: 'Post Comment',
+    nl: 'Bericht Reactie',
+    fr: 'Commentaire sur Publication',
+  },
+  'notifications.coinEarned': {
+    en: 'Coins Earned',
+    nl: 'Munten Verdiend',
+    fr: 'Pièces Gagnées',
+  },
 };
 
 interface LanguageContextProps {
@@ -588,25 +775,38 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // Fetch the user's language preference when they authenticate
   useEffect(() => {
     const fetchLanguagePreference = async () => {
-      if (isAuthenticated && user?.id) {
-        try {
-          const { data, error } = await supabase
-            .from('user_settings')
-            .select('language')
-            .eq('user_id', user.id)
-            .single();
-            
-          if (error) {
-            console.error('Error fetching language preference:', error);
-            return;
-          }
-          
-          if (data && data.language) {
-            setLanguageState(data.language as LanguageCode);
-          }
-        } catch (error) {
-          console.error('Failed to fetch language settings:', error);
+      try {
+        // First check localStorage for a language preference
+        const storedLang = localStorage.getItem('preferredLanguage');
+        if (storedLang && ['en', 'nl', 'fr'].includes(storedLang)) {
+          setLanguageState(storedLang as LanguageCode);
         }
+        
+        // If authenticated, fetch from database
+        if (isAuthenticated && user?.id) {
+          try {
+            const { data, error } = await supabase
+              .from('user_settings')
+              .select('language')
+              .eq('user_id', user.id)
+              .single();
+              
+            if (error) {
+              console.error('Error fetching language preference:', error);
+              return;
+            }
+            
+            if (data && data.language) {
+              setLanguageState(data.language as LanguageCode);
+              // Also update localStorage
+              localStorage.setItem('preferredLanguage', data.language);
+            }
+          } catch (error) {
+            console.error('Failed to fetch language settings:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Error in language initialization:', error);
       }
     };
     
@@ -616,6 +816,8 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
   // Function to set language and save preference to database
   const setLanguage = async (newLanguage: LanguageCode) => {
     setLanguageState(newLanguage);
+    // Always store in localStorage for consistency
+    localStorage.setItem('preferredLanguage', newLanguage);
     
     if (isAuthenticated && user?.id) {
       try {

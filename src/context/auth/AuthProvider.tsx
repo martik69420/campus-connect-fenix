@@ -1,7 +1,7 @@
 
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { User, AuthContextType } from "./types";
+import { User, AuthContextType, ProfileUpdateData } from "./types";
 import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "./context";
@@ -180,6 +180,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update profile function
+  const handleUpdateUserProfile = async (data: ProfileUpdateData): Promise<boolean> => {
+    if (!user) return false;
+
+    try {
+      const success = await updateUserProfile(user.id, data);
+      
+      if (success) {
+        // Update the local user state with new data
+        setUser(prevUser => {
+          if (!prevUser) return null;
+          
+          return {
+            ...prevUser,
+            displayName: data.displayName ?? prevUser.displayName,
+            avatar: data.avatar ?? prevUser.avatar,
+            school: data.school ?? prevUser.school,
+          };
+        });
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      return false;
+    }
+  };
+
   // Update password function
   const updatePassword = async (newPassword: string): Promise<boolean> => {
     if (!user) return false;
@@ -260,7 +290,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         updateUser,
         addCoins,
         updatePassword,
-        updateUserProfile,
+        updateUserProfile: handleUpdateUserProfile,
         changePassword,
         validateCurrentPassword
       }}

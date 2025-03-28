@@ -37,15 +37,19 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   onFriendAction,
   loadingFriendAction = false
 }) => {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const [isUserOnline, setIsUserOnline] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editedBio, setEditedBio] = useState(profileUser.bio || "");
+  const [editedDisplayName, setEditedDisplayName] = useState(profileUser.display_name || "");
+  const [editedSchool, setEditedSchool] = useState(profileUser.school || "");
   const [friendCount, setFriendCount] = useState(0);
   const [showReportModal, setShowReportModal] = useState(false);
   const [lastActive, setLastActive] = useState<Date | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
   
   useEffect(() => {
     // Fetch online status and last active time
@@ -58,8 +62,12 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           .single();
           
         if (!error && data) {
-          // Add type checking to ensure properties exist
-          setIsUserOnline(data.is_online || false);
+          // Check if last_active is recent (within last 3 minutes)
+          const lastActiveDate = new Date(data.last_active);
+          const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+          
+          // Only show as online if both flag is true AND last_active is recent
+          setIsUserOnline(data.is_online && lastActiveDate > threeMinutesAgo);
           setLastActive(data.last_active ? new Date(data.last_active) : null);
         }
       }
@@ -81,12 +89,20 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         (payload) => {
           if (payload.new) {
             const newData = payload.new as { is_online: boolean; last_active: string };
-            setIsUserOnline(newData.is_online || false);
+            const lastActiveDate = new Date(newData.last_active);
+            const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+            
+            setIsUserOnline(newData.is_online && lastActiveDate > threeMinutesAgo);
             setLastActive(newData.last_active ? new Date(newData.last_active) : null);
           }
         }
       )
       .subscribe();
+    
+    // Set up a refresh interval to periodically check if user is still active
+    const refreshInterval = setInterval(() => {
+      fetchOnlineStatus();
+    }, 60000); // Check every minute
     
     // Fetch friend count
     const fetchFriendCount = async () => {
@@ -128,16 +144,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     return () => {
       supabase.removeChannel(statusChannel);
       clearInterval(interval);
+      clearInterval(refreshInterval);
     };
   }, [profileUser.id, user?.id]);
   
   const getFriendButtonText = () => {
     switch (friendStatus) {
-      case 'not_friend': return 'Add Friend';
-      case 'pending_sent': return 'Cancel Request';
-      case 'pending_received': return 'Accept Request';
-      case 'friends': return 'Unfriend';
-      default: return 'Add Friend';
+      case 'not_friend': return t('profile.addFriend');
+      case 'pending_sent': return t('profile.cancelRequest');
+      case 'pending_received': return t('profile.acceptRequest');
+      case 'friends': return t('profile.unfriend');
+      default: return t('profile.addFriend');
     }
   };
   
@@ -169,37 +186,69 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   
   const handleEditProfile = () => {
     setIsEditing(true);
+    // Initialize with current values
+    setEditedBio(profileUser.bio || "");
+    setEditedDisplayName(profileUser.display_name || "");
+    setEditedSchool(profileUser.school || "");
   };
   
   const handleSaveProfile = async () => {
+    if (!user) return;
+    
+    setIsLoading(true);
+    
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ bio: editedBio })
-        .eq('id', user?.id);
-        
-      if (error) throw error;
+      // Use auth context method to update profile
+      if (updateUserProfile) {
+        await updateUserProfile({
+          displayName: editedDisplayName,
+          bio: editedBio,
+          school: editedSchool
+        });
+      } else {
+        // Fallback direct update if context method not available
+        const { error } = await supabase
+          .from('profiles')
+          .update({ 
+            display_name: editedDisplayName,
+            bio: editedBio,
+            school: editedSchool
+          })
+          .eq('id', user.id);
+          
+        if (error) throw error;
+      }
       
       setIsEditing(false);
+      
       toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
+        title: t('profile.profileUpdated'),
+        description: t('profile.profileUpdatedDesc'),
       });
       
-      // Update local state
+      // Update local state to reflect changes immediately
       profileUser.bio = editedBio;
+      profileUser.display_name = editedDisplayName;
+      profileUser.school = editedSchool;
+      
     } catch (error: any) {
+      console.error("Error updating profile:", error);
       toast({
-        title: "Error updating profile",
+        title: t('profile.updateError'),
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsLoading(false);
     }
   };
   
   const handleCancelEdit = () => {
     setIsEditing(false);
+    // Reset to original values
     setEditedBio(profileUser.bio || "");
+    setEditedDisplayName(profileUser.display_name || "");
+    setEditedSchool(profileUser.school || "");
   };
   
   const handleReport = () => {
@@ -220,15 +269,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
       if (error) throw error;
       
       toast({
-        title: "User blocked",
-        description: `You've blocked ${profileUser.display_name}. You won't see their content anymore.`,
+        title: t('profile.userBlocked'),
+        description: t('profile.userBlockedDesc', { name: profileUser.display_name }),
       });
       
       // Navigate away from the profile
       navigate('/');
     } catch (error: any) {
       toast({
-        title: "Error blocking user",
+        title: t('profile.blockError'),
         description: error.message,
         variant: "destructive"
       });
@@ -247,6 +296,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.3 }}
+                className="relative"
               >
                 <Avatar className="h-24 w-24 border-4 border-background">
                   <AvatarImage src={profileUser.avatar_url || "/placeholder.svg"} alt={profileUser.display_name} />
@@ -255,13 +305,24 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                   </AvatarFallback>
                 </Avatar>
                 
-                {isUserOnline && (
-                  <div className="absolute w-5 h-5 bg-green-500 rounded-full border-2 border-background right-0 bottom-0"></div>
-                )}
+                <OnlineStatus 
+                  userId={profileUser.id} 
+                  className="absolute bottom-0 right-0" 
+                />
               </motion.div>
               
               <div className="pb-1">
-                <h2 className="text-2xl font-bold">{profileUser.display_name}</h2>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    className="text-2xl font-bold w-full p-1 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={editedDisplayName}
+                    onChange={(e) => setEditedDisplayName(e.target.value)}
+                    placeholder={t('profile.displayName')}
+                  />
+                ) : (
+                  <h2 className="text-2xl font-bold">{profileUser.display_name}</h2>
+                )}
                 <p className="text-muted-foreground">@{profileUser.username}</p>
               </div>
             </div>
@@ -271,17 +332,24 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <>
                   {isEditing ? (
                     <div className="flex gap-2">
-                      <Button variant="default" onClick={handleSaveProfile}>
-                        Save
+                      <Button 
+                        variant="default" 
+                        onClick={handleSaveProfile}
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        ) : null}
+                        {t('profile.saveChanges')}
                       </Button>
-                      <Button variant="outline" onClick={handleCancelEdit}>
-                        Cancel
+                      <Button variant="outline" onClick={handleCancelEdit} disabled={isLoading}>
+                        {t('common.cancel')}
                       </Button>
                     </div>
                   ) : (
                     <Button variant="outline" className="gap-1.5" onClick={handleEditProfile}>
                       <Edit className="h-4 w-4" />
-                      Edit Profile
+                      {t('profile.editProfile')}
                     </Button>
                   )}
                 </>
@@ -294,7 +362,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       onClick={handleMessageClick}
                     >
                       <MessageCircle className="h-4 w-4" />
-                      Message
+                      {t('messages.message')}
                     </Button>
                   )}
                   <Button
@@ -313,41 +381,59 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           
           <div className="mt-4">
             {isEditing ? (
-              <textarea
-                className="w-full p-2 border rounded-md min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-primary"
-                value={editedBio}
-                onChange={(e) => setEditedBio(e.target.value)}
-                placeholder="Write something about yourself..."
-              />
+              <>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">{t('profile.bio')}</label>
+                  <textarea
+                    className="w-full p-2 border rounded-md min-h-[100px] resize-none focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={editedBio}
+                    onChange={(e) => setEditedBio(e.target.value)}
+                    placeholder={t('profile.bioPlaceholder')}
+                  ></textarea>
+                </div>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">{t('profile.school')}</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    value={editedSchool}
+                    onChange={(e) => setEditedSchool(e.target.value)}
+                    placeholder={t('profile.schoolPlaceholder')}
+                  />
+                </div>
+              </>
             ) : (
               profileUser.bio && (
                 <p className="text-sm mb-4">{profileUser.bio}</p>
               )
             )}
             
-            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Briefcase className="h-4 w-4" />
-                <span>Student at {profileUser.school}</span>
+            {!isEditing && (
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-1">
+                  <Briefcase className="h-4 w-4" />
+                  <span>Student at {profileUser.school}</span>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <MapPin className="h-4 w-4" />
+                  <span>Campus</span>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  <span>Joined {formatDistanceToNow(new Date(profileUser.created_at), { addSuffix: true })}</span>
+                </div>
+                
+                <div className="flex items-center gap-1">
+                  <Users className="h-4 w-4" />
+                  <Link to={`/profile/${profileUser.username}/friends`} className="hover:text-foreground transition-colors">
+                    {friendCount} {t('settings.friends')}
+                  </Link>
+                </div>
               </div>
-              
-              <div className="flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                <span>Campus</span>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4" />
-                <span>Joined {formatDistanceToNow(new Date(profileUser.created_at), { addSuffix: true })}</span>
-              </div>
-              
-              <div className="flex items-center gap-1">
-                <Users className="h-4 w-4" />
-                <Link to={`/profile/${profileUser.username}/friends`} className="hover:text-foreground transition-colors">
-                  {friendCount} friends
-                </Link>
-              </div>
-            </div>
+            )}
           </div>
           
           <Separator className="my-4" />
@@ -356,7 +442,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
             <div className="flex gap-6">
               <div className="text-center">
                 <div className="font-semibold">{profileUser.coins}</div>
-                <div className="text-xs text-muted-foreground">Coins</div>
+                <div className="text-xs text-muted-foreground">{t('leaderboard.coins')}</div>
               </div>
               
               <Badge 
@@ -365,9 +451,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
               >
                 <div className={`w-2 h-2 rounded-full ${isUserOnline ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                 <span>
-                  {isUserOnline ? 'Online' : lastActive 
-                    ? `Last seen ${formatDistanceToNow(lastActive, { addSuffix: true })}` 
-                    : 'Offline'}
+                  {isUserOnline 
+                    ? t('profile.online') 
+                    : lastActive 
+                      ? `${t('profile.lastSeen')} ${formatDistanceToNow(lastActive, { addSuffix: true })}` 
+                      : t('profile.offline')}
                 </span>
               </Badge>
             </div>
@@ -377,7 +465,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-1.5">
                     <MoreHorizontal className="h-4 w-4" />
-                    More
+                    {t('common.more')}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -385,22 +473,22 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                     <>
                       <DropdownMenuItem onClick={handleReport}>
                         <ShieldAlert className="h-4 w-4 mr-2" />
-                        Report User
+                        {t('messages.reportUser')}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleBlock}>
                         <UserX className="h-4 w-4 mr-2" />
-                        Block User
+                        {t('profile.blockUser')}
                       </DropdownMenuItem>
                     </>
                   )}
                   <DropdownMenuItem onClick={() => {
                     navigator.clipboard.writeText(window.location.href);
                     toast({
-                      title: "Link copied",
-                      description: "Profile link copied to clipboard",
+                      title: t('profile.linkCopied'),
+                      description: t('profile.linkCopiedDesc'),
                     });
                   }}>
-                    Copy Profile Link
+                    {t('profile.copyProfileLink')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
