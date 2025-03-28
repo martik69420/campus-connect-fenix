@@ -528,7 +528,8 @@ const Settings = () => {
               <SelectValue placeholder="Select pronouns" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Prefer not to say</SelectItem>
+              {/* Changed the empty string value to "none" */}
+              <SelectItem value="none">Prefer not to say</SelectItem>
               <SelectItem value="he/him">He/Him</SelectItem>
               <SelectItem value="she/her">She/Her</SelectItem>
               <SelectItem value="they/them">They/Them</SelectItem>
