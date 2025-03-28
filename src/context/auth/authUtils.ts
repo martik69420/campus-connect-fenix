@@ -1,239 +1,136 @@
+import { supabase } from '@/integrations/supabase/client';
+import { hashPassword } from '@/lib/password-utils';
+import { User } from '@/types';
+import crypto from 'crypto';
 
-import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
-import { User, mapProfileToUser } from "./types";
-
-// Login function
-export const loginUser = async (username: string, password: string): Promise<User | null> => {
-  try {
-    // Call the validate_password function to check credentials
-    const { data: isValid, error: validateError } = await supabase
-      .rpc('validate_password', {
-        username: username,
-        password: password
-      });
-
-    if (validateError) {
-      console.error("Login validation error:", validateError);
-      toast({
-        title: "Login failed",
-        description: validateError.message,
-        variant: "destructive",
-      });
-      return null;
-    }
-
-    if (!isValid) {
-      toast({
-        title: "Login failed",
-        description: "Invalid username or password",
-        variant: "destructive",
-      });
-      return null;
-    }
-
-    // Get user profile
-    const { data: profile, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('username', username)
-      .single();
-
-    if (profileError) {
-      console.error("Profile fetch error:", profileError);
-      toast({
-        title: "Login failed",
-        description: "Could not retrieve user profile",
-        variant: "destructive",
-      });
-      return null;
-    }
-
-    // Update online status
-    await supabase
-      .from('user_status')
-      .upsert({
-        user_id: profile.id,
-        is_online: true,
-        last_active: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-
-    // Map profile to user model
-    const user = mapProfileToUser(profile);
-    
-    toast({
-      title: "Login successful",
-      description: "Welcome back, " + user.displayName,
-    });
-
-    return user;
-  } catch (error: any) {
-    console.error("Login error:", error);
-    toast({
-      title: "Login error",
-      description: error.message,
-      variant: "destructive",
-    });
+export const getCurrentUser = async (): Promise<User | null> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
     return null;
   }
+
+  const { data: profile, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    console.error("Error fetching user profile:", error);
+    return null;
+  }
+
+  if (!profile) {
+    console.warn("No profile found for user ID:", user.id);
+    return null;
+  }
+
+  return {
+    id: profile.id,
+    username: profile.username,
+    email: profile.email,
+    displayName: profile.display_name,
+    school: profile.school,
+    avatar: profile.avatar_url,
+    coins: profile.coins,
+    createdAt: profile.created_at,
+  };
 };
 
-// Register function
 export const registerUser = async (
-  username: string, 
-  email: string, 
-  displayName: string, 
-  school: string, 
-  password: string
-): Promise<User | null> => {
+  username: string,
+  email: string,
+  password: string,
+  displayName: string,
+  school: string
+): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
-    // Check if username is already taken
-    const { data: existingUser, error: checkError } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('username', username)
-      .maybeSingle();
+    // Validate username and email
+    const { data: existingUsers, error: checkError } = await supabase
+      .from('users')
+      .select('username, email')
+      .or(`username.eq.${username},email.eq.${email}`);
 
     if (checkError) {
-      console.error("Error checking existing user:", checkError);
-      toast({
-        title: "Registration failed",
-        description: checkError.message,
-        variant: "destructive",
-      });
-      return null;
+      throw new Error(checkError.message);
     }
 
-    if (existingUser) {
-      toast({
-        title: "Username taken",
-        description: "This username is already taken. Please choose another one.",
-        variant: "destructive",
-      });
-      return null;
+    if (existingUsers && existingUsers.length > 0) {
+      if (existingUsers.some((user) => user.username === username)) {
+        return { success: false, error: 'Username already taken' };
+      }
+      if (existingUsers.some((user) => user.email === email)) {
+        return { success: false, error: 'Email already in use' };
+      }
     }
 
-    // Generate a UUID for the new user
-    const { data: newId } = await supabase.rpc('gen_random_uuid');
-    const userId = newId || crypto.randomUUID();
-
-    // Create user profile
-    const { data: newProfile, error: createError } = await supabase
-      .from('profiles')
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+    
+    // Generate UUID for user ID
+    const userId = crypto.randomUUID();
+    
+    // Insert user into database
+    const { data: newUser, error: insertError } = await supabase
+      .from('users')
       .insert({
         id: userId,
-        username,
-        email,
+        username: username,
+        email: email,
         display_name: displayName,
-        school,
-        password_hash: password, // In production, this should be properly hashed
-        coins: 100, // Starting coins
-        avatar_url: '/placeholder.svg',
-        created_at: new Date().toISOString()
+        school: school,
+        password_hash: hashedPassword,
+        coins: 100,
+        avatar_url: '',
+        created_at: new Date().toISOString(),
       })
-      .select('*')
+      .select()
       .single();
 
-    if (createError) {
-      console.error("Error creating user:", createError);
-      toast({
-        title: "Registration failed",
-        description: createError.message,
-        variant: "destructive",
-      });
-      return null;
+    if (insertError) {
+      throw new Error(insertError.message);
     }
 
-    // Create initial user settings
-    await supabase
-      .from('user_settings')
-      .insert({
-        user_id: newProfile.id
-      });
+    const user: User = {
+      id: newUser.id,
+      username: newUser.username,
+      email: newUser.email,
+      displayName: newUser.display_name,
+      school: newUser.school,
+      avatar: newUser.avatar_url,
+      coins: newUser.coins,
+      createdAt: newUser.created_at,
+    };
 
-    // Set online status
-    await supabase
-      .from('user_status')
-      .insert({
-        user_id: newProfile.id,
-        is_online: true,
-        last_active: new Date().toISOString()
-      });
-
-    // Map profile to user model
-    const user = mapProfileToUser(newProfile);
-    
-    toast({
-      title: "Registration successful",
-      description: "Welcome to Campus Connect, " + user.displayName,
-    });
-
-    return user;
+    return { success: true, user: user };
   } catch (error: any) {
-    console.error("Registration error:", error);
-    toast({
-      title: "Registration error",
-      description: error.message,
-      variant: "destructive",
-    });
-    return null;
+    console.error("Registration failed:", error.message);
+    return { success: false, error: error.message };
   }
 };
 
-// Update password function
-export const changePassword = async (userId: string, newPassword: string): Promise<boolean> => {
+export const updateUserProfile = async (
+  userId: string,
+  updates: { displayName?: string; school?: string; avatar?: string }
+): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
-      .from('profiles')
-      .update({ password_hash: newPassword })
+      .from('users')
+      .update({
+        display_name: updates.displayName,
+        school: updates.school,
+        avatar_url: updates.avatar,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', userId);
-      
-    if (error) throw error;
-    
-    return true;
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    return { success: true };
   } catch (error: any) {
-    console.error("Password change error:", error);
-    return false;
-  }
-};
-
-// Validate current password
-export const validateCurrentPassword = async (userId: string, currentPassword: string): Promise<boolean> => {
-  try {
-    const { data: user } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('id', userId)
-      .single();
-      
-    if (!user) return false;
-    
-    const { data } = await supabase
-      .rpc('validate_password', {
-        username: user.username,
-        password: currentPassword
-      });
-      
-    return !!data;
-  } catch (error) {
-    console.error("Password validation error:", error);
-    return false;
-  }
-};
-
-// Update user's online status
-export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<void> => {
-  if (!userId) return;
-  
-  try {
-    await supabase
-      .from('user_status')
-      .upsert({
-        user_id: userId,
-        is_online: isOnline,
-        last_active: new Date().toISOString()
-      }, { onConflict: 'user_id' });
-  } catch (error) {
-    console.error("Error updating online status:", error);
+    console.error("Update profile failed:", error.message);
+    return { success: false, error: error.message };
   }
 };
