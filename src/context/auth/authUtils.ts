@@ -1,41 +1,49 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { hashPassword, comparePassword } from '@/lib/password-utils';
 import { User } from './types';
 import crypto from 'crypto';
 
 export const getCurrentUser = async (): Promise<User | null> => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  try {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.log("No authenticated user found:", userError?.message);
+      return null;
+    }
+
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    if (error) {
+      console.error("Error fetching user profile:", error);
+      return null;
+    }
+
+    if (!profile) {
+      console.warn("No profile found for user ID:", user.id);
+      return null;
+    }
+
+    return {
+      id: profile.id,
+      username: profile.username,
+      email: profile.email,
+      displayName: profile.display_name,
+      school: profile.school,
+      avatar: profile.avatar_url,
+      coins: profile.coins,
+      createdAt: profile.created_at ? new Date(profile.created_at) : new Date(),
+      friends: [], // Add empty friends array
+      bio: profile.bio
+    };
+  } catch (error) {
+    console.error("Error in getCurrentUser:", error);
     return null;
   }
-
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single();
-
-  if (error) {
-    console.error("Error fetching user profile:", error);
-    return null;
-  }
-
-  if (!profile) {
-    console.warn("No profile found for user ID:", user.id);
-    return null;
-  }
-
-  return {
-    id: profile.id,
-    username: profile.username,
-    email: profile.email,
-    displayName: profile.display_name,
-    school: profile.school,
-    avatar: profile.avatar_url,
-    coins: profile.coins,
-    createdAt: profile.created_at ? new Date(profile.created_at) : new Date(),
-    friends: [], // Add empty friends array
-  };
 };
 
 export const loginUser = async (
@@ -62,7 +70,11 @@ export const loginUser = async (
     }
     
     // Update online status when logging in
-    updateOnlineStatus(user.id, true);
+    try {
+      await updateOnlineStatus(user.id, true);
+    } catch (error) {
+      console.warn("Failed to update online status, but continuing login:", error);
+    }
     
     return {
       id: user.id,
@@ -74,6 +86,7 @@ export const loginUser = async (
       coins: user.coins,
       createdAt: user.created_at ? new Date(user.created_at) : new Date(),
       friends: [], // Add empty friends array
+      bio: user.bio
     };
   } catch (error: any) {
     console.error("Login failed:", error.message);
@@ -135,6 +148,28 @@ export const registerUser = async (
       throw new Error(insertError.message);
     }
 
+    // Create a user in auth.users if it doesn't exist already
+    try {
+      // Try to sign up the user in auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            display_name: displayName,
+            school
+          }
+        }
+      });
+      
+      if (authError && !authError.message.includes('already registered')) {
+        console.error("Failed to create auth user, but profile created:", authError);
+      }
+    } catch (authError) {
+      console.warn("Error creating auth user (continuing anyway):", authError);
+    }
+
     const user: User = {
       id: newUser.id,
       username: newUser.username,
@@ -145,6 +180,7 @@ export const registerUser = async (
       coins: newUser.coins,
       createdAt: newUser.created_at ? new Date(newUser.created_at) : new Date(),
       friends: [], // Add empty friends array
+      bio: newUser.bio
     };
 
     return { success: true, user: user };
@@ -156,7 +192,7 @@ export const registerUser = async (
 
 export const updateUserProfile = async (
   userId: string,
-  updates: { displayName?: string; school?: string; avatar?: string }
+  updates: { displayName?: string; school?: string; avatar?: string; bio?: string }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
@@ -165,6 +201,7 @@ export const updateUserProfile = async (
         display_name: updates.displayName,
         school: updates.school,
         avatar_url: updates.avatar,
+        bio: updates.bio,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);
@@ -180,7 +217,6 @@ export const updateUserProfile = async (
   }
 };
 
-// Add the missing functions that are imported by AuthProvider
 export const validateCurrentPassword = async (userId: string, currentPassword: string): Promise<boolean> => {
   try {
     const { data: user, error } = await supabase
@@ -228,16 +264,9 @@ export const changePassword = async (userId: string, newPassword: string): Promi
 
 export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
   try {
-    // First, check if the user has auth access
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      // If no active session, attempt to sign in as the user with service role
-      // This is needed because the user may not have a valid JWT token yet
-      await supabase.auth.signInWithPassword({
-        email: 'service-role@example.com',
-        password: 'service-role-password'
-      });
+    if (!userId) {
+      console.error("Cannot update online status: No user ID provided");
+      return false;
     }
     
     // Check if the user already has a status entry
@@ -247,7 +276,7 @@ export const updateOnlineStatus = async (userId: string, isOnline: boolean): Pro
       .eq('user_id', userId);
       
     if (checkError) {
-      console.error("Error checking user status:", checkError.message);
+      console.error("Error checking user status:", checkError);
       return false;
     }
     

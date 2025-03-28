@@ -34,26 +34,56 @@ const Index = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
-  const { fetchPosts, posts } = usePost();
+  const { posts, fetchPosts } = usePost();
   
   const [loadingPosts, setLoadingPosts] = useState(false);
 
   useEffect(() => {
+    // If authentication has completed loading and user is not authenticated, redirect to auth page
     if (!isLoading && !isAuthenticated) {
       navigate('/auth');
       return;
     }
     
-    if (isAuthenticated) {
-      fetchPosts();
+    // Only fetch posts if user is authenticated
+    if (isAuthenticated && !isLoading) {
+      handleFetchPosts();
     }
   }, [isAuthenticated, isLoading, navigate]);
 
-  const refreshFeed = () => {
-    setLoadingPosts(true);
-    fetchPosts()
-      .finally(() => setLoadingPosts(false));
+  const handleFetchPosts = async () => {
+    try {
+      setLoadingPosts(true);
+      await fetchPosts();
+    } catch (error) {
+      console.error("Error fetching posts:", error);
+      toast({
+        title: "Error loading posts",
+        description: "Please try refreshing the page",
+        variant: "destructive"
+      });
+    } finally {
+      setLoadingPosts(false);
+    }
   };
+
+  const refreshFeed = () => {
+    handleFetchPosts();
+  };
+
+  // Show loading state while authentication is in progress
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[50vh]">
+          <div className="flex flex-col items-center space-y-4">
+            <Loader2 className="h-10 w-10 animate-spin text-primary" />
+            <p>Loading your feed...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
@@ -68,7 +98,7 @@ const Index = () => {
         <CreatePostForm onPostCreated={refreshFeed} />
           
         <div className="mt-6 space-y-6">
-          {isLoading || loadingPosts ? (
+          {loadingPosts ? (
             Array.from({ length: 3 }).map((_, i) => (
               <div key={i} className="rounded-lg border shadow-sm p-4 space-y-4">
                 <div className="flex items-center space-x-2">
@@ -86,7 +116,7 @@ const Index = () => {
                 </div>
               </div>
             ))
-          ) : posts.length > 0 ? (
+          ) : posts && posts.length > 0 ? (
             posts.map((post) => (
               <PostCard 
                 key={post.id} 
