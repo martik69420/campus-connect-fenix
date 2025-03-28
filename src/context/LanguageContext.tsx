@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './AuthContext';
+import { useAuth } from './auth';
 import { supabase } from '@/integrations/supabase/client';
 
 // Define available languages
@@ -283,7 +283,8 @@ const LanguageContext = createContext<LanguageContextProps>({
 
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = useState<LanguageCode>(defaultLanguage);
-  const { user, isAuthenticated } = useAuth();
+  const auth = useAuth();
+  const { user, isAuthenticated } = auth;
   
   // Fetch the user's language preference when they authenticate
   useEffect(() => {

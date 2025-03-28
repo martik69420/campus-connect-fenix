@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { usePost, Post } from "@/context/PostContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
