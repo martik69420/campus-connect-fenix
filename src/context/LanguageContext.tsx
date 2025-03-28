@@ -1,218 +1,363 @@
 
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
-type Language = 'nl' | 'en' | 'fr';
+// Define available languages
+export type LanguageCode = 'en' | 'nl' | 'fr';
 
-interface LanguageContextType {
-  language: Language;
-  setLanguage: (lang: Language) => void;
-  t: (key: string) => string;
-}
+export type Translations = {
+  [key: string]: {
+    [key in LanguageCode]: string;
+  };
+};
 
-const translations: Record<Language, Record<string, string>> = {
-  nl: {
-    // Dutch translations
-    "settings": "Instellingen",
-    "profile": "Profiel",
-    "security": "Beveiliging",
-    "notifications": "Meldingen",
-    "privacy": "Privacy",
-    "language": "Taal",
-    "save_changes": "Wijzigingen opslaan",
-    "profile_settings": "Profielinstellingen",
-    "display_name": "Weergavenaam",
-    "username": "Gebruikersnaam",
-    "email": "E-mail",
-    "bio": "Bio",
-    "location": "Locatie",
-    "pronouns": "Voornaamwoorden",
-    "birthday": "Geboortedatum",
-    "online": "Online",
-    "offline": "Offline",
-    "saving": "Opslaan...",
-    "messages": "Berichten",
-    "friends": "Vrienden",
-    "search": "Zoeken",
-    "games": "Spellen",
-    "send_message": "Bericht versturen",
-    "type_message": "Typ een bericht...",
-    "no_messages_yet": "Nog geen berichten",
-    "send_first_message": "Stuur een bericht om het gesprek te starten",
-    "new_conversation": "Nieuw gesprek",
-    "search_conversations": "Zoek gesprekken...",
-    "online_status": "Online status",
-    "activity_status": "Activiteitsstatus",
-    "read_receipts": "Leesbevestigingen",
-    "data_sharing": "Gegevensdeling",
-    "password": "Wachtwoord",
-    "current_password": "Huidig wachtwoord",
-    "new_password": "Nieuw wachtwoord",
-    "confirm_password": "Bevestig wachtwoord",
-    "change_password": "Wachtwoord wijzigen",
-    "two_factor_auth": "Tweefactorauthenticatie",
-    "login_notifications": "Inlogmeldingen",
-    "update_password": "Wachtwoord bijwerken",
-    "prefer_not_to_say": "Liever niet zeggen",
-    "he_him": "Hij/Hem",
-    "she_her": "Zij/Haar",
-    "they_them": "Hen/Hun",
-    "custom": "Aangepast"
+// Define translations
+export const translations: Translations = {
+  // Common
+  'app.name': {
+    en: 'Campus Connect',
+    nl: 'Campus Connect',
+    fr: 'Campus Connect',
   },
-  en: {
-    // English translations
-    "settings": "Settings",
-    "profile": "Profile",
-    "security": "Security",
-    "notifications": "Notifications",
-    "privacy": "Privacy",
-    "language": "Language",
-    "save_changes": "Save Changes",
-    "profile_settings": "Profile Settings",
-    "display_name": "Display Name",
-    "username": "Username",
-    "email": "Email",
-    "bio": "Bio",
-    "location": "Location",
-    "pronouns": "Pronouns",
-    "birthday": "Birthday",
-    "online": "Online",
-    "offline": "Offline",
-    "saving": "Saving...",
-    "messages": "Messages",
-    "friends": "Friends",
-    "search": "Search",
-    "games": "Games",
-    "send_message": "Send Message",
-    "type_message": "Type a message...",
-    "no_messages_yet": "No messages yet",
-    "send_first_message": "Send a message to start the conversation",
-    "new_conversation": "New Conversation",
-    "search_conversations": "Search conversations...",
-    "online_status": "Online Status",
-    "activity_status": "Activity Status",
-    "read_receipts": "Read Receipts",
-    "data_sharing": "Data Sharing",
-    "password": "Password",
-    "current_password": "Current Password",
-    "new_password": "New Password",
-    "confirm_password": "Confirm Password",
-    "change_password": "Change Password",
-    "two_factor_auth": "Two-Factor Authentication",
-    "login_notifications": "Login Notifications",
-    "update_password": "Update Password",
-    "prefer_not_to_say": "Prefer not to say",
-    "he_him": "He/Him",
-    "she_her": "She/Her",
-    "they_them": "They/Them",
-    "custom": "Custom"
+  'common.save': {
+    en: 'Save',
+    nl: 'Opslaan',
+    fr: 'Enregistrer',
   },
-  fr: {
-    // French translations
-    "settings": "Paramètres",
-    "profile": "Profil",
-    "security": "Sécurité",
-    "notifications": "Notifications",
-    "privacy": "Confidentialité",
-    "language": "Langue",
-    "save_changes": "Enregistrer les modifications",
-    "profile_settings": "Paramètres du profil",
-    "display_name": "Nom d'affichage",
-    "username": "Nom d'utilisateur",
-    "email": "E-mail",
-    "bio": "Bio",
-    "location": "Emplacement",
-    "pronouns": "Pronoms",
-    "birthday": "Date de naissance",
-    "online": "En ligne",
-    "offline": "Hors ligne",
-    "saving": "Enregistrement...",
-    "messages": "Messages",
-    "friends": "Amis",
-    "search": "Rechercher",
-    "games": "Jeux",
-    "send_message": "Envoyer un message",
-    "type_message": "Tapez un message...",
-    "no_messages_yet": "Pas encore de messages",
-    "send_first_message": "Envoyez un message pour commencer la conversation",
-    "new_conversation": "Nouvelle conversation",
-    "search_conversations": "Rechercher des conversations...",
-    "online_status": "Statut en ligne",
-    "activity_status": "Statut d'activité",
-    "read_receipts": "Accusés de lecture",
-    "data_sharing": "Partage de données",
-    "password": "Mot de passe",
-    "current_password": "Mot de passe actuel",
-    "new_password": "Nouveau mot de passe",
-    "confirm_password": "Confirmer le mot de passe",
-    "change_password": "Changer le mot de passe",
-    "two_factor_auth": "Authentification à deux facteurs",
-    "login_notifications": "Notifications de connexion",
-    "update_password": "Mettre à jour le mot de passe",
-    "prefer_not_to_say": "Préfère ne pas dire",
-    "he_him": "Il/Lui",
-    "she_her": "Elle/Elle",
-    "they_them": "Ils/Eux",
-    "custom": "Personnalisé"
+  'common.cancel': {
+    en: 'Cancel',
+    nl: 'Annuleren',
+    fr: 'Annuler',
+  },
+  'common.loading': {
+    en: 'Loading...',
+    nl: 'Laden...',
+    fr: 'Chargement...',
+  },
+  'common.error': {
+    en: 'An error occurred',
+    nl: 'Er is een fout opgetreden',
+    fr: 'Une erreur s\'est produite',
+  },
+  'common.success': {
+    en: 'Success!',
+    nl: 'Succes!',
+    fr: 'Succès!',
+  },
+  'common.ok': {
+    en: 'OK',
+    nl: 'OK',
+    fr: 'OK',
+  },
+  'common.yes': {
+    en: 'Yes',
+    nl: 'Ja',
+    fr: 'Oui',
+  },
+  'common.no': {
+    en: 'No',
+    nl: 'Nee',
+    fr: 'Non',
+  },
+
+  // Auth
+  'auth.login': {
+    en: 'Login',
+    nl: 'Inloggen',
+    fr: 'Connexion',
+  },
+  'auth.signup': {
+    en: 'Sign Up',
+    nl: 'Registreren',
+    fr: 'S\'inscrire',
+  },
+  'auth.logout': {
+    en: 'Logout',
+    nl: 'Uitloggen',
+    fr: 'Déconnexion',
+  },
+  'auth.username': {
+    en: 'Username',
+    nl: 'Gebruikersnaam',
+    fr: 'Nom d\'utilisateur',
+  },
+  'auth.email': {
+    en: 'Email',
+    nl: 'E-mail',
+    fr: 'E-mail',
+  },
+  'auth.password': {
+    en: 'Password',
+    nl: 'Wachtwoord',
+    fr: 'Mot de passe',
+  },
+
+  // Navigation
+  'nav.home': {
+    en: 'Home',
+    nl: 'Home',
+    fr: 'Accueil',
+  },
+  'nav.profile': {
+    en: 'Profile',
+    nl: 'Profiel',
+    fr: 'Profil',
+  },
+  'nav.messages': {
+    en: 'Messages',
+    nl: 'Berichten',
+    fr: 'Messages',
+  },
+  'nav.settings': {
+    en: 'Settings',
+    nl: 'Instellingen',
+    fr: 'Paramètres',
+  },
+  'nav.search': {
+    en: 'Search',
+    nl: 'Zoeken',
+    fr: 'Rechercher',
+  },
+  
+  // Messages
+  'messages.new': {
+    en: 'New Message',
+    nl: 'Nieuw Bericht',
+    fr: 'Nouveau Message',
+  },
+  'messages.send': {
+    en: 'Send',
+    nl: 'Versturen',
+    fr: 'Envoyer',
+  },
+  'messages.placeholder': {
+    en: 'Type a message...',
+    nl: 'Typ een bericht...',
+    fr: 'Tapez un message...',
+  },
+  'messages.noMessages': {
+    en: 'No messages yet',
+    nl: 'Nog geen berichten',
+    fr: 'Pas encore de messages',
+  },
+  'messages.selectContact': {
+    en: 'Select a contact to start messaging',
+    nl: 'Selecteer een contact om te beginnen met chatten',
+    fr: 'Sélectionnez un contact pour commencer à discuter',
+  },
+  
+  // Settings
+  'settings.account': {
+    en: 'Account Settings',
+    nl: 'Account Instellingen',
+    fr: 'Paramètres du Compte',
+  },
+  'settings.profile': {
+    en: 'Profile Settings',
+    nl: 'Profiel Instellingen',
+    fr: 'Paramètres du Profil',
+  },
+  'settings.privacy': {
+    en: 'Privacy Settings',
+    nl: 'Privacy Instellingen',
+    fr: 'Paramètres de Confidentialité',
+  },
+  'settings.notifications': {
+    en: 'Notification Settings',
+    nl: 'Notificatie Instellingen',
+    fr: 'Paramètres de Notification',
+  },
+  'settings.language': {
+    en: 'Language',
+    nl: 'Taal',
+    fr: 'Langue',
+  },
+  'settings.language.english': {
+    en: 'English',
+    nl: 'Engels',
+    fr: 'Anglais',
+  },
+  'settings.language.dutch': {
+    en: 'Dutch',
+    nl: 'Nederlands',
+    fr: 'Néerlandais',
+  },
+  'settings.language.french': {
+    en: 'French',
+    nl: 'Frans',
+    fr: 'Français',
+  },
+  
+  // Posts
+  'post.create': {
+    en: 'Create Post',
+    nl: 'Bericht Maken',
+    fr: 'Créer une Publication',
+  },
+  'post.comment': {
+    en: 'Comment',
+    nl: 'Reactie',
+    fr: 'Commentaire',
+  },
+  'post.like': {
+    en: 'Like',
+    nl: 'Leuk',
+    fr: 'J\'aime',
+  },
+  'post.share': {
+    en: 'Share',
+    nl: 'Delen',
+    fr: 'Partager',
+  },
+  'post.report': {
+    en: 'Report',
+    nl: 'Rapporteren',
+    fr: 'Signaler',
+  },
+  
+  // Games
+  'games.title': {
+    en: 'Games',
+    nl: 'Spellen',
+    fr: 'Jeux',
+  },
+  'games.play': {
+    en: 'Play Now',
+    nl: 'Nu Spelen',
+    fr: 'Jouer Maintenant',
+  },
+  'games.leaderboard': {
+    en: 'Leaderboard',
+    nl: 'Scorebord',
+    fr: 'Classement',
+  },
+  'games.rewards': {
+    en: 'Rewards',
+    nl: 'Beloningen',
+    fr: 'Récompenses',
   }
 };
 
-const LanguageContext = createContext<LanguageContextType>({
-  language: 'nl',
-  setLanguage: () => {},
-  t: (key) => key
+interface LanguageContextProps {
+  language: LanguageCode;
+  setLanguage: (language: LanguageCode) => Promise<void>;
+  t: (key: string) => string;
+  availableLanguages: Array<{ code: LanguageCode, name: string }>;
+}
+
+const defaultLanguage: LanguageCode = 'nl';
+
+const LanguageContext = createContext<LanguageContextProps>({
+  language: defaultLanguage,
+  setLanguage: async () => {},
+  t: () => '',
+  availableLanguages: [
+    { code: 'nl', name: 'Nederlands' },
+    { code: 'en', name: 'English' },
+    { code: 'fr', name: 'Français' }
+  ]
 });
 
-export const useLanguage = () => useContext(LanguageContext);
-
-export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguageState] = useState<Language>('nl');
-
-  // Load language preference from local storage on mount
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguageState] = useState<LanguageCode>(defaultLanguage);
+  const { user, isAuthenticated } = useAuth();
+  
+  // Fetch the user's language preference when they authenticate
   useEffect(() => {
-    const savedLanguage = localStorage.getItem('language') as Language;
-    if (savedLanguage && ['nl', 'en', 'fr'].includes(savedLanguage)) {
-      setLanguageState(savedLanguage);
-    }
-  }, []);
-
-  // Save language preference to user profile if logged in
-  const saveLanguagePreference = async (lang: Language) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        const { error } = await supabase
-          .from('user_settings')
-          .upsert({
-            user_id: session.user.id,
-            language: lang
-          }, {
-            onConflict: 'user_id'
-          });
+    const fetchLanguagePreference = async () => {
+      if (isAuthenticated && user?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('user_settings')
+            .select('language')
+            .eq('user_id', user.id)
+            .single();
+            
+          if (error) {
+            console.error('Error fetching language preference:', error);
+            return;
+          }
           
-        if (error) {
-          console.error('Error saving language preference:', error);
+          if (data?.language) {
+            setLanguageState(data.language as LanguageCode);
+          }
+        } catch (error) {
+          console.error('Failed to fetch language settings:', error);
         }
       }
-    } catch (error) {
-      console.error('Error in saveLanguagePreference:', error);
+    };
+    
+    fetchLanguagePreference();
+  }, [isAuthenticated, user?.id]);
+  
+  // Function to set language and save preference to database
+  const setLanguage = async (newLanguage: LanguageCode) => {
+    setLanguageState(newLanguage);
+    
+    if (isAuthenticated && user?.id) {
+      try {
+        // Check if user settings exist
+        const { data: existingSettings } = await supabase
+          .from('user_settings')
+          .select('id')
+          .eq('user_id', user.id)
+          .single();
+          
+        if (existingSettings) {
+          // Update existing settings
+          const { error } = await supabase
+            .from('user_settings')
+            .update({ language: newLanguage })
+            .eq('user_id', user.id);
+            
+          if (error) {
+            console.error('Error updating language preference:', error);
+          }
+        } else {
+          // Create new settings
+          const { error } = await supabase
+            .from('user_settings')
+            .insert({ user_id: user.id, language: newLanguage });
+            
+          if (error) {
+            console.error('Error creating language preference:', error);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to save language preference:', error);
+      }
     }
   };
-
-  const setLanguage = (lang: Language) => {
-    setLanguageState(lang);
-    localStorage.setItem('language', lang);
-    saveLanguagePreference(lang);
+  
+  // Translation function
+  const t = (key: string) => {
+    const translation = translations[key];
+    if (!translation) {
+      console.warn(`Translation missing for key: ${key}`);
+      return key;
+    }
+    
+    return translation[language] || translation.en || key;
   };
-
-  const t = (key: string): string => {
-    return translations[language][key] || key;
-  };
-
+  
+  const availableLanguages = [
+    { code: 'nl', name: 'Nederlands' },
+    { code: 'en', name: 'English' },
+    { code: 'fr', name: 'Français' }
+  ];
+  
   return (
-    <LanguageContext.Provider value={{ language, setLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, t, availableLanguages }}>
       {children}
     </LanguageContext.Provider>
   );
+}
+
+export const useLanguage = () => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
 };

@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 
 interface OnlineStatus {
   userId: string;
@@ -11,6 +12,90 @@ interface OnlineStatus {
 export const useOnlineStatus = (userIds: string[] = []) => {
   const [onlineStatuses, setOnlineStatuses] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
+
+  // Update current user's online status
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // When component mounts, set user as online
+    const updateStatus = async () => {
+      try {
+        // Check if user already has a status record
+        const { data, error: checkError } = await supabase
+          .from('user_status')
+          .select('id')
+          .eq('user_id', user.id);
+
+        if (checkError) {
+          console.error("Error checking user status:", checkError);
+          return;
+        }
+
+        const currentTime = new Date().toISOString();
+
+        if (data && data.length > 0) {
+          // Update existing status
+          await supabase
+            .from('user_status')
+            .update({
+              is_online: true,
+              last_active: currentTime
+            })
+            .eq('user_id', user.id);
+        } else {
+          // Insert new status
+          await supabase
+            .from('user_status')
+            .insert({
+              user_id: user.id,
+              is_online: true,
+              last_active: currentTime
+            });
+        }
+
+        // Set offline when the component unmounts
+        const handleBeforeUnload = () => {
+          // Use synchronous fetch to make sure it runs before page unload
+          navigator.sendBeacon(
+            `${supabase.supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
+            JSON.stringify({
+              is_online: false,
+              last_active: new Date().toISOString()
+            })
+          );
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        // Set up periodic updates of "last active" to maintain online status
+        const pingInterval = setInterval(async () => {
+          await supabase
+            .from('user_status')
+            .update({ last_active: new Date().toISOString() })
+            .eq('user_id', user.id);
+        }, 60000); // Update every minute
+
+        return () => {
+          window.removeEventListener('beforeunload', handleBeforeUnload);
+          clearInterval(pingInterval);
+          
+          // Set offline when the component unmounts (if page isn't being closed)
+          supabase
+            .from('user_status')
+            .update({
+              is_online: false,
+              last_active: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
+        };
+      } catch (error) {
+        console.error("Failed to update online status:", error);
+      }
+    };
+
+    updateStatus();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!userIds.length) {
@@ -64,7 +149,7 @@ export const useOnlineStatus = (userIds: string[] = []) => {
           event: '*',
           schema: 'public',
           table: 'user_status',
-          filter: userIds.length > 0 ? `user_id.in.(${userIds.join(',')})` : undefined,
+          filter: userIds.length > 0 ? `user_id=in.(${userIds.join(',')})` : undefined,
         },
         (payload) => {
           console.log('User status change:', payload);
@@ -83,7 +168,9 @@ export const useOnlineStatus = (userIds: string[] = []) => {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Subscription status:', status);
+      });
 
     return () => {
       supabase.removeChannel(channel);

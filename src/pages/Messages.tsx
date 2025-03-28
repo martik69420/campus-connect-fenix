@@ -1,124 +1,78 @@
 
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Card } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { useToast } from '@/hooks/use-toast';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useLanguage } from '@/context/LanguageContext';
-import { supabase } from '@/integrations/supabase/client';
-import AppLayout from '@/components/layout/AppLayout';
-import { Search, Send, Plus, User, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
-import { useOnlineStatus } from '@/hooks/use-online-status';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { useLanguage } from '@/context/LanguageContext';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
+import OnlineStatus from '@/components/OnlineStatus';
+import { cn } from '@/lib/utils';
+import AppLayout from '@/components/layout/AppLayout';
+import {
+  Send,
+  User,
+  Search,
+  Loader2,
+  MoreVertical,
+  Trash,
+  Flag,
+  Bell,
+  BellOff,
+} from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import ReportModal from '@/components/ReportModal';
 
-type Conversation = {
+interface Message {
   id: string;
-  userId: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+  receiver_id: string;
+  is_read: boolean;
+}
+
+interface Contact {
+  id: string;
   username: string;
   displayName: string;
-  avatar: string;
-  lastMessage: string;
-  lastMessageTime: Date;
-  unread: number;
-};
+  avatar: string | null;
+  lastMessage?: string;
+  lastMessageTime?: string;
+  unreadCount?: number;
+}
 
 const Messages = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const { t } = useLanguage();
+  const { toast } = useToast();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [activeConversation, setActiveConversation] = useState<string | null>(null);
-  const [activeUserId, setActiveUserId] = useState<string | null>(null);
+  const [activeContactId, setActiveContactId] = useState<string>('');
+  const [activeContact, setActiveContact] = useState<Contact | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [sendingMessage, setSendingMessage] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
   
-  // Get all user IDs from conversations to track online status
-  const userIds = conversations.map(conv => conv.userId);
-  
-  // Use our custom hooks for messages and online status
-  const { messages, isLoading: loadingMessages, sendMessage, markMessagesAsRead } = useMessages(activeUserId, user?.id || null);
-  const { isUserOnline } = useOnlineStatus(userIds);
-
-  // Parse URL params to get initial active user
-  useEffect(() => {
-    if (!user) return;
-    
-    const params = new URLSearchParams(location.search);
-    const userId = params.get('userId');
-    if (userId) {
-      console.log('URL parameter userId found:', userId);
-      setActiveUserId(userId);
-      // We'll fetch this user's details regardless of whether they're in conversations
-      fetchUserDetails(userId);
-    }
-  }, [location, user]);
-
-  // Add function to fetch user details when directly accessing via URL
-  const fetchUserDetails = async (userId: string) => {
-    if (!user || !userId) return;
-    
-    try {
-      console.log('Fetching user details for:', userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
-        
-      if (error) {
-        console.error('Error fetching user details:', error);
-        return;
-      }
-      
-      if (data) {
-        console.log('User details fetched:', data);
-        
-        // Check if a conversation with this user already exists
-        const existingConv = conversations.find(conv => conv.userId === userId);
-        if (existingConv) {
-          console.log('Conversation already exists:', existingConv);
-          setActiveConversation(existingConv.id);
-          return;
-        }
-        
-        // Create a temporary conversation object
-        const tempConversation = {
-          id: `temp-${userId}`,
-          userId: userId,
-          username: data.username,
-          displayName: data.display_name,
-          avatar: data.avatar_url || '/placeholder.svg',
-          lastMessage: "No messages yet",
-          lastMessageTime: new Date(),
-          unread: 0
-        };
-        
-        // Add this to conversations
-        setConversations(prev => {
-          // Only add if it doesn't already exist
-          if (!prev.some(conv => conv.userId === userId)) {
-            return [tempConversation, ...prev];
-          }
-          return prev;
-        });
-        
-        // Set as active
-        setActiveConversation(`temp-${userId}`);
-      }
-    } catch (err) {
-      console.error('Error in fetchUserDetails:', err);
-    }
-  };
+  // Store optimistic messages (ones we've sent but haven't been confirmed yet)
+  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
   
   // Redirect if not authenticated
   useEffect(() => {
@@ -127,423 +81,636 @@ const Messages = () => {
     }
   }, [isAuthenticated, isLoading, navigate]);
   
-  // Load conversations
+  // Fetch contacts
   useEffect(() => {
-    if (user) {
-      fetchConversations();
-    }
-  }, [user]);
-  
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages]);
-
-  // Mark messages as read when viewing a conversation
-  useEffect(() => {
-    if (activeUserId && messages.length > 0) {
-      markMessagesAsRead();
-    }
-  }, [activeUserId, messages, markMessagesAsRead]);
-  
-  const fetchConversations = async () => {
-    if (!user) return;
-    
-    setLoadingConversations(true);
-    
-    try {
-      console.log('Fetching conversations for user:', user.id);
-      // Get all friends
-      const { data: friendsData, error: friendsError } = await supabase
-        .from('friends')
-        .select(`
-          id,
-          user_id,
-          friend_id,
-          status,
-          friend_profile:profiles!friends_friend_id_fkey(id, username, display_name, avatar_url),
-          user_profile:profiles!friends_user_id_fkey(id, username, display_name, avatar_url)
-        `)
-        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
-        .eq('status', 'friends');
+    const fetchContacts = async () => {
+      if (!user) return;
+      
+      try {
+        setLoadingContacts(true);
         
-      if (friendsError) {
-        console.error("Error fetching friends:", friendsError);
-        throw friendsError;
-      }
-      
-      console.log("Friends data fetched:", friendsData);
-      
-      if (friendsData && friendsData.length > 0) {
-        // Create conversations from friends
-        const conversationsPromises = friendsData.map(async (friendship) => {
-          // Determine which profile is the friend (not the current user)
-          const friendProfile = friendship.user_id === user.id 
-            ? friendship.friend_profile
-            : friendship.user_profile;
-          
-          // Get last message and unread count
-          const { data: lastMessageData } = await supabase
-            .from('messages')
-            .select('*')
-            .or(`and(sender_id.eq.${user.id},receiver_id.eq.${friendProfile.id}),and(sender_id.eq.${friendProfile.id},receiver_id.eq.${user.id})`)
-            .order('created_at', { ascending: false })
-            .limit(1);
-          
-          const { count: unreadCount } = await supabase
-            .from('messages')
-            .select('*', { count: 'exact', head: true })
-            .eq('sender_id', friendProfile.id)
-            .eq('receiver_id', user.id)
-            .eq('is_read', false);
-            
-          return {
-            id: friendship.id,
-            userId: friendProfile.id,
-            username: friendProfile.username,
-            displayName: friendProfile.display_name,
-            avatar: friendProfile.avatar_url || '/placeholder.svg',
-            lastMessage: lastMessageData && lastMessageData.length > 0 
-              ? lastMessageData[0].content 
-              : "No messages yet",
-            lastMessageTime: lastMessageData && lastMessageData.length > 0 
-              ? new Date(lastMessageData[0].created_at) 
-              : new Date(),
-            unread: unreadCount || 0
-          };
+        // Get all messages to and from the current user
+        const { data: messagesData, error: messagesError } = await supabase
+          .from('messages')
+          .select('*')
+          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .order('created_at', { ascending: false });
+        
+        if (messagesError) {
+          console.error('Error fetching messages:', messagesError);
+          return;
+        }
+        
+        // Extract unique contact IDs
+        const contactIds = new Set<string>();
+        
+        messagesData?.forEach(message => {
+          if (message.sender_id === user.id) {
+            contactIds.add(message.receiver_id);
+          } else {
+            contactIds.add(message.sender_id);
+          }
         });
         
-        const conversationsFromFriends = await Promise.all(conversationsPromises);
-        console.log("Conversations created from friends:", conversationsFromFriends);
+        // Get contact profiles
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, avatar_url')
+          .in('id', Array.from(contactIds));
         
-        setConversations(conversationsFromFriends);
-        
-        // Process URL parameter if present
-        const params = new URLSearchParams(location.search);
-        const urlUserId = params.get('userId');
-        
-        if (urlUserId) {
-          const conversation = conversationsFromFriends.find(conv => conv.userId === urlUserId);
-          if (conversation) {
-            console.log('Setting active conversation from URL parameter:', conversation.id);
-            setActiveConversation(conversation.id);
-          } else {
-            // If not found in friends, fetch user details to create a temp conversation
-            console.log('Friend not found in conversations, fetching details');
-            fetchUserDetails(urlUserId);
-          }
-        } else if (conversationsFromFriends.length > 0 && !activeConversation) {
-          // Set first conversation as active if none selected
-          setActiveConversation(conversationsFromFriends[0].id);
-          setActiveUserId(conversationsFromFriends[0].userId);
+        if (profilesError) {
+          console.error('Error fetching profiles:', profilesError);
+          return;
         }
-      } else {
-        console.log("No friends found, using sample conversations");
-        // If no friends, use sample conversations
-        const sampleConversations = getSampleConversations();
-        setConversations(sampleConversations);
+        
+        // Create contacts with last message
+        const contactsMap = new Map<string, Contact>();
+        
+        profiles?.forEach(profile => {
+          contactsMap.set(profile.id, {
+            id: profile.id,
+            username: profile.username,
+            displayName: profile.display_name,
+            avatar: profile.avatar_url,
+            unreadCount: 0,
+          });
+        });
+        
+        // Process messages to get last message and unread count
+        const processedContactIds = new Set<string>();
+        
+        messagesData?.forEach(message => {
+          const contactId = message.sender_id === user.id ? message.receiver_id : message.sender_id;
+          const contact = contactsMap.get(contactId);
+          
+          if (contact) {
+            // Only set last message for first occurrence (most recent)
+            if (!processedContactIds.has(contactId)) {
+              contact.lastMessage = message.content;
+              contact.lastMessageTime = message.created_at;
+              processedContactIds.add(contactId);
+            }
+            
+            // Count unread messages
+            if (message.sender_id !== user.id && !message.is_read) {
+              contact.unreadCount = (contact.unreadCount || 0) + 1;
+            }
+          }
+        });
+        
+        const contactsList = Array.from(contactsMap.values());
+        
+        // Sort by last message time
+        contactsList.sort((a, b) => {
+          if (!a.lastMessageTime) return 1;
+          if (!b.lastMessageTime) return -1;
+          return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
+        });
+        
+        setContacts(contactsList);
+        
+        // If there's a contact, set the first one as active
+        if (contactsList.length > 0 && !activeContactId) {
+          setActiveContactId(contactsList[0].id);
+          setActiveContact(contactsList[0]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch contacts:', error);
+      } finally {
+        setLoadingContacts(false);
       }
+    };
+    
+    fetchContacts();
+    
+    // Subscribe to new messages for real-time updates
+    if (user) {
+      const channel = supabase
+        .channel('messages-channel')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `receiver_id=eq.${user.id}`,
+          },
+          async (payload) => {
+            console.log('New message received:', payload);
+            const newMessage = payload.new as Message;
+            
+            // Add the new message if it's from the active contact
+            if (newMessage.sender_id === activeContactId) {
+              setMessages(prev => [...prev, newMessage]);
+              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+              
+              // Mark as read
+              await supabase
+                .from('messages')
+                .update({ is_read: true })
+                .eq('id', newMessage.id);
+            }
+            
+            // Update contacts list
+            setContacts(prev => {
+              const updated = [...prev];
+              const contactIndex = updated.findIndex(c => c.id === newMessage.sender_id);
+              
+              if (contactIndex >= 0) {
+                const contact = { ...updated[contactIndex] };
+                contact.lastMessage = newMessage.content;
+                contact.lastMessageTime = newMessage.created_at;
+                
+                // Only increment unread count if it's not the active contact
+                if (newMessage.sender_id !== activeContactId) {
+                  contact.unreadCount = (contact.unreadCount || 0) + 1;
+                }
+                
+                // Move this contact to the top
+                updated.splice(contactIndex, 1);
+                updated.unshift(contact);
+              } else {
+                // It's a new contact, fetch their profile
+                supabase
+                  .from('profiles')
+                  .select('id, username, display_name, avatar_url')
+                  .eq('id', newMessage.sender_id)
+                  .single()
+                  .then(({ data, error }) => {
+                    if (error || !data) {
+                      console.error('Error fetching new contact:', error);
+                      return;
+                    }
+                    
+                    const newContact: Contact = {
+                      id: data.id,
+                      username: data.username,
+                      displayName: data.display_name,
+                      avatar: data.avatar_url,
+                      lastMessage: newMessage.content,
+                      lastMessageTime: newMessage.created_at,
+                      unreadCount: 1,
+                    };
+                    
+                    setContacts(prev => [newContact, ...prev]);
+                  });
+              }
+              
+              return updated;
+            });
+            
+            // Show a toast notification if it's not from the active contact
+            if (newMessage.sender_id !== activeContactId) {
+              // Find the sender
+              const sender = contacts.find(c => c.id === newMessage.sender_id);
+              
+              if (sender) {
+                toast({
+                  title: t('messages.newMessage'),
+                  description: `${sender.displayName || sender.username}: ${newMessage.content}`,
+                  action: (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => {
+                        setActiveContactId(sender.id);
+                        setActiveContact(sender);
+                      }}
+                    >
+                      {t('messages.view')}
+                    </Button>
+                  ),
+                });
+              }
+            }
+          }
+        )
+        .subscribe();
+      
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [user, activeContactId]);
+  
+  // Fetch messages when active contact changes
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (!user || !activeContactId) return;
+      
+      try {
+        setLoadingMessages(true);
+        setMessages([]);
+        
+        // Get messages between current user and the active contact
+        const { data, error } = await supabase
+          .from('messages')
+          .select('*')
+          .or(
+            `and(sender_id.eq.${user.id},receiver_id.eq.${activeContactId}),and(sender_id.eq.${activeContactId},receiver_id.eq.${user.id})`
+          )
+          .order('created_at', { ascending: true });
+        
+        if (error) {
+          console.error('Error fetching messages:', error);
+          return;
+        }
+        
+        setMessages(data || []);
+        
+        // Mark unread messages as read
+        const unreadMessages = data?.filter(
+          message => message.sender_id === activeContactId && !message.is_read
+        );
+        
+        if (unreadMessages && unreadMessages.length > 0) {
+          await Promise.all(
+            unreadMessages.map(message =>
+              supabase
+                .from('messages')
+                .update({ is_read: true })
+                .eq('id', message.id)
+            )
+          );
+          
+          // Update unread count in contacts
+          setContacts(prev => {
+            return prev.map(contact => {
+              if (contact.id === activeContactId) {
+                return { ...contact, unreadCount: 0 };
+              }
+              return contact;
+            });
+          });
+        }
+        
+        // Find and set the active contact
+        const activeContact = contacts.find(contact => contact.id === activeContactId) || null;
+        setActiveContact(activeContact);
+      } catch (error) {
+        console.error('Failed to fetch messages:', error);
+      } finally {
+        setLoadingMessages(false);
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    };
+    
+    fetchMessages();
+  }, [user, activeContactId, contacts]);
+  
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, optimisticMessages]);
+  
+  const handleSendMessage = async () => {
+    if (!user || !activeContactId || !newMessage.trim()) return;
+    
+    try {
+      setSendingMessage(true);
+      
+      // Create an optimistic message
+      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticMessage: Message = {
+        id: optimisticId,
+        content: newMessage,
+        created_at: new Date().toISOString(),
+        sender_id: user.id,
+        receiver_id: activeContactId,
+        is_read: false,
+      };
+      
+      // Add to optimistic messages
+      setOptimisticMessages(prev => [...prev, optimisticMessage]);
+      
+      // Clear input
+      setNewMessage('');
+      
+      // Actually send the message
+      const { data, error } = await supabase
+        .from('messages')
+        .insert({
+          content: newMessage,
+          sender_id: user.id,
+          receiver_id: activeContactId,
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error sending message:', error);
+        toast({
+          title: t('common.error'),
+          description: t('messages.sendError'),
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Remove the optimistic message and add the real one
+      setOptimisticMessages(prev => prev.filter(msg => msg.id !== optimisticId));
+      
+      // Add to messages
+      setMessages(prev => [...prev, data]);
+      
+      // Update the contact's last message
+      setContacts(prev => {
+        const updated = [...prev];
+        const contactIndex = updated.findIndex(c => c.id === activeContactId);
+        
+        if (contactIndex >= 0) {
+          const contact = { ...updated[contactIndex] };
+          contact.lastMessage = newMessage;
+          contact.lastMessageTime = new Date().toISOString();
+          
+          // Move this contact to the top
+          updated.splice(contactIndex, 1);
+          updated.unshift(contact);
+        }
+        
+        return updated;
+      });
     } catch (error) {
-      console.error("Error fetching conversations:", error);
-      // Fallback to sample conversations
-      const sampleConversations = getSampleConversations();
-      setConversations(sampleConversations);
+      console.error('Failed to send message:', error);
+      toast({
+        title: t('common.error'),
+        description: t('messages.sendError'),
+        variant: "destructive",
+      });
     } finally {
-      setLoadingConversations(false);
+      setSendingMessage(false);
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   };
   
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !activeUserId || !user) return;
-    
-    await sendMessage(newMessage);
-    setNewMessage('');
-    
-    // Refresh conversations to update last message
-    fetchConversations();
-  };
-  
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSendMessage();
     }
   };
   
-  // Get current conversation partner
-  const getCurrentConversation = () => {
-    return conversations.find(conv => conv.id === activeConversation);
-  };
-  
-  // Filter conversations by search term
-  const filteredConversations = conversations.filter(conv => 
-    conv.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    conv.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleConversationClick = (conv: Conversation) => {
-    setActiveConversation(conv.id);
-    setActiveUserId(conv.userId);
-    
-    // Update URL to include userId parameter without navigation
-    const params = new URLSearchParams(location.search);
-    params.set('userId', conv.userId);
-    const newUrl = `${location.pathname}?${params.toString()}`;
-    window.history.replaceState({}, '', newUrl);
-  };
-  
-  // Create a new conversation
-  const handleNewConversation = () => {
-    navigate('/friends'); // Redirect to friends page to select someone
-  };
-  
-  // Sample conversations (fallback)
-  const getSampleConversations = (): Conversation[] => [
-    {
-      id: 'conv1',
-      userId: '2',
-      username: 'jane_smith',
-      displayName: 'Jane Smith',
-      avatar: '/placeholder.svg',
-      lastMessage: 'You have no friends yet. Add some friends to start messaging!',
-      lastMessageTime: new Date(),
-      unread: 0
-    }
-  ];
-  
-  // Render online status indicator for a user
-  const renderOnlineStatus = (userId: string) => {
-    const online = isUserOnline(userId);
-    
-    return (
-      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background ${
-        online ? 'bg-green-500' : 'bg-gray-400'
-      }`} title={online ? t('online') : t('offline')} />
-    );
-  };
+  // Filter contacts based on search
+  const filteredContacts = searchQuery
+    ? contacts.filter(
+        contact =>
+          contact.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          contact.username.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : contacts;
   
   return (
     <AppLayout>
-      <div className="h-[calc(100vh-4rem)]">
-        <div className="grid md:grid-cols-[300px_1fr] h-full">
-          {/* Conversations sidebar */}
-          <div className="border-r">
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">{t('messages')}</h2>
-                <Button variant="outline" size="icon" onClick={handleNewConversation}>
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="relative">
+      <div className="container mx-auto p-4 h-[calc(100vh-4rem)]">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+          {/* Contacts List */}
+          <div className="md:col-span-1 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col">
+            <div className="border-b p-4">
+              <h2 className="text-xl font-bold">{t('messages.conversations')}</h2>
+              <div className="relative mt-2">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder={t('search_conversations')}
+                  placeholder={t('messages.searchContacts')}
                   className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
             
-            <ScrollArea className="h-[calc(100vh-10rem)]">
-              {loadingConversations ? (
-                <div className="space-y-1 p-2">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="w-full flex items-center gap-3 p-2 rounded-lg">
-                      <div className="animate-pulse w-10 h-10 bg-muted rounded-full" />
-                      <div className="flex-1">
-                        <div className="animate-pulse h-4 w-24 bg-muted rounded" />
-                        <div className="animate-pulse h-3 w-32 bg-muted rounded mt-1" />
-                      </div>
+            <div className="flex-1 overflow-y-auto">
+              {loadingContacts ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <div key={index} className="flex items-center gap-3 p-3 border-b">
+                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <div className="space-y-1.5 flex-1">
+                      <Skeleton className="h-4 w-2/3" />
+                      <Skeleton className="h-3 w-full" />
                     </div>
-                  ))}
+                  </div>
+                ))
+              ) : filteredContacts.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
+                  <User className="h-12 w-12 mb-2" />
+                  <p>{t('messages.noConversations')}</p>
                 </div>
-              ) : filteredConversations.length > 0 ? (
-                <div className="space-y-1 p-2">
-                  {filteredConversations.map((conv) => (
-                    <motion.button
-                      key={conv.id}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors ${
-                        activeConversation === conv.id
-                          ? 'bg-secondary'
-                          : 'hover:bg-secondary/50'
-                      }`}
-                      onClick={() => handleConversationClick(conv)}
-                    >
-                      <div className="relative">
-                        <Avatar>
-                          <AvatarImage src={conv.avatar} alt={conv.displayName} />
-                          <AvatarFallback>
-                            {conv.displayName.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        {renderOnlineStatus(conv.userId)}
-                        {conv.unread > 0 && (
-                          <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                            {conv.unread}
+              ) : (
+                filteredContacts.map((contact) => (
+                  <button
+                    key={contact.id}
+                    className={cn(
+                      'flex items-center gap-3 p-3 hover:bg-muted w-full text-left border-b relative',
+                      contact.id === activeContactId && 'bg-muted'
+                    )}
+                    onClick={() => {
+                      setActiveContactId(contact.id);
+                      setActiveContact(contact);
+                    }}
+                  >
+                    <div className="relative">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={contact.avatar || "/placeholder.svg"} alt={contact.displayName || contact.username} />
+                        <AvatarFallback>{contact.displayName?.charAt(0) || contact.username.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <OnlineStatus userId={contact.id} className="absolute -bottom-1 -right-1" />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-medium truncate">
+                          {contact.displayName || contact.username}
+                        </h3>
+                        {contact.lastMessageTime && (
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(contact.lastMessageTime).toLocaleDateString(undefined, {
+                              month: 'short',
+                              day: 'numeric',
+                            })}
                           </span>
                         )}
                       </div>
-                      <div className="flex-1 overflow-hidden">
-                        <div className="flex justify-between items-center">
-                          <span className="font-medium truncate">{conv.displayName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {conv.lastMessageTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground truncate">{conv.lastMessage}</p>
-                      </div>
-                    </motion.button>
-                  ))}
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-                  <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="font-medium mb-1">{t('no_messages_yet')}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {searchTerm 
-                      ? `No results for "${searchTerm}"`
-                      : "Start chatting with your friends"}
-                  </p>
-                </div>
+                      <p className="text-sm text-muted-foreground truncate">
+                        {contact.lastMessage || t('messages.noMessages')}
+                      </p>
+                    </div>
+                    
+                    {(contact.unreadCount || 0) > 0 && (
+                      <span className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full h-5 min-w-5 flex items-center justify-center text-xs font-semibold px-1.5">
+                        {contact.unreadCount}
+                      </span>
+                    )}
+                  </button>
+                ))
               )}
-            </ScrollArea>
+            </div>
           </div>
           
-          {/* Chat area */}
-          <div className="flex flex-col h-full">
-            {activeConversation ? (
+          {/* Messages View */}
+          <div className="md:col-span-2 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col">
+            {activeContact ? (
               <>
-                {/* Chat header */}
-                <div className="flex items-center gap-3 p-4 border-b">
-                  <div className="relative">
-                    <Avatar>
-                      <AvatarImage 
-                        src={getCurrentConversation()?.avatar || '/placeholder.svg'} 
-                        alt={getCurrentConversation()?.displayName || 'User'} 
-                      />
+                <div className="border-b p-4 flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage src={activeContact.avatar || "/placeholder.svg"} alt={activeContact.displayName || activeContact.username} />
                       <AvatarFallback>
-                        {getCurrentConversation()?.displayName.substring(0, 2).toUpperCase() || 'U'}
+                        {activeContact.displayName?.charAt(0) || activeContact.username.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    {activeUserId && renderOnlineStatus(activeUserId)}
+                    <div>
+                      <h3 className="font-medium">
+                        {activeContact.displayName || activeContact.username}
+                      </h3>
+                      <div className="flex items-center text-xs text-muted-foreground">
+                        <OnlineStatus userId={activeContact.id} showLabel />
+                      </div>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-medium">{getCurrentConversation()?.displayName}</h3>
-                    <p className="text-xs text-muted-foreground">@{getCurrentConversation()?.username}</p>
-                  </div>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => navigate(`/profile/${activeContact.username}`)}>
+                        <User className="h-4 w-4 mr-2" />
+                        {t('messages.viewProfile')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem>
+                        <Bell className="h-4 w-4 mr-2" />
+                        {t('messages.muteNotifications')}
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setShowReportModal(true)} className="text-destructive">
+                        <Flag className="h-4 w-4 mr-2" />
+                        {t('messages.reportUser')}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
                 
-                {/* Messages */}
-                <ScrollArea className="flex-1 p-4">
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
                   {loadingMessages ? (
-                    <div className="space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className={`flex ${i % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
-                          <div className="flex gap-2 max-w-[70%]">
-                            {i % 2 !== 0 && (
-                              <div className="animate-pulse w-8 h-8 bg-muted rounded-full" />
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className={cn(
+                          'flex',
+                          index % 2 === 0 ? 'justify-start' : 'justify-end'
+                        )}
+                      >
+                        <div className={cn(
+                          'max-w-[80%] p-3 rounded-lg',
+                          index % 2 === 0 ? 'bg-muted' : 'bg-primary text-primary-foreground'
+                        )}>
+                          <Skeleton className="h-4 w-64" />
+                        </div>
+                      </div>
+                    ))
+                  ) : messages.length === 0 && optimisticMessages.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
+                      <p>{t('messages.noMessagesYet')}</p>
+                      <p className="text-sm">{t('messages.startConversation')}</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Real messages */}
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={cn(
+                            'flex',
+                            message.sender_id === user?.id ? 'justify-end' : 'justify-start'
+                          )}
+                        >
+                          <div
+                            className={cn(
+                              'max-w-[80%] p-3 rounded-lg',
+                              message.sender_id === user?.id
+                                ? 'bg-primary text-primary-foreground'
+                                : 'bg-muted'
                             )}
-                            <div>
-                              <div className={`animate-pulse rounded-lg p-3 h-12 w-40 ${
-                                i % 2 === 0 ? 'bg-primary/20' : 'bg-muted'
-                              }`}></div>
+                          >
+                            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                            <div className="text-xs mt-1 opacity-70 text-right">
+                              {new Date(message.created_at).toLocaleTimeString(undefined, {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
                             </div>
                           </div>
                         </div>
                       ))}
-                    </div>
-                  ) : messages.length > 0 ? (
-                    <div className="space-y-4">
-                      {messages.map((message) => {
-                        const isOwnMessage = message.sender_id === user?.id;
-                        
-                        return (
-                          <div 
-                            key={message.id}
-                            className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                          >
-                            <div className="flex gap-2 max-w-[70%]">
-                              {!isOwnMessage && (
-                                <Avatar className="h-8 w-8">
-                                  <AvatarImage 
-                                    src={getCurrentConversation()?.avatar || '/placeholder.svg'} 
-                                    alt={getCurrentConversation()?.displayName || 'User'} 
-                                  />
-                                  <AvatarFallback>
-                                    {getCurrentConversation()?.displayName.substring(0, 2).toUpperCase() || 'U'}
-                                  </AvatarFallback>
-                                </Avatar>
-                              )}
-                              <div>
-                                <div 
-                                  className={`rounded-lg p-3 ${
-                                    isOwnMessage 
-                                      ? 'bg-primary text-primary-foreground' 
-                                      : 'bg-muted'
-                                  }`}
-                                >
-                                  {message.content}
-                                </div>
-                                <div className="text-xs text-muted-foreground mt-1">
-                                  {new Date(message.created_at).toLocaleTimeString([], { 
-                                    hour: '2-digit', 
-                                    minute: '2-digit' 
-                                  })}
-                                </div>
-                              </div>
+                      
+                      {/* Optimistic messages */}
+                      {optimisticMessages.map((message) => (
+                        <div key={message.id} className="flex justify-end">
+                          <div className="max-w-[80%] p-3 rounded-lg bg-primary text-primary-foreground opacity-80">
+                            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+                            <div className="text-xs mt-1 opacity-70 text-right flex justify-end items-center">
+                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                              {t('messages.sending')}
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
+                      
                       <div ref={messagesEndRef} />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-center p-4">
-                      <User className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-1">{t('no_messages_yet')}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {t('send_first_message')}
-                      </p>
-                    </div>
+                    </>
                   )}
-                </ScrollArea>
+                </div>
                 
-                {/* Message input */}
                 <div className="border-t p-4">
                   <div className="flex gap-2">
-                    <Input
-                      placeholder={t('type_message')}
+                    <Textarea
+                      placeholder={t('messages.typeMessage')}
+                      className="min-h-10 flex-1 resize-none"
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
+                      disabled={sendingMessage}
                     />
-                    <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                      <Send className="h-4 w-4" />
+                    <Button
+                      size="icon"
+                      disabled={!newMessage.trim() || sendingMessage}
+                      onClick={handleSendMessage}
+                    >
+                      {sendingMessage ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                      ) : (
+                        <Send className="h-5 w-5" />
+                      )}
                     </Button>
                   </div>
                 </div>
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-                <User className="h-16 w-16 text-muted-foreground mb-4" />
-                <h2 className="text-2xl font-bold mb-2">{t('messages')}</h2>
-                <p className="text-muted-foreground max-w-md mb-6">
-                  Connect with your friends and classmates through private messages
-                </p>
-                <Button onClick={handleNewConversation}>
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t('new_conversation')}
-                </Button>
+              <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
+                <div className="mb-4 p-4 rounded-full bg-muted">
+                  <Send className="h-12 w-12" />
+                </div>
+                <h3 className="text-lg font-medium mb-2">{t('messages.selectContact')}</h3>
+                <p className="max-w-md">{t('messages.selectContactDescription')}</p>
               </div>
             )}
           </div>
         </div>
       </div>
+      
+      {/* Report Modal */}
+      {showReportModal && activeContact && (
+        <ReportModal
+          open={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          type="user"
+          targetId={activeContact.id}
+          targetName={activeContact.displayName || activeContact.username}
+        />
+      )}
     </AppLayout>
   );
 };
