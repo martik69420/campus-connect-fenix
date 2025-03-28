@@ -15,6 +15,8 @@ const Games = () => {
   const handleTriviaGameEnd = async (score: number) => {
     // Handle the trivia game end event
     console.log("Trivia game ended with score:", score);
+    // Return a promise to satisfy the type requirement
+    return Promise.resolve();
   };
   
   return (

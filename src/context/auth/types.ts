@@ -10,6 +10,7 @@ export interface User {
   createdAt?: string; // Add createdAt property
   bio?: string; // Add bio property
   friends?: string[]; // Add friends property
+  location?: string; // Add location property
 }
 
 export interface ProfileUpdateData {
@@ -17,6 +18,7 @@ export interface ProfileUpdateData {
   bio?: string;
   school?: string;
   avatar?: string;
+  location?: string; // Add location property
 }
 
 export interface AuthContextType {
