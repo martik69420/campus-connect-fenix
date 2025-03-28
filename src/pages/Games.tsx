@@ -28,7 +28,7 @@ const Games = () => {
           </TabsContent>
           
           <TabsContent value="trivia" className="w-full">
-            <TriviaGame />
+            <TriviaGame onGameEnd={() => {}} />
           </TabsContent>
           
           <TabsContent value="tetris" className="w-full">
