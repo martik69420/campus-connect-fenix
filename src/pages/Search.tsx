@@ -1,525 +1,363 @@
 
-import { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search as SearchIcon, UserRound, MessageSquare, UserX, ShieldAlert, Bookmark, CheckCircle } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
-import { useNotification } from '@/context/NotificationContext';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { Search as SearchIcon, User, FileText, Loader2 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/components/layout/AppLayout';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import PostCard from '@/components/post/PostCard';
+import { Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+
+// Helper function to safely parse dates
+const safeParseDate = (dateString: string | null): Date => {
+  if (!dateString) return new Date();
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return new Date();
+    }
+    return date;
+  } catch (error) {
+    return new Date();
+  }
+};
 
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { addNotification } = useNotification();
   
-  const [query, setQuery] = useState(searchParams.get('q') || '');
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const initialQuery = searchParams.get('q') || '';
+  const initialTab = searchParams.get('tab') || 'users';
+  
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
+  const [isSearching, setIsSearching] = useState(false);
+  const [activeTab, setActiveTab] = useState(initialTab);
+  
+  const [userResults, setUserResults] = useState<any[]>([]);
   const [postResults, setPostResults] = useState<any[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState('users');
-  const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
   
-  useEffect(() => {
-    // Set initial query from URL params
-    if (searchParams.get('q')) {
-      setQuery(searchParams.get('q') || '');
-      handleSearch(searchParams.get('q') || '');
-    }
+  // Search function
+  const performSearch = async (query: string) => {
+    if (!query.trim()) return;
     
-    // Fetch blocked users
-    if (user?.id) {
-      fetchBlockedUsers();
-    }
-  }, [searchParams, user?.id]);
-  
-  const fetchBlockedUsers = async () => {
-    if (!user) return;
+    setIsSearching(true);
     
     try {
-      const { data, error } = await supabase
-        .from('user_blocks')
-        .select('blocked_user_id')
-        .eq('user_id', user.id);
+      // Update URL params
+      setSearchParams({ q: query, tab: activeTab });
+      
+      if (activeTab === 'users' || activeTab === 'all') {
+        // Search users
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('id, username, display_name, school, avatar_url, bio')
+          .or(`username.ilike.%${query}%,display_name.ilike.%${query}%,school.ilike.%${query}%`)
+          .limit(20);
+          
+        if (userError) throw userError;
         
-      if (error) throw error;
+        // Filter out blocked users
+        let filteredUsers = userData || [];
+        
+        if (user) {
+          const { data: blockedUsers } = await supabase
+            .from('user_blocks')
+            .select('blocked_user_id')
+            .eq('user_id', user.id);
+            
+          if (blockedUsers && blockedUsers.length > 0) {
+            const blockedIds = blockedUsers.map(block => block.blocked_user_id);
+            filteredUsers = filteredUsers.filter(u => !blockedIds.includes(u.id));
+          }
+        }
+        
+        setUserResults(filteredUsers);
+      }
       
-      setBlockedUsers(data?.map(block => block.blocked_user_id) || []);
+      if (activeTab === 'posts' || activeTab === 'all') {
+        // Search posts
+        const { data: postData, error: postError } = await supabase
+          .from('posts')
+          .select(`
+            id, 
+            content, 
+            created_at, 
+            images, 
+            user_id,
+            profiles:user_id(username, display_name, avatar_url),
+            likes:likes(id),
+            comments:comments(id)
+          `)
+          .ilike('content', `%${query}%`)
+          .limit(20);
+          
+        if (postError) throw postError;
+        
+        // Filter out posts from blocked users
+        let filteredPosts = postData || [];
+        
+        if (user) {
+          const { data: blockedUsers } = await supabase
+            .from('user_blocks')
+            .select('blocked_user_id')
+            .eq('user_id', user.id);
+            
+          if (blockedUsers && blockedUsers.length > 0) {
+            const blockedIds = blockedUsers.map(block => block.blocked_user_id);
+            filteredPosts = filteredPosts.filter(p => !blockedIds.includes(p.user_id));
+          }
+        }
+        
+        setPostResults(filteredPosts);
+      }
+      
     } catch (error: any) {
-      console.error('Error fetching blocked users:', error.message);
-    }
-  };
-  
-  const handleSearch = async (searchValue: string) => {
-    if (!searchValue.trim()) {
-      setSearchResults([]);
-      setPostResults([]);
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      // Search for users
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('*')
-        .or(`username.ilike.%${searchValue}%,display_name.ilike.%${searchValue}%,bio.ilike.%${searchValue}%`)
-        .limit(20);
-      
-      if (userError) throw userError;
-      
-      // Search for posts
-      const { data: postData, error: postError } = await supabase
-        .from('posts')
-        .select(`
-          *,
-          profiles:user_id(username, display_name, avatar_url)
-        `)
-        .ilike('content', `%${searchValue}%`)
-        .limit(20);
-      
-      if (postError) throw postError;
-      
-      setSearchResults(userData || []);
-      setPostResults(postData || []);
-    } catch (error: any) {
+      console.error("Search error:", error);
       toast({
         title: "Search failed",
         description: error.message,
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setIsSearching(false);
     }
   };
   
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setQuery(e.target.value);
-  };
-  
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle search submission
+  const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Update URL with search query
-    setSearchParams({ q: query });
-    handleSearch(query);
+    performSearch(searchQuery);
   };
   
-  const handleUserClick = (username: string) => {
-    navigate(`/profile/${username}`);
-  };
-  
-  const handlePostClick = (postId: string) => {
-    // For future implementation: navigate to the specific post view
-    navigate(`/`); // For now, navigate to home
+  // Handle tab change
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setSearchParams({ q: searchQuery, tab: value });
     
-    toast({
-      title: "Post view",
-      description: "Direct post view is coming soon!",
-    });
-  };
-  
-  const handleBlockUser = async (userId: string, username: string) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('user_blocks')
-        .insert({
-          user_id: user.id,
-          blocked_user_id: userId
-        });
-        
-      if (error) throw error;
-      
-      // Add blocked user to local state
-      setBlockedUsers(prev => [...prev, userId]);
-      
-      // Filter out the blocked user from results
-      setSearchResults(prev => prev.filter(user => user.id !== userId));
-      
-      toast({
-        title: "User blocked",
-        description: `You've blocked ${username}. You won't see their content anymore.`,
-      });
-    } catch (error: any) {
-      toast({
-        title: "Failed to block user",
-        description: error.message,
-        variant: "destructive"
-      });
+    // Re-search if query exists
+    if (searchQuery.trim()) {
+      performSearch(searchQuery);
     }
   };
   
-  const handleReportUser = async (userId: string, username: string) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('user_reports')
-        .insert({
-          reporter_id: user.id,
-          reported_user_id: userId,
-          reason: 'Reported by user'
-        });
-        
-      if (error) throw error;
-      
-      toast({
-        title: "User reported",
-        description: `Thank you for reporting ${username}. We'll review this account.`,
-      });
-      
-      // Notify admins (in a real app)
-      addNotification({
-        userId: 'admin', // Admin user ID
-        type: 'system',
-        message: `${user.username} reported user ${username}`,
-        relatedId: userId
-      });
-    } catch (error: any) {
-      toast({
-        title: "Failed to report user",
-        description: error.message,
-        variant: "destructive"
-      });
+  // Initial search if there's a query in the URL
+  useEffect(() => {
+    if (initialQuery) {
+      setSearchQuery(initialQuery);
+      performSearch(initialQuery);
     }
-  };
-  
-  const handleReportPost = async (postId: string, userId: string) => {
-    if (!user) return;
-    
-    try {
-      const { error } = await supabase
-        .from('post_reports')
-        .insert({
-          reporter_id: user.id,
-          post_id: postId,
-          reason: 'Reported by user'
-        });
-        
-      if (error) throw error;
-      
-      toast({
-        title: "Post reported",
-        description: "Thank you for reporting this post. We'll review it.",
-      });
-      
-      // Notify admins (in a real app)
-      addNotification({
-        userId: 'admin', // Admin user ID
-        type: 'system',
-        message: `${user.username} reported a post`,
-        relatedId: postId
-      });
-    } catch (error: any) {
-      toast({
-        title: "Failed to report post",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleSavePost = async (postId: string) => {
-    if (!user) return;
-    
-    try {
-      // Check if already saved
-      const { data: existingSave, error: checkError } = await supabase
-        .from('saved_posts')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('post_id', postId)
-        .maybeSingle();
-        
-      if (checkError) throw checkError;
-      
-      if (existingSave) {
-        // Unsave the post
-        const { error: deleteError } = await supabase
-          .from('saved_posts')
-          .delete()
-          .eq('id', existingSave.id);
-          
-        if (deleteError) throw deleteError;
-        
-        toast({
-          title: "Post unsaved",
-          description: "Post has been removed from your saved items.",
-        });
-        
-        // Update UI to reflect the post is no longer saved
-        setPostResults(prev => 
-          prev.map(post => 
-            post.id === postId ? { ...post, is_saved: false } : post
-          )
-        );
-      } else {
-        // Save the post
-        const { error: saveError } = await supabase
-          .from('saved_posts')
-          .insert({
-            user_id: user.id,
-            post_id: postId
-          });
-          
-        if (saveError) throw saveError;
-        
-        toast({
-          title: "Post saved",
-          description: "Post has been added to your saved items.",
-        });
-        
-        // Update UI to reflect the post is now saved
-        setPostResults(prev => 
-          prev.map(post => 
-            post.id === postId ? { ...post, is_saved: true } : post
-          )
-        );
-      }
-    } catch (error: any) {
-      toast({
-        title: "Failed to save post",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  };
+  }, []);
   
   return (
     <AppLayout>
       <div className="max-w-4xl mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-6">Search</h1>
+        <h1 className="text-2xl font-bold mb-4">Search</h1>
         
-        <form onSubmit={handleSubmit} className="flex gap-2 mb-6">
-          <Input
-            type="text"
-            placeholder="Search for users, posts, or topics..."
-            value={query}
-            onChange={handleInputChange}
-            className="flex-1"
-          />
-          <Button type="submit" variant="default">
-            <SearchIcon className="h-4 w-4 mr-2" />
-            Search
-          </Button>
+        {/* Search input */}
+        <form onSubmit={handleSearch} className="mb-6">
+          <div className="flex gap-2">
+            <Input
+              type="search"
+              placeholder="Search users, posts..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1"
+            />
+            <Button type="submit" disabled={isSearching || !searchQuery.trim()}>
+              {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : <SearchIcon className="h-4 w-4" />}
+              Search
+            </Button>
+          </div>
         </form>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        {/* Search results */}
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="mb-4">
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="posts">Posts</TabsTrigger>
+            <TabsTrigger value="users">
+              <User className="h-4 w-4 mr-2" />
+              Users
+            </TabsTrigger>
+            <TabsTrigger value="posts">
+              <FileText className="h-4 w-4 mr-2" />
+              Posts
+            </TabsTrigger>
+            <TabsTrigger value="all">All</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="users">
-            {loading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4">
-                        <Skeleton className="h-12 w-12 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-24" />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+          <TabsContent value="users" className="space-y-4">
+            {isSearching ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
               </div>
-            ) : searchResults.length > 0 ? (
-              <div className="space-y-4">
-                {searchResults.map(user => (
-                  <Card key={user.id} className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div 
-                          className="flex items-center space-x-4 cursor-pointer flex-1"
-                          onClick={() => handleUserClick(user.username)}
-                        >
-                          <Avatar>
-                            <AvatarImage src={user.avatar_url} alt={user.display_name} />
-                            <AvatarFallback className="bg-primary text-primary-foreground">
-                              {user.display_name.split(' ').map(n => n[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-medium">{user.display_name}</h3>
-                            <p className="text-sm text-muted-foreground">@{user.username}</p>
-                          </div>
-                        </div>
-                        
-                        {user.id !== user?.id && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <UserRound className="h-4 w-4 mr-2" />
-                                Actions
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => navigate(`/messages?userId=${user.id}`)}>
-                                <MessageSquare className="h-4 w-4 mr-2" />
-                                Message
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem onClick={() => handleReportUser(user.id, user.username)}>
-                                <ShieldAlert className="h-4 w-4 mr-2" />
-                                Report User
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleBlockUser(user.id, user.username)}>
-                                <UserX className="h-4 w-4 mr-2" />
-                                Block User
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
+            ) : userResults.length > 0 ? (
+              userResults.map(profile => (
+                <Card key={profile.id} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-12 w-12">
+                        <AvatarImage src={profile.avatar_url} />
+                        <AvatarFallback>
+                          {profile.display_name.split(' ').map((n: string) => n[0]).join('')}
+                        </AvatarFallback>
+                      </Avatar>
+                      
+                      <div className="flex-1 min-w-0">
+                        <Link to={`/profile/${profile.username}`}>
+                          <h3 className="text-lg font-semibold truncate hover:text-primary">
+                            {profile.display_name}
+                          </h3>
+                        </Link>
+                        <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                        <p className="text-sm">{profile.school}</p>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : query ? (
-              <div className="text-center py-12">
-                <UserRound className="h-12 w-12 mx-auto text-muted-foreground opacity-50 mb-4" />
-                <h3 className="text-lg font-medium">No users found</h3>
-                <p className="text-muted-foreground mt-1">
-                  Try searching for a different username or display name
-                </p>
+                      
+                      <Button size="sm" asChild>
+                        <Link to={`/profile/${profile.username}`}>
+                          View Profile
+                        </Link>
+                      </Button>
+                    </div>
+                    
+                    {profile.bio && (
+                      <p className="mt-2 text-sm line-clamp-2">{profile.bio}</p>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            ) : searchQuery ? (
+              <div className="text-center p-8">
+                <p className="text-muted-foreground">No users found matching "{searchQuery}"</p>
               </div>
             ) : null}
           </TabsContent>
           
-          <TabsContent value="posts">
-            {loading ? (
-              <div className="space-y-4">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <Card key={i}>
-                    <CardContent className="p-4 space-y-4">
-                      <div className="flex items-center space-x-4">
-                        <Skeleton className="h-10 w-10 rounded-full" />
-                        <div className="space-y-2">
-                          <Skeleton className="h-4 w-32" />
-                          <Skeleton className="h-3 w-24" />
-                        </div>
-                      </div>
-                      <Skeleton className="h-24 w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
+          <TabsContent value="posts" className="space-y-6">
+            {isSearching ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
               </div>
             ) : postResults.length > 0 ? (
-              <div className="space-y-4">
-                {postResults.map(post => (
-                  <Card key={post.id} className="hover:border-primary/50 transition-colors">
-                    <CardContent className="p-4">
-                      <div className="flex items-center space-x-4 mb-4">
-                        <Avatar 
-                          className="cursor-pointer"
-                          onClick={() => handleUserClick(post.profiles.username)}
-                        >
-                          <AvatarImage src={post.profiles.avatar_url} alt={post.profiles.display_name} />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
-                            {post.profiles.display_name.split(' ').map((n: string) => n[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <h3 
-                            className="font-medium cursor-pointer"
-                            onClick={() => handleUserClick(post.profiles.username)}
-                          >
-                            {post.profiles.display_name}
-                          </h3>
-                          <p 
-                            className="text-sm text-muted-foreground cursor-pointer"
-                            onClick={() => handleUserClick(post.profiles.username)}
-                          >
-                            @{post.profiles.username}
-                          </p>
-                        </div>
-                      </div>
-                      
-                      <div 
-                        className="cursor-pointer mb-4"
-                        onClick={() => handlePostClick(post.id)}
-                      >
-                        <p className="text-sm">{post.content}</p>
-                        {post.images && post.images.length > 0 && (
-                          <div className="mt-2 grid grid-cols-2 gap-2">
-                            {post.images.map((image: string, idx: number) => (
-                              <img 
-                                key={idx} 
-                                src={image} 
-                                alt="Post image" 
-                                className="rounded-md object-cover w-full h-32"
-                              />
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      
-                      <div className="flex justify-between items-center">
-                        <div className="flex space-x-2">
-                          <Badge variant="outline">
-                            {new Date(post.created_at).toLocaleDateString()}
-                          </Badge>
-                        </div>
-                        
-                        <div className="flex space-x-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleSavePost(post.id)}
-                            className={post.is_saved ? "text-yellow-500" : ""}
-                          >
-                            <Bookmark 
-                              className={`h-4 w-4 mr-2 ${post.is_saved ? "fill-yellow-500 text-yellow-500" : ""}`} 
-                            />
-                            {post.is_saved ? "Saved" : "Save"}
-                          </Button>
-                          
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleReportPost(post.id, post.user_id)}
-                          >
-                            <ShieldAlert className="h-4 w-4 mr-2" />
-                            Report
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : query ? (
-              <div className="text-center py-12">
-                <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground opacity-50 mb-4" />
-                <h3 className="text-lg font-medium">No posts found</h3>
-                <p className="text-muted-foreground mt-1">
-                  Try searching for different keywords
-                </p>
+              postResults.map(post => (
+                <PostCard
+                  key={post.id}
+                  post={{
+                    id: post.id,
+                    userId: post.user_id,
+                    content: post.content,
+                    images: post.images || [],
+                    createdAt: safeParseDate(post.created_at),
+                    likes: post.likes.map((like: any) => like.id),
+                    comments: post.comments || [],
+                    shares: 0
+                  }}
+                  onAction={() => performSearch(searchQuery)}
+                />
+              ))
+            ) : searchQuery ? (
+              <div className="text-center p-8">
+                <p className="text-muted-foreground">No posts found matching "{searchQuery}"</p>
               </div>
             ) : null}
+          </TabsContent>
+          
+          <TabsContent value="all">
+            {isSearching ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin" />
+              </div>
+            ) : (
+              <>
+                {userResults.length > 0 && (
+                  <div className="mb-8">
+                    <h2 className="text-xl font-semibold mb-4">Users</h2>
+                    <div className="space-y-4">
+                      {userResults.slice(0, 5).map(profile => (
+                        <Card key={profile.id} className="overflow-hidden">
+                          <CardContent className="p-4">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-12 w-12">
+                                <AvatarImage src={profile.avatar_url} />
+                                <AvatarFallback>
+                                  {profile.display_name.split(' ').map((n: string) => n[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              
+                              <div className="flex-1 min-w-0">
+                                <Link to={`/profile/${profile.username}`}>
+                                  <h3 className="text-lg font-semibold truncate hover:text-primary">
+                                    {profile.display_name}
+                                  </h3>
+                                </Link>
+                                <p className="text-sm text-muted-foreground">@{profile.username}</p>
+                              </div>
+                              
+                              <Button size="sm" asChild>
+                                <Link to={`/profile/${profile.username}`}>
+                                  View
+                                </Link>
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                    
+                    {userResults.length > 5 && (
+                      <div className="text-center mt-4">
+                        <Button variant="outline" onClick={() => handleTabChange('users')}>
+                          See all {userResults.length} users
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {postResults.length > 0 && (
+                  <div>
+                    <h2 className="text-xl font-semibold mb-4">Posts</h2>
+                    <div className="space-y-6">
+                      {postResults.slice(0, 3).map(post => (
+                        <PostCard
+                          key={post.id}
+                          post={{
+                            id: post.id,
+                            userId: post.user_id,
+                            content: post.content,
+                            images: post.images || [],
+                            createdAt: safeParseDate(post.created_at),
+                            likes: post.likes.map((like: any) => like.id),
+                            comments: post.comments || [],
+                            shares: 0
+                          }}
+                          onAction={() => performSearch(searchQuery)}
+                        />
+                      ))}
+                    </div>
+                    
+                    {postResults.length > 3 && (
+                      <div className="text-center mt-4">
+                        <Button variant="outline" onClick={() => handleTabChange('posts')}>
+                          See all {postResults.length} posts
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
+                
+                {userResults.length === 0 && postResults.length === 0 && searchQuery && (
+                  <div className="text-center p-8">
+                    <p className="text-muted-foreground">No results found matching "{searchQuery}"</p>
+                  </div>
+                )}
+              </>
+            )}
           </TabsContent>
         </Tabs>
       </div>

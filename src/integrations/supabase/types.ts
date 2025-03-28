@@ -273,6 +273,7 @@ export type Database = {
           is_read: boolean | null
           related_id: string | null
           type: string
+          url: string | null
           user_id: string | null
         }
         Insert: {
@@ -282,6 +283,7 @@ export type Database = {
           is_read?: boolean | null
           related_id?: string | null
           type: string
+          url?: string | null
           user_id?: string | null
         }
         Update: {
@@ -291,6 +293,7 @@ export type Database = {
           is_read?: boolean | null
           related_id?: string | null
           type?: string
+          url?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -299,6 +302,44 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      post_reports: {
+        Row: {
+          created_at: string | null
+          details: string | null
+          id: string
+          post_id: string
+          reason: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          post_id: string
+          reason: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          post_id?: string
+          reason?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "post_reports_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
             referencedColumns: ["id"]
           },
         ]
@@ -380,6 +421,191 @@ export type Database = {
           password_hash?: string | null
           school?: string
           username?: string
+        }
+        Relationships: []
+      }
+      saved_posts: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_posts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_blocks: {
+        Row: {
+          blocked_user_id: string
+          created_at: string | null
+          id: string
+          user_id: string
+        }
+        Insert: {
+          blocked_user_id: string
+          created_at?: string | null
+          id?: string
+          user_id: string
+        }
+        Update: {
+          blocked_user_id?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_reports: {
+        Row: {
+          created_at: string | null
+          details: string | null
+          id: string
+          reason: string
+          reported_user_id: string
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          reason: string
+          reported_user_id: string
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          details?: string | null
+          id?: string
+          reason?: string
+          reported_user_id?: string
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          birthday: string | null
+          created_at: string | null
+          id: string
+          location: string | null
+          notif_announcements: boolean | null
+          notif_comment_replies: boolean | null
+          notif_email: boolean | null
+          notif_friend_activity: boolean | null
+          notif_friend_requests: boolean | null
+          notif_mentions: boolean | null
+          notif_messages: boolean | null
+          notif_post_likes: boolean | null
+          privacy_activity_status: boolean | null
+          privacy_data_sharing: boolean | null
+          privacy_online_status: boolean | null
+          privacy_profile: string | null
+          privacy_read_receipts: boolean | null
+          privacy_searchable: boolean | null
+          pronouns: string | null
+          security_2fa: boolean | null
+          security_account_activity: boolean | null
+          security_alerts: boolean | null
+          security_login_notif: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          birthday?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          notif_announcements?: boolean | null
+          notif_comment_replies?: boolean | null
+          notif_email?: boolean | null
+          notif_friend_activity?: boolean | null
+          notif_friend_requests?: boolean | null
+          notif_mentions?: boolean | null
+          notif_messages?: boolean | null
+          notif_post_likes?: boolean | null
+          privacy_activity_status?: boolean | null
+          privacy_data_sharing?: boolean | null
+          privacy_online_status?: boolean | null
+          privacy_profile?: string | null
+          privacy_read_receipts?: boolean | null
+          privacy_searchable?: boolean | null
+          pronouns?: string | null
+          security_2fa?: boolean | null
+          security_account_activity?: boolean | null
+          security_alerts?: boolean | null
+          security_login_notif?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          birthday?: string | null
+          created_at?: string | null
+          id?: string
+          location?: string | null
+          notif_announcements?: boolean | null
+          notif_comment_replies?: boolean | null
+          notif_email?: boolean | null
+          notif_friend_activity?: boolean | null
+          notif_friend_requests?: boolean | null
+          notif_mentions?: boolean | null
+          notif_messages?: boolean | null
+          notif_post_likes?: boolean | null
+          privacy_activity_status?: boolean | null
+          privacy_data_sharing?: boolean | null
+          privacy_online_status?: boolean | null
+          privacy_profile?: string | null
+          privacy_read_receipts?: boolean | null
+          privacy_searchable?: boolean | null
+          pronouns?: string | null
+          security_2fa?: boolean | null
+          security_account_activity?: boolean | null
+          security_alerts?: boolean | null
+          security_login_notif?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_status: {
+        Row: {
+          id: string
+          is_online: boolean | null
+          last_active: string | null
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          is_online?: boolean | null
+          last_active?: string | null
+          user_id: string
+        }
+        Update: {
+          id?: string
+          is_online?: boolean | null
+          last_active?: string | null
+          user_id?: string
         }
         Relationships: []
       }

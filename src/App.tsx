@@ -1,60 +1,36 @@
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/context/AuthContext";
-import { NotificationProvider } from "@/context/NotificationContext";
-import { GameProvider } from "@/context/GameContext";
-import { PostProvider } from "@/context/PostContext";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import Profile from "./pages/Profile";
-import Friends from "./pages/Friends";
-import AddFriends from "./pages/AddFriends";
-import Games from "./pages/Games";
-import Notifications from "./pages/Notifications";
-import Leaderboard from "./pages/Leaderboard";
-import Messages from "./pages/Messages";
-import Settings from "./pages/Settings";
-import Earn from "./pages/Earn";
-import NotFound from "./pages/NotFound";
+import { Routes, Route } from 'react-router-dom';
+import Auth from './pages/Auth';
+import Index from './pages/Index';
+import Profile from './pages/Profile';
+import Messages from './pages/Messages';
+import Settings from './pages/Settings';
+import Games from './pages/Games';
+import Search from './pages/Search';
+import { Toaster } from './components/ui/toaster';
+import { AuthProvider } from './context/AuthContext';
+import { PostProvider } from './context/PostContext';
+import { NotificationProvider } from './context/NotificationContext';
 
-const queryClient = new QueryClient();
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
+function App() {
+  return (
     <AuthProvider>
       <PostProvider>
         <NotificationProvider>
-          <GameProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/profile/:username" element={<Profile />} />
-                  <Route path="/friends" element={<Friends />} />
-                  <Route path="/add-friends" element={<AddFriends />} />
-                  <Route path="/games" element={<Games />} />
-                  <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/earn" element={<Earn />} />
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </GameProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/profile/:username" element={<Profile />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/games" element={<Games />} />
+            <Route path="/search" element={<Search />} />
+          </Routes>
+          <Toaster />
         </NotificationProvider>
       </PostProvider>
     </AuthProvider>
-  </QueryClientProvider>
-);
+  );
+}
 
 export default App;
