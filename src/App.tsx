@@ -8,6 +8,7 @@ import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import Games from './pages/Games';
 import Search from './pages/Search';
+import NotFound from './pages/NotFound';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './context/AuthContext';
 import { PostProvider } from './context/PostContext';
@@ -30,6 +31,7 @@ function App() {
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/games" element={<Games />} />
                 <Route path="/search" element={<Search />} />
+                <Route path="*" element={<NotFound />} />
               </Routes>
               <Toaster />
             </GameProvider>

@@ -1,4 +1,5 @@
 
-// Re-export the auth context from the refactored files
-export { AuthProvider, useAuth } from './auth';
-export type { User } from './auth';
+// This file re-exports the context and provider from the auth folder
+import { AuthContext, AuthProvider, useAuth } from './auth';
+
+export { AuthContext, AuthProvider, useAuth };
