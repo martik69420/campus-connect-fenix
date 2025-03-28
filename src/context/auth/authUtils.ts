@@ -1,6 +1,7 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { hashPassword } from '@/lib/password-utils';
-import { User } from '@/types';
+import { hashPassword, comparePassword } from '@/lib/password-utils';
+import { User } from './types';
 import crypto from 'crypto';
 
 export const getCurrentUser = async (): Promise<User | null> => {
@@ -10,7 +11,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 
   const { data: profile, error } = await supabase
-    .from('users')
+    .from('profiles')
     .select('*')
     .eq('id', user.id)
     .single();
@@ -37,17 +38,59 @@ export const getCurrentUser = async (): Promise<User | null> => {
   };
 };
 
+export const loginUser = async (
+  username: string, 
+  password: string
+): Promise<User | null> => {
+  try {
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('username', username)
+      .single();
+    
+    if (error || !user) {
+      console.error("User not found:", error?.message);
+      return null;
+    }
+    
+    // Verify password
+    const isValid = await comparePassword(password, user.password_hash);
+    if (!isValid) {
+      console.error("Invalid password");
+      return null;
+    }
+    
+    // Update online status when logging in
+    updateOnlineStatus(user.id, true);
+    
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      displayName: user.display_name,
+      school: user.school,
+      avatar: user.avatar_url,
+      coins: user.coins,
+      createdAt: user.created_at,
+    };
+  } catch (error: any) {
+    console.error("Login failed:", error.message);
+    return null;
+  }
+};
+
 export const registerUser = async (
   username: string,
   email: string,
-  password: string,
   displayName: string,
-  school: string
+  school: string,
+  password: string
 ): Promise<{ success: boolean; user?: User; error?: string }> => {
   try {
     // Validate username and email
     const { data: existingUsers, error: checkError } = await supabase
-      .from('users')
+      .from('profiles')
       .select('username, email')
       .or(`username.eq.${username},email.eq.${email}`);
 
@@ -72,7 +115,7 @@ export const registerUser = async (
     
     // Insert user into database
     const { data: newUser, error: insertError } = await supabase
-      .from('users')
+      .from('profiles')
       .insert({
         id: userId,
         username: username,
@@ -115,7 +158,7 @@ export const updateUserProfile = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
-      .from('users')
+      .from('profiles')
       .update({
         display_name: updates.displayName,
         school: updates.school,
@@ -132,5 +175,101 @@ export const updateUserProfile = async (
   } catch (error: any) {
     console.error("Update profile failed:", error.message);
     return { success: false, error: error.message };
+  }
+};
+
+// Add the missing functions that are imported by AuthProvider
+export const validateCurrentPassword = async (userId: string, currentPassword: string): Promise<boolean> => {
+  try {
+    const { data: user, error } = await supabase
+      .from('profiles')
+      .select('password_hash')
+      .eq('id', userId)
+      .single();
+    
+    if (error || !user) {
+      console.error("User not found:", error?.message);
+      return false;
+    }
+    
+    // Verify password
+    const isValid = await comparePassword(currentPassword, user.password_hash);
+    return isValid;
+  } catch (error: any) {
+    console.error("Password validation failed:", error.message);
+    return false;
+  }
+};
+
+export const changePassword = async (userId: string, newPassword: string): Promise<boolean> => {
+  try {
+    // Hash the new password
+    const hashedPassword = await hashPassword(newPassword);
+    
+    // Update in the database
+    const { error } = await supabase
+      .from('profiles')
+      .update({ password_hash: hashedPassword })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error("Error updating password:", error.message);
+      return false;
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error("Change password failed:", error.message);
+    return false;
+  }
+};
+
+export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
+  try {
+    // Check if the user already has a status entry
+    const { data, error: checkError } = await supabase
+      .from('user_status')
+      .select('id')
+      .eq('user_id', userId);
+      
+    if (checkError) {
+      console.error("Error checking user status:", checkError.message);
+      return false;
+    }
+    
+    if (data && data.length > 0) {
+      // Update existing status
+      const { error } = await supabase
+        .from('user_status')
+        .update({ 
+          is_online: isOnline,
+          last_active: new Date().toISOString()
+        })
+        .eq('user_id', userId);
+        
+      if (error) {
+        console.error("Error updating online status:", error.message);
+        return false;
+      }
+    } else {
+      // Insert new status
+      const { error } = await supabase
+        .from('user_status')
+        .insert({ 
+          user_id: userId, 
+          is_online: isOnline,
+          last_active: new Date().toISOString()
+        });
+        
+      if (error) {
+        console.error("Error inserting online status:", error.message);
+        return false;
+      }
+    }
+    
+    return true;
+  } catch (error: any) {
+    console.error("Update online status failed:", error.message);
+    return false;
   }
 };

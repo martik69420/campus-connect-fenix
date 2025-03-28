@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Lock, Bell, Eye, Calendar, User, Cog, Camera, UserIcon } from 'lucide-react';
@@ -1029,52 +1028,3 @@ const Settings = () => {
           <div>
             <h1 className="text-2xl font-bold">Settings</h1>
             <p className="text-muted-foreground">Manage your account settings and preferences</p>
-          </div>
-        </div>
-        
-        <Tabs defaultValue="profile">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile">
-              <User className="h-4 w-4 mr-2" />
-              Profile
-            </TabsTrigger>
-            <TabsTrigger value="security">
-              <Shield className="h-4 w-4 mr-2" />
-              Security
-            </TabsTrigger>
-            <TabsTrigger value="notifications">
-              <Bell className="h-4 w-4 mr-2" />
-              Notifications
-            </TabsTrigger>
-            <TabsTrigger value="privacy">
-              <Eye className="h-4 w-4 mr-2" />
-              Privacy
-            </TabsTrigger>
-          </TabsList>
-          
-          <Card className="mt-4">
-            <CardContent className="pt-6">
-              <TabsContent value="profile">
-                {renderProfileSettings()}
-              </TabsContent>
-              
-              <TabsContent value="security">
-                {renderAccountSecurity()}
-              </TabsContent>
-              
-              <TabsContent value="notifications">
-                {renderNotificationSettings()}
-              </TabsContent>
-              
-              <TabsContent value="privacy">
-                {renderPrivacySettings()}
-              </TabsContent>
-            </CardContent>
-          </Card>
-        </Tabs>
-      </div>
-    </AppLayout>
-  );
-};
-
-export default Settings;

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, AuthContextType } from "./types";
@@ -92,10 +93,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(true);
     
     try {
-      const newUser = await registerUser(username, email, displayName, school, password);
+      const result = await registerUser(username, email, displayName, school, password);
       
-      if (newUser) {
-        setUser(newUser);
+      if (result.success && result.user) {
+        setUser(result.user);
         return true;
       }
       
