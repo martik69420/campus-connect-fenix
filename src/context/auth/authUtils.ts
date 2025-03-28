@@ -34,7 +34,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     school: profile.school,
     avatar: profile.avatar_url,
     coins: profile.coins,
-    createdAt: profile.created_at,
+    createdAt: profile.created_at ? new Date(profile.created_at) : new Date(),
   };
 };
 
@@ -72,7 +72,7 @@ export const loginUser = async (
       school: user.school,
       avatar: user.avatar_url,
       coins: user.coins,
-      createdAt: user.created_at,
+      createdAt: user.created_at ? new Date(user.created_at) : new Date(),
     };
   } catch (error: any) {
     console.error("Login failed:", error.message);
@@ -142,7 +142,7 @@ export const registerUser = async (
       school: newUser.school,
       avatar: newUser.avatar_url,
       coins: newUser.coins,
-      createdAt: newUser.created_at,
+      createdAt: newUser.created_at ? new Date(newUser.created_at) : new Date(),
     };
 
     return { success: true, user: user };
@@ -262,7 +262,7 @@ export const updateOnlineStatus = async (userId: string, isOnline: boolean): Pro
         });
         
       if (error) {
-        console.error("Error inserting online status:", error.message);
+        console.error("Error inserting online status:", error);
         return false;
       }
     }
