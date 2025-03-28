@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Lock, Bell, Eye, Calendar, User, Cog, Camera, UserIcon } from 'lucide-react';
@@ -1028,3 +1029,76 @@ const Settings = () => {
           <div>
             <h1 className="text-2xl font-bold">Settings</h1>
             <p className="text-muted-foreground">Manage your account settings and preferences</p>
+          </div>
+        </div>
+        
+        <Tabs defaultValue="profile">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+            <TabsTrigger value="privacy">Privacy</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="profile">
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Settings</CardTitle>
+                <CardDescription>
+                  Update your personal information and profile details
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderProfileSettings()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="security">
+            <Card>
+              <CardHeader>
+                <CardTitle>Security Settings</CardTitle>
+                <CardDescription>
+                  Manage your account security and password
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderAccountSecurity()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="notifications">
+            <Card>
+              <CardHeader>
+                <CardTitle>Notification Settings</CardTitle>
+                <CardDescription>
+                  Control what notifications you receive
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderNotificationSettings()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="privacy">
+            <Card>
+              <CardHeader>
+                <CardTitle>Privacy Settings</CardTitle>
+                <CardDescription>
+                  Manage your privacy preferences
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {renderPrivacySettings()}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </AppLayout>
+  );
+};
+
+export default Settings;
