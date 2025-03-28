@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, ShieldAlert, UserX } from "lucide-react";
@@ -57,7 +56,8 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           .single();
           
         if (!error && data) {
-          setIsUserOnline(data.is_online);
+          // Add type checking to ensure properties exist
+          setIsUserOnline(data.is_online || false);
           setLastActive(data.last_active ? new Date(data.last_active) : null);
         }
       }
@@ -78,8 +78,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
         },
         (payload) => {
           if (payload.new) {
-            setIsUserOnline(payload.new.is_online);
-            setLastActive(payload.new.last_active ? new Date(payload.new.last_active) : null);
+            const newData = payload.new as { is_online: boolean; last_active: string };
+            setIsUserOnline(newData.is_online || false);
+            setLastActive(newData.last_active ? new Date(newData.last_active) : null);
           }
         }
       )

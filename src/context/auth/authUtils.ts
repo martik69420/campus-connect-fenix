@@ -113,10 +113,15 @@ export const registerUser = async (
       return null;
     }
 
+    // Generate a UUID for the new user
+    const { data: newId } = await supabase.rpc('gen_random_uuid');
+    const userId = newId || crypto.randomUUID();
+
     // Create user profile
     const { data: newProfile, error: createError } = await supabase
       .from('profiles')
       .insert({
+        id: userId,
         username,
         email,
         display_name: displayName,

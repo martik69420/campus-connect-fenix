@@ -87,7 +87,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
         const { error } = await supabase
           .from('user_reports')
           .insert({
-            reporter_id: user.id,
+            user_id: user.id,
             reported_user_id: targetId,
             reason: values.reason,
             details: values.details
@@ -103,7 +103,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
         const { error } = await supabase
           .from('post_reports')
           .insert({
-            reporter_id: user.id,
+            user_id: user.id,
             post_id: targetId,
             reason: values.reason,
             details: values.details
