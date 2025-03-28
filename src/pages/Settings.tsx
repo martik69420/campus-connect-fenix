@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Shield, Lock, Bell, Eye, Calendar, User, Cog, Camera, UserIcon } from 'lucide-react';
+import { Shield, Lock, Bell, Eye, Calendar, User, Cog, Camera, UserIcon, Globe } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +14,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { supabase } from '@/integrations/supabase/client';
 import { validateCurrentPassword, changePassword } from '@/context/auth/authUtils';
@@ -23,6 +23,7 @@ const Settings = () => {
   const { user, updateUser, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { language, setLanguage, t } = useLanguage();
   
   // Profile settings
   const [displayName, setDisplayName] = useState('');
@@ -114,7 +115,7 @@ const Settings = () => {
       if (data) {
         // Set location, pronouns, and birthday
         setLocation(data.location || '');
-        setPronouns(data.pronouns || '');
+        setPronouns(data.pronouns || 'none');
         setBirthday(data.birthday ? new Date(data.birthday).toISOString().split('T')[0] : '');
         
         // Set notification settings
@@ -146,6 +147,11 @@ const Settings = () => {
           accountActivity: data.security_account_activity ?? true,
           securityAlerts: data.security_alerts ?? true
         });
+        
+        // Set language preference if available
+        if (data.language && ['nl', 'en', 'fr'].includes(data.language)) {
+          setLanguage(data.language as 'nl' | 'en' | 'fr');
+        }
       }
     } catch (error) {
       console.error('Error fetching user settings:', error);
@@ -439,6 +445,40 @@ const Settings = () => {
     }
   };
   
+  const handleChangeLanguage = (newLanguage: string) => {
+    setLanguage(newLanguage as 'nl' | 'en' | 'fr');
+  };
+  
+  const renderLanguageSettings = () => (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-lg font-medium">{t('language')}</h3>
+        <p className="text-sm text-muted-foreground">
+          Select your preferred language
+        </p>
+        
+        <div className="mt-4 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="language">{t('language')}</Label>
+            <Select 
+              value={language} 
+              onValueChange={handleChangeLanguage}
+            >
+              <SelectTrigger id="language">
+                <SelectValue placeholder="Select language" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nl">Nederlands</SelectItem>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="fr">Français</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+  
   const renderProfileSettings = () => (
     <div className="space-y-6">
       <div className="flex flex-col items-center justify-center gap-4 sm:flex-row sm:justify-start">
@@ -472,7 +512,6 @@ const Settings = () => {
           <h2 className="text-xl font-bold">{displayName || 'Your Name'}</h2>
           <p className="text-muted-foreground">@{username}</p>
           <p className="text-sm text-muted-foreground mt-1">
-            {/* use correct icon import (User) and not Users */}
             <UserIcon className="inline h-3 w-3 mr-1" /> {user?.school || 'School'}
           </p>
         </div>
@@ -482,22 +521,22 @@ const Settings = () => {
       
       <div className="grid gap-4 md:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="displayName">Display Name</Label>
+          <Label htmlFor="displayName">{t('display_name')}</Label>
           <Input
             id="displayName"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Your Name"
+            placeholder={t('display_name')}
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="username">Username</Label>
+          <Label htmlFor="username">{t('username')}</Label>
           <Input
             id="username"
             value={username}
             disabled
-            placeholder="username"
+            placeholder={t('username')}
           />
           <p className="text-xs text-muted-foreground">
             Username cannot be changed.
@@ -505,7 +544,7 @@ const Settings = () => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t('email')}</Label>
           <Input
             id="email"
             type="email"
@@ -519,27 +558,26 @@ const Settings = () => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="pronouns">Pronouns</Label>
+          <Label htmlFor="pronouns">{t('pronouns')}</Label>
           <Select
             value={pronouns}
             onValueChange={setPronouns}
           >
             <SelectTrigger id="pronouns">
-              <SelectValue placeholder="Select pronouns" />
+              <SelectValue placeholder={t('pronouns')} />
             </SelectTrigger>
             <SelectContent>
-              {/* Changed the empty string value to "none" */}
-              <SelectItem value="none">Prefer not to say</SelectItem>
-              <SelectItem value="he/him">He/Him</SelectItem>
-              <SelectItem value="she/her">She/Her</SelectItem>
-              <SelectItem value="they/them">They/Them</SelectItem>
-              <SelectItem value="custom">Custom</SelectItem>
+              <SelectItem value="none">{t('prefer_not_to_say')}</SelectItem>
+              <SelectItem value="he/him">{t('he_him')}</SelectItem>
+              <SelectItem value="she/her">{t('she_her')}</SelectItem>
+              <SelectItem value="they/them">{t('they_them')}</SelectItem>
+              <SelectItem value="custom">{t('custom')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         
         <div className="space-y-2 md:col-span-2">
-          <Label htmlFor="bio">Bio</Label>
+          <Label htmlFor="bio">{t('bio')}</Label>
           <textarea
             id="bio"
             value={bio}
@@ -553,17 +591,17 @@ const Settings = () => {
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="location">Location</Label>
+          <Label htmlFor="location">{t('location')}</Label>
           <Input
             id="location"
             value={location}
             onChange={(e) => setLocation(e.target.value)}
-            placeholder="City, State"
+            placeholder={t('location')}
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="birthday">Birthday</Label>
+          <Label htmlFor="birthday">{t('birthday')}</Label>
           <Input
             id="birthday"
             type="date"
@@ -578,7 +616,7 @@ const Settings = () => {
           onClick={handleSaveProfile} 
           disabled={savingProfile}
         >
-          {savingProfile ? 'Saving...' : 'Save Changes'}
+          {savingProfile ? t('saving') : t('save_changes')}
         </Button>
       </div>
     </div>
@@ -587,14 +625,14 @@ const Settings = () => {
   const renderAccountSecurity = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Change Password</h3>
+        <h3 className="text-lg font-medium">{t('change_password')}</h3>
         <p className="text-sm text-muted-foreground">
           Update your password to keep your account secure
         </p>
         
         <div className="mt-4 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="currentPassword">Current Password</Label>
+            <Label htmlFor="currentPassword">{t('current_password')}</Label>
             <Input
               id="currentPassword"
               type="password"
@@ -605,7 +643,7 @@ const Settings = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="newPassword">New Password</Label>
+            <Label htmlFor="newPassword">{t('new_password')}</Label>
             <Input
               id="newPassword"
               type="password"
@@ -616,7 +654,7 @@ const Settings = () => {
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm New Password</Label>
+            <Label htmlFor="confirmPassword">{t('confirm_password')}</Label>
             <Input
               id="confirmPassword"
               type="password"
@@ -630,7 +668,7 @@ const Settings = () => {
             onClick={handleChangePassword} 
             disabled={changingPassword || !currentPassword || !newPassword || !confirmPassword}
           >
-            {changingPassword ? 'Updating...' : 'Update Password'}
+            {changingPassword ? t('update_password') : t('change_password')}
           </Button>
         </div>
       </div>
@@ -638,7 +676,7 @@ const Settings = () => {
       <Separator />
       
       <div>
-        <h3 className="text-lg font-medium">Security Settings</h3>
+        <h3 className="text-lg font-medium">{t('security')}</h3>
         <p className="text-sm text-muted-foreground">
           Configure additional security features for your account
         </p>
@@ -646,7 +684,7 @@ const Settings = () => {
         <div className="mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="twoFactorAuth">Two-Factor Authentication</Label>
+              <Label htmlFor="twoFactorAuth">{t('two_factor_auth')}</Label>
               <p className="text-sm text-muted-foreground">
                 Add an extra layer of security to your account
               </p>
@@ -662,7 +700,7 @@ const Settings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="loginNotifications">Login Notifications</Label>
+              <Label htmlFor="loginNotifications">{t('login_notifications')}</Label>
               <p className="text-sm text-muted-foreground">
                 Receive notifications when your account is logged into
               </p>
@@ -712,7 +750,7 @@ const Settings = () => {
             onClick={handleSaveSecurity} 
             disabled={savingSecurity}
           >
-            {savingSecurity ? 'Saving...' : 'Save Changes'}
+            {savingSecurity ? t('saving') : t('save_changes')}
           </Button>
         </div>
       </div>
@@ -722,7 +760,7 @@ const Settings = () => {
   const renderNotificationSettings = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Notification Preferences</h3>
+        <h3 className="text-lg font-medium">{t('notifications')}</h3>
         <p className="text-sm text-muted-foreground">
           Choose what notifications you want to receive
         </p>
@@ -730,7 +768,7 @@ const Settings = () => {
         <div className="mt-4 space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="messages">Messages</Label>
+              <Label htmlFor="messages">{t('messages')}</Label>
               <p className="text-sm text-muted-foreground">
                 Notifications for new messages
               </p>
@@ -746,7 +784,7 @@ const Settings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="friendRequests">Friend Requests</Label>
+              <Label htmlFor="friendRequests">{t('friends')}</Label>
               <p className="text-sm text-muted-foreground">
                 Notifications for new friend requests
               </p>
@@ -860,7 +898,7 @@ const Settings = () => {
             onClick={handleSaveNotifications} 
             disabled={savingNotifications}
           >
-            {savingNotifications ? 'Saving...' : 'Save Changes'}
+            {savingNotifications ? t('saving') : t('save_changes')}
           </Button>
         </div>
       </div>
@@ -870,14 +908,14 @@ const Settings = () => {
   const renderPrivacySettings = () => (
     <div className="space-y-6">
       <div>
-        <h3 className="text-lg font-medium">Privacy Settings</h3>
+        <h3 className="text-lg font-medium">{t('privacy')}</h3>
         <p className="text-sm text-muted-foreground">
           Control who can see your profile and activity
         </p>
         
         <div className="mt-4 space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="profileVisibility">Profile Visibility</Label>
+            <Label htmlFor="profileVisibility">{t('profile')}</Label>
             <Select
               value={privacySettings.profile}
               onValueChange={(value) => 
@@ -897,7 +935,7 @@ const Settings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="onlineStatus">Online Status</Label>
+              <Label htmlFor="onlineStatus">{t('online_status')}</Label>
               <p className="text-sm text-muted-foreground">
                 Allow others to see when you're online
               </p>
@@ -913,7 +951,7 @@ const Settings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="activityStatus">Activity Status</Label>
+              <Label htmlFor="activityStatus">{t('activity_status')}</Label>
               <p className="text-sm text-muted-foreground">
                 Allow others to see your recent activity
               </p>
@@ -929,7 +967,7 @@ const Settings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="readReceipts">Read Receipts</Label>
+              <Label htmlFor="readReceipts">{t('read_receipts')}</Label>
               <p className="text-sm text-muted-foreground">
                 Show others when you've read their messages
               </p>
@@ -945,7 +983,7 @@ const Settings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="searchable">Searchable</Label>
+              <Label htmlFor="searchable">{t('search')}</Label>
               <p className="text-sm text-muted-foreground">
                 Allow others to find you via search
               </p>
@@ -961,7 +999,7 @@ const Settings = () => {
           
           <div className="flex items-center justify-between">
             <div>
-              <Label htmlFor="dataSharing">Data Sharing</Label>
+              <Label htmlFor="dataSharing">{t('data_sharing')}</Label>
               <p className="text-sm text-muted-foreground">
                 Share anonymous usage data to help improve the platform
               </p>
@@ -979,127 +1017,4 @@ const Settings = () => {
             onClick={handleSavePrivacy} 
             disabled={savingPrivacy}
           >
-            {savingPrivacy ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-  
-  if (isLoading || settingsLoading) {
-    return (
-      <AppLayout>
-        <div className="container max-w-5xl py-6 space-y-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold">Settings</h1>
-              <p className="text-muted-foreground">Manage your account settings and preferences</p>
-            </div>
-          </div>
-          
-          <Tabs defaultValue="profile">
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="profile">Profile</TabsTrigger>
-              <TabsTrigger value="security">Security</TabsTrigger>
-              <TabsTrigger value="notifications">Notifications</TabsTrigger>
-              <TabsTrigger value="privacy">Privacy</TabsTrigger>
-            </TabsList>
-            
-            <Card className="mt-4">
-              <CardHeader>
-                <Skeleton className="h-8 w-1/3" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Skeleton className="h-24 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </CardContent>
-            </Card>
-          </Tabs>
-        </div>
-      </AppLayout>
-    );
-  }
-  
-  return (
-    <AppLayout>
-      <div className="container max-w-5xl py-6 space-y-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Manage your account settings and preferences</p>
-          </div>
-        </div>
-        
-        <Tabs defaultValue="profile">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="security">Security</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
-            <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="profile">
-            <Card>
-              <CardHeader>
-                <CardTitle>Profile Settings</CardTitle>
-                <CardDescription>
-                  Update your personal information and profile details
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderProfileSettings()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="security">
-            <Card>
-              <CardHeader>
-                <CardTitle>Security Settings</CardTitle>
-                <CardDescription>
-                  Manage your account security and password
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderAccountSecurity()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="notifications">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>
-                  Control what notifications you receive
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderNotificationSettings()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="privacy">
-            <Card>
-              <CardHeader>
-                <CardTitle>Privacy Settings</CardTitle>
-                <CardDescription>
-                  Manage your privacy preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {renderPrivacySettings()}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </AppLayout>
-  );
-};
-
-export default Settings;
+            {savingPrivacy ? t('saving')

@@ -136,6 +136,16 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
       
       console.log('Message data being sent:', messageData);
       
+      // Optimistically add message to state immediately
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMessage = {
+        id: tempId,
+        ...messageData,
+        created_at: new Date().toISOString()
+      };
+      
+      setMessages(prev => [...prev, optimisticMessage]);
+      
       const { data, error } = await supabase
         .from('messages')
         .insert(messageData)
@@ -143,6 +153,8 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
       if (error) {
         console.error('Error sending message:', error);
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
         toast({
           title: 'Error sending message',
           description: error.message,
@@ -151,6 +163,12 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         return null;
       } else {
         console.log('Message sent successfully:', data);
+        // Replace optimistic message with real one from server
+        if (data && data.length > 0) {
+          setMessages(prev => 
+            prev.map(msg => msg.id === tempId ? data[0] : msg)
+          );
+        }
         return data[0];
       }
     } catch (error: any) {

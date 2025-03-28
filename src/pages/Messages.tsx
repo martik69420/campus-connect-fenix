@@ -8,11 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
+import { useLanguage } from '@/context/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { Search, Send, Plus, User, Users } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useMessages } from '@/hooks/use-messages';
+import { useOnlineStatus } from '@/hooks/use-online-status';
 
 type Conversation = {
   id: string;
@@ -30,6 +32,7 @@ const Messages = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { t } = useLanguage();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -39,8 +42,12 @@ const Messages = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingConversations, setLoadingConversations] = useState(false);
   
-  // Use our custom hook for messages
+  // Get all user IDs from conversations to track online status
+  const userIds = conversations.map(conv => conv.userId);
+  
+  // Use our custom hooks for messages and online status
   const { messages, isLoading: loadingMessages, sendMessage, markMessagesAsRead } = useMessages(activeUserId, user?.id || null);
+  const { isUserOnline } = useOnlineStatus(userIds);
 
   // Parse URL params to get initial active user
   useEffect(() => {
@@ -305,6 +312,17 @@ const Messages = () => {
     }
   ];
   
+  // Render online status indicator for a user
+  const renderOnlineStatus = (userId: string) => {
+    const online = isUserOnline(userId);
+    
+    return (
+      <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-background ${
+        online ? 'bg-green-500' : 'bg-gray-400'
+      }`} title={online ? t('online') : t('offline')} />
+    );
+  };
+  
   return (
     <AppLayout>
       <div className="h-[calc(100vh-4rem)]">
@@ -313,7 +331,7 @@ const Messages = () => {
           <div className="border-r">
             <div className="p-4 border-b">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold">Messages</h2>
+                <h2 className="text-xl font-bold">{t('messages')}</h2>
                 <Button variant="outline" size="icon" onClick={handleNewConversation}>
                   <Plus className="h-4 w-4" />
                 </Button>
@@ -321,7 +339,7 @@ const Messages = () => {
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search conversations..."
+                  placeholder={t('search_conversations')}
                   className="pl-8"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -363,6 +381,7 @@ const Messages = () => {
                             {conv.displayName.substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
+                        {renderOnlineStatus(conv.userId)}
                         {conv.unread > 0 && (
                           <span className="absolute -top-1 -right-1 bg-primary text-primary-foreground text-xs rounded-full h-5 w-5 flex items-center justify-center">
                             {conv.unread}
@@ -384,7 +403,7 @@ const Messages = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                   <Users className="h-12 w-12 text-muted-foreground mb-4" />
-                  <h3 className="font-medium mb-1">No conversations found</h3>
+                  <h3 className="font-medium mb-1">{t('no_messages_yet')}</h3>
                   <p className="text-sm text-muted-foreground">
                     {searchTerm 
                       ? `No results for "${searchTerm}"`
@@ -401,15 +420,18 @@ const Messages = () => {
               <>
                 {/* Chat header */}
                 <div className="flex items-center gap-3 p-4 border-b">
-                  <Avatar>
-                    <AvatarImage 
-                      src={getCurrentConversation()?.avatar || '/placeholder.svg'} 
-                      alt={getCurrentConversation()?.displayName || 'User'} 
-                    />
-                    <AvatarFallback>
-                      {getCurrentConversation()?.displayName.substring(0, 2).toUpperCase() || 'U'}
-                    </AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar>
+                      <AvatarImage 
+                        src={getCurrentConversation()?.avatar || '/placeholder.svg'} 
+                        alt={getCurrentConversation()?.displayName || 'User'} 
+                      />
+                      <AvatarFallback>
+                        {getCurrentConversation()?.displayName.substring(0, 2).toUpperCase() || 'U'}
+                      </AvatarFallback>
+                    </Avatar>
+                    {activeUserId && renderOnlineStatus(activeUserId)}
+                  </div>
                   <div>
                     <h3 className="font-medium">{getCurrentConversation()?.displayName}</h3>
                     <p className="text-xs text-muted-foreground">@{getCurrentConversation()?.username}</p>
@@ -483,9 +505,9 @@ const Messages = () => {
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-center p-4">
                       <User className="h-12 w-12 text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-1">No messages yet</h3>
+                      <h3 className="text-lg font-medium mb-1">{t('no_messages_yet')}</h3>
                       <p className="text-sm text-muted-foreground">
-                        Send a message to start the conversation
+                        {t('send_first_message')}
                       </p>
                     </div>
                   )}
@@ -495,7 +517,7 @@ const Messages = () => {
                 <div className="border-t p-4">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Type a message..."
+                      placeholder={t('type_message')}
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyDown={handleKeyPress}
@@ -509,13 +531,13 @@ const Messages = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                 <User className="h-16 w-16 text-muted-foreground mb-4" />
-                <h2 className="text-2xl font-bold mb-2">Your Messages</h2>
+                <h2 className="text-2xl font-bold mb-2">{t('messages')}</h2>
                 <p className="text-muted-foreground max-w-md mb-6">
                   Connect with your friends and classmates through private messages
                 </p>
                 <Button onClick={handleNewConversation}>
                   <Plus className="mr-2 h-4 w-4" />
-                  New Conversation
+                  {t('new_conversation')}
                 </Button>
               </div>
             )}
