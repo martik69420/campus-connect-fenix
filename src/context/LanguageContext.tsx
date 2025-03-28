@@ -236,6 +236,28 @@ export const translations: Translations = {
     en: 'Rewards',
     nl: 'Beloningen',
     fr: 'Récompenses',
+  },
+  
+  // Online status
+  'profile.online': {
+    en: 'Online',
+    nl: 'Online',
+    fr: 'En ligne',
+  },
+  'profile.offline': {
+    en: 'Offline',
+    nl: 'Offline',
+    fr: 'Hors ligne',
+  },
+  'profile.userOnline': {
+    en: 'User is online',
+    nl: 'Gebruiker is online',
+    fr: 'Utilisateur est en ligne',
+  },
+  'profile.userOffline': {
+    en: 'User is offline',
+    nl: 'Gebruiker is offline',
+    fr: 'Utilisateur est hors ligne',
   }
 };
 
@@ -279,7 +301,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           
-          if (data?.language) {
+          if (data && data.language) {
             setLanguageState(data.language as LanguageCode);
           }
         } catch (error) {
@@ -341,7 +363,7 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     return translation[language] || translation.en || key;
   };
   
-  const availableLanguages = [
+  const availableLanguages: Array<{ code: LanguageCode, name: string }> = [
     { code: 'nl', name: 'Nederlands' },
     { code: 'en', name: 'English' },
     { code: 'fr', name: 'Français' }

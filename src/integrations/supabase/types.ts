@@ -509,6 +509,7 @@ export type Database = {
           birthday: string | null
           created_at: string | null
           id: string
+          language: string | null
           location: string | null
           notif_announcements: boolean | null
           notif_comment_replies: boolean | null
@@ -536,6 +537,7 @@ export type Database = {
           birthday?: string | null
           created_at?: string | null
           id?: string
+          language?: string | null
           location?: string | null
           notif_announcements?: boolean | null
           notif_comment_replies?: boolean | null
@@ -563,6 +565,7 @@ export type Database = {
           birthday?: string | null
           created_at?: string | null
           id?: string
+          language?: string | null
           location?: string | null
           notif_announcements?: boolean | null
           notif_comment_replies?: boolean | null
