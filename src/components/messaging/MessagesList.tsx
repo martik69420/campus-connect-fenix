@@ -1,0 +1,206 @@
+import React, { useRef, useEffect } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { Loader2 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
+import { cn } from '@/lib/utils';
+
+interface Message {
+  id: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+  receiver_id: string;
+  is_read: boolean;
+}
+
+interface MessagesListProps {
+  messages: Message[];
+  optimisticMessages: Message[];
+  currentUserId: string;
+  isLoading: boolean;
+}
+
+const MessagesList: React.FC<MessagesListProps> = ({
+  messages,
+  optimisticMessages,
+  currentUserId,
+  isLoading,
+}) => {
+  const { t } = useLanguage();
+  const endOfMessagesRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (endOfMessagesRef.current) {
+      endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, optimisticMessages]);
+
+  const formatMessageTime = (dateString: string) => {
+    try {
+      const messageDate = new Date(dateString);
+      
+      // If today, show only time
+      if (messageDate.toDateString() === new Date().toDateString()) {
+        return messageDate.toLocaleTimeString(undefined, {
+          hour: '2-digit',
+          minute: '2-digit',
+        });
+      }
+      
+      // Otherwise show relative time
+      return formatDistanceToNow(messageDate, { addSuffix: true });
+    } catch (e) {
+      console.error('Date formatting error:', e);
+      return '';
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (messages.length === 0 && optimisticMessages.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+        <div className="bg-muted/40 p-4 rounded-full mb-4">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-8 w-8 text-muted-foreground"
+          >
+            <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z" />
+            <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
+          </svg>
+        </div>
+        <h3 className="text-lg font-medium mb-2">{t('messages.noMessagesYet')}</h3>
+        <p className="text-sm text-muted-foreground max-w-xs">
+          {t('messages.startConversation')}
+        </p>
+      </div>
+    );
+  }
+
+  // Group messages by date
+  const groupedMessages: { [date: string]: (Message | { id: string; isDateDivider: true; date: string })[] } = {};
+  
+  // Helper to add a date divider
+  const addDateDivider = (date: string, messageDate: Date) => {
+    if (!groupedMessages[date]) {
+      groupedMessages[date] = [
+        {
+          id: `date-${date}`,
+          isDateDivider: true,
+          date: messageDate.toLocaleDateString(undefined, {
+            weekday: 'long',
+            month: 'long',
+            day: 'numeric',
+          }),
+        },
+      ];
+    }
+  };
+  
+  // Group real messages
+  messages.forEach(message => {
+    const messageDate = new Date(message.created_at);
+    const dateKey = messageDate.toDateString();
+    
+    addDateDivider(dateKey, messageDate);
+    groupedMessages[dateKey].push(message);
+  });
+  
+  // Add optimistic messages
+  optimisticMessages.forEach(message => {
+    const messageDate = new Date(message.created_at);
+    const dateKey = messageDate.toDateString();
+    
+    addDateDivider(dateKey, messageDate);
+    groupedMessages[dateKey].push(message);
+  });
+  
+  // Sort dates in ascending order
+  const sortedDates = Object.keys(groupedMessages).sort(
+    (a, b) => new Date(a).getTime() - new Date(b).getTime()
+  );
+
+  return (
+    <div className="flex-1 p-3 overflow-y-auto chat-scrollbar">
+      <div className="space-y-5">
+        {sortedDates.map(date => (
+          <div key={date} className="space-y-3">
+            {groupedMessages[date].map(msg => {
+              if ('isDateDivider' in msg) {
+                return (
+                  <div key={msg.id} className="flex justify-center my-4">
+                    <div className="px-3 py-1 text-xs bg-muted/40 rounded-full text-muted-foreground">
+                      {msg.date}
+                    </div>
+                  </div>
+                );
+              }
+              
+              const isCurrentUser = msg.sender_id === currentUserId;
+              const isOptimistic = optimisticMessages.some(m => m.id === msg.id);
+              
+              return (
+                <div
+                  key={msg.id}
+                  className={cn(
+                    'flex',
+                    isCurrentUser ? 'justify-end' : 'justify-start'
+                  )}
+                >
+                  <div className="flex flex-col max-w-[80%]">
+                    <div
+                      className={cn(
+                        'chat-bubble',
+                        isCurrentUser
+                          ? 'chat-bubble-sender'
+                          : 'chat-bubble-receiver',
+                        isOptimistic && 'opacity-70'
+                      )}
+                    >
+                      {msg.content}
+                    </div>
+                    <div
+                      className={cn(
+                        'message-time',
+                        isCurrentUser ? 'text-right' : 'text-left'
+                      )}
+                    >
+                      {isOptimistic ? (
+                        <span className="flex items-center justify-end">
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          {t('messages.sending')}
+                        </span>
+                      ) : (
+                        formatMessageTime(msg.created_at)
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
+        
+        <div ref={endOfMessagesRef} />
+      </div>
+    </div>
+  );
+};
+
+export default MessagesList;

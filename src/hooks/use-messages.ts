@@ -30,12 +30,11 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         setIsLoading(true);
         console.log(`Fetching messages between ${userId} and ${chatPartnerId}`);
         
-        // Since RLS is disabled, we can use a simpler query
+        // Modified query to properly get conversation between two users
         const { data, error } = await supabase
           .from('messages')
           .select('*')
-          .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
-          .or(`sender_id.eq.${chatPartnerId},receiver_id.eq.${chatPartnerId}`)
+          .or(`and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`)
           .order('created_at', { ascending: true });
 
         if (error) {
@@ -48,14 +47,23 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           return;
         }
 
-        // Filter messages to only include those between the user and chat partner
-        const filteredMessages = data?.filter(msg => 
-          (msg.sender_id === userId && msg.receiver_id === chatPartnerId) || 
-          (msg.sender_id === chatPartnerId && msg.receiver_id === userId)
+        console.log('Fetched messages:', data);
+        setMessages(data || []);
+        
+        // Mark received messages as read
+        const unreadMessages = data?.filter(msg => 
+          msg.sender_id === chatPartnerId && 
+          msg.receiver_id === userId && 
+          !msg.is_read
         ) || [];
-
-        console.log('Fetched messages:', filteredMessages);
-        setMessages(filteredMessages);
+        
+        if (unreadMessages.length > 0) {
+          await Promise.all(
+            unreadMessages.map(msg => 
+              markMessageAsRead(msg.id)
+            )
+          );
+        }
       } catch (error: any) {
         console.error('Error in fetchMessages:', error);
         toast({
@@ -70,9 +78,9 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
     fetchMessages();
 
-    // Set up Realtime subscription for messages
+    // Set up Realtime subscription for messages with improved filter
     const channel = supabase
-      .channel('messages-channel-' + chatPartnerId)
+      .channel('messages-channel-' + chatPartnerId + '-' + userId)
       .on(
         'postgres_changes',
         {
@@ -220,6 +228,15 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
         
       if (error) {
         console.error('Error marking messages as read:', error);
+      } else {
+        // Update local messages state
+        setMessages(prev => 
+          prev.map(msg => 
+            msg.sender_id === chatPartnerId && msg.receiver_id === userId && !msg.is_read
+              ? { ...msg, is_read: true }
+              : msg
+          )
+        );
       }
     } catch (error) {
       console.error('Error in markMessagesAsRead:', error);

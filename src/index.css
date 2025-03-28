@@ -6,125 +6,108 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 220 10% 12%;
-
+    --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
-    --card-foreground: 220 10% 12%;
-
+    --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
-    --popover-foreground: 220 10% 12%;
-
-    --primary: 16 100% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 20% 96%;
-    --secondary-foreground: 220 10% 12%;
-
-    --muted: 220 20% 96%;
-    --muted-foreground: 220 10% 45%;
-
-    --accent: 220 20% 96%;
-    --accent-foreground: 220 10% 12%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    --ring: 16 100% 60%;
-
-    --radius: 0.75rem;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 260 85% 75%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 260 85% 75%;
+    --radius: 0.5rem;
   }
 
   .dark {
-    --background: 220 25% 10%;
-    --foreground: 220 10% 96%;
-
-    --card: 220 25% 12%;
-    --card-foreground: 220 10% 96%;
-
-    --popover: 220 25% 12%;
-    --popover-foreground: 220 10% 96%;
-
-    --primary: 16 100% 60%;
-    --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 25% 16%;
-    --secondary-foreground: 220 10% 96%;
-
-    --muted: 220 25% 16%;
-    --muted-foreground: 220 10% 70%;
-
-    --accent: 220 25% 16%;
-    --accent-foreground: 220 10% 96%;
-
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-
-    --border: 220 25% 18%;
-    --input: 220 25% 18%;
-    --ring: 16 100% 60%;
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 240 10% 3.9%;
+    --card-foreground: 0 0% 98%;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 260 85% 75%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 260 85% 75%;
   }
 }
 
 @layer base {
   * {
-    @apply border-border selection:bg-fenix/10 selection:text-fenix-dark;
+    @apply border-border;
   }
-  
   body {
-    @apply bg-background text-foreground antialiased;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02", "cv03";
-  }
-
-  html {
-    @apply scroll-smooth;
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-@layer utilities {
-  .scrollbar-hidden {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-  
-  .scrollbar-hidden::-webkit-scrollbar {
-    display: none;
-  }
+.glass-panel {
+  @apply bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 dark:border-white/5;
+}
 
-  .glass-effect {
-    @apply backdrop-blur-md bg-white/80 dark:bg-black/50 border border-white/20 dark:border-white/10;
-  }
-  
-  .text-balance {
-    text-wrap: balance;
-  }
-  
-  .animate-enter {
-    @apply opacity-0;
-    animation: enter 0.5s ease forwards;
-  }
-  
-  @keyframes enter {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  
-  .animate-enter-delay-1 {
-    animation-delay: 0.1s;
-  }
-  
-  .animate-enter-delay-2 {
-    animation-delay: 0.2s;
-  }
-  
-  .animate-enter-delay-3 {
-    animation-delay: 0.3s;
-  }
+/* Custom scrollbar for chat */
+.chat-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.chat-scrollbar::-webkit-scrollbar-track {
+  @apply bg-transparent rounded-full;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-gray-300 dark:bg-gray-700 rounded-full;
+}
+
+.chat-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400 dark:bg-gray-600;
+}
+
+/* Bubble chat styling */
+.chat-bubble {
+  @apply px-4 py-2 rounded-2xl max-w-[80%] break-words;
+}
+
+.chat-bubble-sender {
+  @apply bg-primary text-primary-foreground rounded-tr-none;
+}
+
+.chat-bubble-receiver {
+  @apply bg-secondary text-secondary-foreground rounded-tl-none;
+}
+
+/* Message sent time */
+.message-time {
+  @apply text-xs opacity-70 mt-1;
+}
+
+/* Avatar badge for online status */
+.avatar-badge {
+  @apply absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full;
+}
+
+.avatar-badge.online {
+  @apply bg-emerald-500 border-2 border-white dark:border-gray-900;
+}
+
+.avatar-badge.offline {
+  @apply bg-gray-400 border-2 border-white dark:border-gray-900;
 }

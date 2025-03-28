@@ -1,8 +1,11 @@
+
 import React, { useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { Search, Bell, User, Menu, X, Home, MessageSquare, Users, Gamepad2, Award, BarChart3, LogOut } from "lucide-react";
+import { Search, Bell, User, Menu, Home, MessageSquare, Users, Gamepad2, Award, BarChart3, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { useNotification } from "@/context/NotificationContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +17,8 @@ import { cn } from "@/lib/utils";
 const TopBar: React.FC = () => {
   const { user, logout } = useAuth();
   const { unreadCount } = useNotification();
+  const { theme, toggleTheme } = useTheme();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
 
@@ -25,18 +30,18 @@ const TopBar: React.FC = () => {
   };
 
   const mobileNavItems = [
-    { path: "/", icon: Home, label: "Home" },
-    { path: `/profile/${user?.username}`, icon: User, label: "Profile" },
-    { path: "/notifications", icon: Bell, label: "Notifications" },
-    { path: "/messages", icon: MessageSquare, label: "Messages" },
-    { path: "/friends", icon: Users, label: "Friends" },
-    { path: "/games", icon: Gamepad2, label: "Games" },
-    { path: "/leaderboard", icon: Award, label: "Leaderboard" },
-    { path: "/earn", icon: BarChart3, label: "Earn Coins" },
+    { path: "/", icon: Home, label: t('nav.home') },
+    { path: `/profile/${user?.username}`, icon: User, label: t('nav.profile') },
+    { path: "/notifications", icon: Bell, label: t('settings.notifications') },
+    { path: "/messages", icon: MessageSquare, label: t('nav.messages') },
+    { path: "/friends", icon: Users, label: t('settings.friends') },
+    { path: "/games", icon: Gamepad2, label: t('games.title') },
+    { path: "/leaderboard", icon: Award, label: t('leaderboard.title') },
+    { path: "/earn", icon: BarChart3, label: t('coins.earn') },
   ];
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-40 border-b bg-background/90 backdrop-blur-md dark:border-gray-800">
       <div className="container mx-auto flex justify-between items-center h-16 px-4 md:px-6">
         {/* Mobile menu */}
         <div className="md:hidden">
@@ -60,7 +65,7 @@ const TopBar: React.FC = () => {
                       className={({ isActive }) => cn(
                         "flex items-center gap-2 px-4 py-3 rounded-md transition-colors",
                         isActive 
-                          ? "bg-fenix/10 text-fenix font-medium" 
+                          ? "bg-primary/10 text-primary font-medium" 
                           : "text-foreground hover:bg-secondary"
                       )}
                     >
@@ -77,7 +82,7 @@ const TopBar: React.FC = () => {
                     onClick={logout}
                   >
                     <LogOut className="mr-2 h-5 w-5" />
-                    Logout
+                    {t('auth.logout')}
                   </Button>
                 </div>
               </div>
@@ -96,7 +101,7 @@ const TopBar: React.FC = () => {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search Campus Fenix"
+                placeholder={t('nav.search')}
                 className="pl-10 w-full"
                 value={searchValue}
                 onChange={(e) => setSearchValue(e.target.value)}
@@ -107,12 +112,27 @@ const TopBar: React.FC = () => {
 
         {/* User actions */}
         <div className="flex items-center gap-3">
+          {/* Theme Toggle */}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleTheme}
+            className="text-muted-foreground"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+            <span className="sr-only">Toggle theme</span>
+          </Button>
+
           {/* Notifications */}
           <NavLink to="/notifications" className="relative">
             <Button variant="ghost" size="icon" className="relative">
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-fenix text-white">
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground">
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </Badge>
               )}
@@ -120,12 +140,12 @@ const TopBar: React.FC = () => {
           </NavLink>
 
           {/* Coins display */}
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full">
-            <div className="w-5 h-5 rounded-full bg-fenix flex items-center justify-center">
+          <NavLink to="/earn" className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full hover:bg-secondary/80 transition-colors">
+            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
               <span className="text-xs text-white font-bold">C</span>
             </div>
             <span className="text-sm font-medium">{user?.coins || 0}</span>
-          </div>
+          </NavLink>
 
           {/* User dropdown */}
           <DropdownMenu>
@@ -133,7 +153,7 @@ const TopBar: React.FC = () => {
               <Button variant="ghost" size="icon" className="rounded-full">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.avatar} alt={user?.displayName} />
-                  <AvatarFallback className="bg-fenix text-white">
+                  <AvatarFallback className="bg-primary text-primary-foreground">
                     {user?.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
                   </AvatarFallback>
                 </Avatar>
@@ -143,7 +163,7 @@ const TopBar: React.FC = () => {
               <div className="flex items-center justify-start gap-2 p-2">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={user?.avatar} alt={user?.displayName} />
-                  <AvatarFallback className="bg-fenix text-white">
+                  <AvatarFallback className="bg-primary text-primary-foreground">
                     {user?.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
                   </AvatarFallback>
                 </Avatar>
@@ -155,16 +175,16 @@ const TopBar: React.FC = () => {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate(`/profile/${user?.username}`)}>
                 <User className="mr-2 h-4 w-4" />
-                <span>Profile</span>
+                <span>{t('nav.profile')}</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate('/settings')}>
                 <Bell className="mr-2 h-4 w-4" />
-                <span>Settings</span>
+                <span>{t('nav.settings')}</span>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
-                <span>Logout</span>
+                <span>{t('auth.logout')}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

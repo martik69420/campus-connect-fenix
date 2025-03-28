@@ -16,9 +16,9 @@ export type Translations = {
 export const translations: Translations = {
   // Common
   'app.name': {
-    en: 'Campus Connect',
-    nl: 'Campus Connect',
-    fr: 'Campus Connect',
+    en: 'Campus Fenix',
+    nl: 'Campus Fenix',
+    fr: 'Campus Fenix',
   },
   'common.save': {
     en: 'Save',
@@ -146,32 +146,112 @@ export const translations: Translations = {
     nl: 'Selecteer een contact om te beginnen met chatten',
     fr: 'Sélectionnez un contact pour commencer à discuter',
   },
+  'messages.conversations': {
+    en: 'Conversations',
+    nl: 'Gesprekken',
+    fr: 'Conversations',
+  },
+  'messages.searchContacts': {
+    en: 'Search contacts...',
+    nl: 'Zoek contacten...',
+    fr: 'Rechercher des contacts...',
+  },
+  'messages.noConversations': {
+    en: 'No conversations yet',
+    nl: 'Nog geen gesprekken',
+    fr: 'Pas encore de conversations',
+  },
+  'messages.noMessagesYet': {
+    en: 'No messages yet',
+    nl: 'Nog geen berichten',
+    fr: 'Pas encore de messages',
+  },
+  'messages.startConversation': {
+    en: 'Start a conversation now',
+    nl: 'Begin nu een gesprek',
+    fr: 'Commencez une conversation maintenant',
+  },
+  'messages.typeMessage': {
+    en: 'Type a message...',
+    nl: 'Typ een bericht...',
+    fr: 'Tapez un message...',
+  },
+  'messages.sending': {
+    en: 'Sending...',
+    nl: 'Versturen...',
+    fr: 'Envoi en cours...',
+  },
+  'messages.newMessage': {
+    en: 'New Message',
+    nl: 'Nieuw Bericht',
+    fr: 'Nouveau Message',
+  },
+  'messages.view': {
+    en: 'View',
+    nl: 'Bekijken',
+    fr: 'Voir',
+  },
+  'messages.viewProfile': {
+    en: 'View Profile',
+    nl: 'Bekijk Profiel',
+    fr: 'Voir le Profil',
+  },
+  'messages.muteNotifications': {
+    en: 'Mute Notifications',
+    nl: 'Meldingen Dempen',
+    fr: 'Désactiver les Notifications',
+  },
+  'messages.reportUser': {
+    en: 'Report User',
+    nl: 'Gebruiker Rapporteren',
+    fr: 'Signaler l\'Utilisateur',
+  },
+  'messages.sendError': {
+    en: 'Failed to send message',
+    nl: 'Bericht versturen mislukt',
+    fr: 'Échec de l\'envoi du message',
+  },
   
   // Settings
+  'settings.title': {
+    en: 'Settings',
+    nl: 'Instellingen',
+    fr: 'Paramètres',
+  },
+  'settings.description': {
+    en: 'Manage your account settings and preferences.',
+    nl: 'Beheer je accountinstellingen en voorkeuren.',
+    fr: 'Gérer vos paramètres de compte et préférences.',
+  },
   'settings.account': {
     en: 'Account Settings',
     nl: 'Account Instellingen',
     fr: 'Paramètres du Compte',
   },
   'settings.profile': {
-    en: 'Profile Settings',
-    nl: 'Profiel Instellingen',
-    fr: 'Paramètres du Profil',
+    en: 'Profile',
+    nl: 'Profiel',
+    fr: 'Profil',
   },
-  'settings.privacy': {
-    en: 'Privacy Settings',
-    nl: 'Privacy Instellingen',
-    fr: 'Paramètres de Confidentialité',
-  },
-  'settings.notifications': {
-    en: 'Notification Settings',
-    nl: 'Notificatie Instellingen',
-    fr: 'Paramètres de Notification',
+  'settings.appearance': {
+    en: 'Appearance',
+    nl: 'Uiterlijk',
+    fr: 'Apparence',
   },
   'settings.language': {
     en: 'Language',
     nl: 'Taal',
     fr: 'Langue',
+  },
+  'settings.notifications': {
+    en: 'Notifications',
+    nl: 'Meldingen',
+    fr: 'Notifications',
+  },
+  'settings.privacy': {
+    en: 'Privacy',
+    nl: 'Privacy',
+    fr: 'Confidentialité',
   },
   'settings.language.english': {
     en: 'English',
@@ -187,6 +267,166 @@ export const translations: Translations = {
     en: 'French',
     nl: 'Frans',
     fr: 'Français',
+  },
+  'settings.profileSettings': {
+    en: 'Profile Settings',
+    nl: 'Profielinstellingen',
+    fr: 'Paramètres de Profil',
+  },
+  'settings.profileSettingsDesc': {
+    en: 'Update your profile information',
+    nl: 'Werk je profielinformatie bij',
+    fr: 'Mettre à jour vos informations de profil',
+  },
+  'settings.updateProfile': {
+    en: 'Update Profile',
+    nl: 'Profiel Bijwerken',
+    fr: 'Mettre à Jour le Profil',
+  },
+  'settings.accountSettings': {
+    en: 'Account Settings',
+    nl: 'Accountinstellingen',
+    fr: 'Paramètres du Compte',
+  },
+  'settings.themeSettings': {
+    en: 'Theme Settings',
+    nl: 'Thema-instellingen',
+    fr: 'Paramètres de Thème',
+  },
+  'settings.themeSettingsDesc': {
+    en: 'Customize your app appearance',
+    nl: 'Pas het uiterlijk van je app aan',
+    fr: 'Personnaliser l\'apparence de votre application',
+  },
+  'settings.darkMode': {
+    en: 'Dark Mode',
+    nl: 'Donkere Modus',
+    fr: 'Mode Sombre',
+  },
+  'settings.lightMode': {
+    en: 'Light Mode',
+    nl: 'Lichte Modus',
+    fr: 'Mode Clair',
+  },
+  'settings.darkModeDesc': {
+    en: 'Easier on the eyes in low light',
+    nl: 'Makkelijker voor de ogen bij weinig licht',
+    fr: 'Plus facile pour les yeux en faible luminosité',
+  },
+  'settings.lightModeDesc': {
+    en: 'Better visibility in bright light',
+    nl: 'Betere zichtbaarheid bij fel licht',
+    fr: 'Meilleure visibilité en pleine lumière',
+  },
+  'settings.darkModeEnabled': {
+    en: 'Dark Mode Enabled',
+    nl: 'Donkere Modus Ingeschakeld',
+    fr: 'Mode Sombre Activé',
+  },
+  'settings.lightModeEnabled': {
+    en: 'Light Mode Enabled',
+    nl: 'Lichte Modus Ingeschakeld',
+    fr: 'Mode Clair Activé',
+  },
+  'settings.themeUpdateError': {
+    en: 'Failed to update theme',
+    nl: 'Thema bijwerken mislukt',
+    fr: 'Échec de la mise à jour du thème',
+  },
+  'settings.languageSettings': {
+    en: 'Language Settings',
+    nl: 'Taalinstellingen',
+    fr: 'Paramètres de Langue',
+  },
+  'settings.languageSettingsDesc': {
+    en: 'Choose your preferred language',
+    nl: 'Kies je voorkeurstaal',
+    fr: 'Choisissez votre langue préférée',
+  },
+  'settings.languageUpdated': {
+    en: 'Language Updated',
+    nl: 'Taal Bijgewerkt',
+    fr: 'Langue Mise à Jour',
+  },
+  'settings.languageUpdatedDesc': {
+    en: 'Your language preference has been saved',
+    nl: 'Je taalvoorkeur is opgeslagen',
+    fr: 'Votre préférence de langue a été enregistrée',
+  },
+  'settings.languageUpdateError': {
+    en: 'Failed to update language',
+    nl: 'Taal bijwerken mislukt',
+    fr: 'Échec de la mise à jour de la langue',
+  },
+  'settings.notificationSettings': {
+    en: 'Notification Settings',
+    nl: 'Meldingsinstellingen',
+    fr: 'Paramètres de Notification',
+  },
+  'settings.notificationSettingsDesc': {
+    en: 'Manage your notification preferences',
+    nl: 'Beheer je meldingsvoorkeuren',
+    fr: 'Gérer vos préférences de notification',
+  },
+  'settings.messageNotifications': {
+    en: 'Message Notifications',
+    nl: 'Berichtmeldingen',
+    fr: 'Notifications de Messages',
+  },
+  'settings.messageNotificationsDesc': {
+    en: 'Get notified when you receive a new message',
+    nl: 'Word op de hoogte gesteld wanneer je een nieuw bericht ontvangt',
+    fr: 'Soyez notifié lorsque vous recevez un nouveau message',
+  },
+  'settings.likeNotifications': {
+    en: 'Like Notifications',
+    nl: 'Like-meldingen',
+    fr: 'Notifications de J\'aime',
+  },
+  'settings.likeNotificationsDesc': {
+    en: 'Get notified when someone likes your post',
+    nl: 'Word op de hoogte gesteld wanneer iemand je bericht leuk vindt',
+    fr: 'Soyez notifié lorsque quelqu\'un aime votre publication',
+  },
+  'settings.friendNotifications': {
+    en: 'Friend Notifications',
+    nl: 'Vriendmeldingen',
+    fr: 'Notifications d\'Amis',
+  },
+  'settings.friendNotificationsDesc': {
+    en: 'Get notified about friend requests',
+    nl: 'Word op de hoogte gesteld over vriendschapsverzoeken',
+    fr: 'Soyez notifié des demandes d\'amitié',
+  },
+  'settings.privacySettings': {
+    en: 'Privacy Settings',
+    nl: 'Privacy-instellingen',
+    fr: 'Paramètres de Confidentialité',
+  },
+  'settings.privacySettingsDesc': {
+    en: 'Manage your privacy preferences',
+    nl: 'Beheer je privacyvoorkeuren',
+    fr: 'Gérer vos préférences de confidentialité',
+  },
+  'settings.privateProfile': {
+    en: 'Private Profile',
+    nl: 'Privé Profiel',
+    fr: 'Profil Privé',
+  },
+  'settings.privateProfileDesc': {
+    en: 'Only friends can see your posts and activity',
+    nl: 'Alleen vrienden kunnen je berichten en activiteit zien',
+    fr: 'Seuls les amis peuvent voir vos publications et activités',
+  },
+  'settings.showOnlineStatus': {
+    en: 'Show Online Status',
+    nl: 'Online Status Tonen',
+    fr: 'Afficher le Statut En Ligne',
+  },
+  'settings.showOnlineStatusDesc': {
+    en: 'Let others see when you\'re online',
+    nl: 'Laat anderen zien wanneer je online bent',
+    fr: 'Permettre aux autres de voir quand vous êtes en ligne',
   },
   
   // Posts
@@ -258,7 +498,66 @@ export const translations: Translations = {
     en: 'User is offline',
     nl: 'Gebruiker is offline',
     fr: 'Utilisateur est hors ligne',
-  }
+  },
+  
+  // Coins
+  'coins.balance': {
+    en: 'Coin Balance',
+    nl: 'Muntsaldo',
+    fr: 'Solde de Pièces',
+  },
+  'coins.earn': {
+    en: 'Earn Coins',
+    nl: 'Munten Verdienen',
+    fr: 'Gagner des Pièces',
+  },
+  'coins.spend': {
+    en: 'Spend Coins',
+    nl: 'Munten Uitgeven',
+    fr: 'Dépenser des Pièces',
+  },
+  
+  // Leaderboard
+  'leaderboard.title': {
+    en: 'Leaderboard',
+    nl: 'Ranglijst',
+    fr: 'Classement',
+  },
+  'leaderboard.rank': {
+    en: 'Rank',
+    nl: 'Rang',
+    fr: 'Rang',
+  },
+  'leaderboard.user': {
+    en: 'User',
+    nl: 'Gebruiker',
+    fr: 'Utilisateur',
+  },
+  'leaderboard.score': {
+    en: 'Score',
+    nl: 'Score',
+    fr: 'Score',
+  },
+  'leaderboard.points': {
+    en: 'Points',
+    nl: 'Punten',
+    fr: 'Points',
+  },
+  'leaderboard.coins': {
+    en: 'Coins',
+    nl: 'Munten',
+    fr: 'Pièces',
+  },
+  'leaderboard.topScorers': {
+    en: 'Top Scorers',
+    nl: 'Topscorers',
+    fr: 'Meilleurs Marqueurs',
+  },
+  'leaderboard.yourRank': {
+    en: 'Your Rank',
+    nl: 'Jouw Rang',
+    fr: 'Votre Rang',
+  },
 };
 
 interface LanguageContextProps {

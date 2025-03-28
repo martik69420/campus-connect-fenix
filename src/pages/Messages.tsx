@@ -1,39 +1,17 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { useMessages } from '@/hooks/use-messages';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/context/LanguageContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Skeleton } from '@/components/ui/skeleton';
-import OnlineStatus from '@/components/OnlineStatus';
-import { cn } from '@/lib/utils';
 import AppLayout from '@/components/layout/AppLayout';
-import {
-  Send,
-  User,
-  Search,
-  Loader2,
-  MoreVertical,
-  Trash,
-  Flag,
-  Bell,
-  BellOff,
-} from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import ReportModal from '@/components/ReportModal';
+import MessageInput from '@/components/messaging/MessageInput';
+import MessagesList from '@/components/messaging/MessagesList';
+import ChatHeader from '@/components/messaging/ChatHeader';
+import ContactsList from '@/components/messaging/ContactsList';
+import { Send } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -56,30 +34,27 @@ interface Contact {
 
 const Messages = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  
   const [activeContactId, setActiveContactId] = useState<string>('');
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   
-  // Store optimistic messages (ones we've sent but haven't been confirmed yet)
-  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
-  
   // Redirect if not authenticated
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       navigate('/auth');
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate]);
   
   // Fetch contacts
   useEffect(() => {
@@ -202,7 +177,6 @@ const Messages = () => {
             // Add the new message if it's from the active contact
             if (newMessage.sender_id === activeContactId) {
               setMessages(prev => [...prev, newMessage]);
-              messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
               
               // Mark as read
               await supabase
@@ -269,16 +243,15 @@ const Messages = () => {
                   title: t('messages.newMessage'),
                   description: `${sender.displayName || sender.username}: ${newMessage.content}`,
                   action: (
-                    <Button 
-                      size="sm" 
-                      variant="outline"
+                    <button 
+                      className="bg-primary/10 hover:bg-primary/20 text-primary text-xs py-1 px-2 rounded"
                       onClick={() => {
                         setActiveContactId(sender.id);
                         setActiveContact(sender);
                       }}
                     >
                       {t('messages.view')}
-                    </Button>
+                    </button>
                   ),
                 });
               }
@@ -291,7 +264,7 @@ const Messages = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, activeContactId]);
+  }, [user, activeContactId, contacts, toast, t]);
   
   // Fetch messages when active contact changes
   useEffect(() => {
@@ -301,6 +274,7 @@ const Messages = () => {
       try {
         setLoadingMessages(true);
         setMessages([]);
+        setOptimisticMessages([]);
         
         // Get messages between current user and the active contact
         const { data, error } = await supabase
@@ -351,22 +325,14 @@ const Messages = () => {
         console.error('Failed to fetch messages:', error);
       } finally {
         setLoadingMessages(false);
-        setTimeout(() => {
-          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
       }
     };
     
     fetchMessages();
   }, [user, activeContactId, contacts]);
   
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, optimisticMessages]);
-  
-  const handleSendMessage = async () => {
-    if (!user || !activeContactId || !newMessage.trim()) return;
+  const handleSendMessage = async (content: string) => {
+    if (!user || !activeContactId || !content.trim()) return;
     
     try {
       setSendingMessage(true);
@@ -375,7 +341,7 @@ const Messages = () => {
       const optimisticId = `optimistic-${Date.now()}`;
       const optimisticMessage: Message = {
         id: optimisticId,
-        content: newMessage,
+        content: content,
         created_at: new Date().toISOString(),
         sender_id: user.id,
         receiver_id: activeContactId,
@@ -385,14 +351,11 @@ const Messages = () => {
       // Add to optimistic messages
       setOptimisticMessages(prev => [...prev, optimisticMessage]);
       
-      // Clear input
-      setNewMessage('');
-      
       // Actually send the message
       const { data, error } = await supabase
         .from('messages')
         .insert({
-          content: newMessage,
+          content: content.trim(),
           sender_id: user.id,
           receiver_id: activeContactId,
         })
@@ -406,6 +369,9 @@ const Messages = () => {
           description: t('messages.sendError'),
           variant: "destructive",
         });
+        
+        // Remove the optimistic message
+        setOptimisticMessages(prev => prev.filter(msg => msg.id !== optimisticId));
         return;
       }
       
@@ -422,7 +388,7 @@ const Messages = () => {
         
         if (contactIndex >= 0) {
           const contact = { ...updated[contactIndex] };
-          contact.lastMessage = newMessage;
+          contact.lastMessage = content.trim();
           contact.lastMessageTime = new Date().toISOString();
           
           // Move this contact to the top
@@ -441,14 +407,6 @@ const Messages = () => {
       });
     } finally {
       setSendingMessage(false);
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-  
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
     }
   };
   
@@ -461,240 +419,64 @@ const Messages = () => {
       )
     : contacts;
   
+  const handleNewChat = () => {
+    navigate('/add-friends');
+  };
+  
+  if (authLoading) {
+    return null;
+  }
+  
   return (
     <AppLayout>
       <div className="container mx-auto p-4 h-[calc(100vh-4rem)]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
           {/* Contacts List */}
-          <div className="md:col-span-1 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col">
-            <div className="border-b p-4">
-              <h2 className="text-xl font-bold">{t('messages.conversations')}</h2>
-              <div className="relative mt-2">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('messages.searchContacts')}
-                  className="pl-8"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto">
-              {loadingContacts ? (
-                Array.from({ length: 5 }).map((_, index) => (
-                  <div key={index} className="flex items-center gap-3 p-3 border-b">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                    <div className="space-y-1.5 flex-1">
-                      <Skeleton className="h-4 w-2/3" />
-                      <Skeleton className="h-3 w-full" />
-                    </div>
-                  </div>
-                ))
-              ) : filteredContacts.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
-                  <User className="h-12 w-12 mb-2" />
-                  <p>{t('messages.noConversations')}</p>
-                </div>
-              ) : (
-                filteredContacts.map((contact) => (
-                  <button
-                    key={contact.id}
-                    className={cn(
-                      'flex items-center gap-3 p-3 hover:bg-muted w-full text-left border-b relative',
-                      contact.id === activeContactId && 'bg-muted'
-                    )}
-                    onClick={() => {
-                      setActiveContactId(contact.id);
-                      setActiveContact(contact);
-                    }}
-                  >
-                    <div className="relative">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={contact.avatar || "/placeholder.svg"} alt={contact.displayName || contact.username} />
-                        <AvatarFallback>{contact.displayName?.charAt(0) || contact.username.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <OnlineStatus userId={contact.id} className="absolute -bottom-1 -right-1" />
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex justify-between items-center">
-                        <h3 className="font-medium truncate">
-                          {contact.displayName || contact.username}
-                        </h3>
-                        {contact.lastMessageTime && (
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(contact.lastMessageTime).toLocaleDateString(undefined, {
-                              month: 'short',
-                              day: 'numeric',
-                            })}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {contact.lastMessage || t('messages.noMessages')}
-                      </p>
-                    </div>
-                    
-                    {(contact.unreadCount || 0) > 0 && (
-                      <span className="absolute top-3 right-3 bg-primary text-primary-foreground rounded-full h-5 min-w-5 flex items-center justify-center text-xs font-semibold px-1.5">
-                        {contact.unreadCount}
-                      </span>
-                    )}
-                  </button>
-                ))
-              )}
-            </div>
+          <div className="md:col-span-1 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col dark:border-gray-800">
+            <ContactsList
+              contacts={filteredContacts}
+              activeContactId={activeContactId}
+              setActiveContact={(contact) => {
+                setActiveContactId(contact.id);
+                setActiveContact(contact);
+              }}
+              isLoading={loadingContacts}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onNewChat={handleNewChat}
+            />
           </div>
           
           {/* Messages View */}
-          <div className="md:col-span-2 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col">
+          <div className="md:col-span-2 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col dark:border-gray-800">
             {activeContact ? (
               <>
-                <div className="border-b p-4 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
-                      <AvatarImage src={activeContact.avatar || "/placeholder.svg"} alt={activeContact.displayName || activeContact.username} />
-                      <AvatarFallback>
-                        {activeContact.displayName?.charAt(0) || activeContact.username.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <h3 className="font-medium">
-                        {activeContact.displayName || activeContact.username}
-                      </h3>
-                      <div className="flex items-center text-xs text-muted-foreground">
-                        <OnlineStatus userId={activeContact.id} showLabel />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreVertical className="h-5 w-5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => navigate(`/profile/${activeContact.username}`)}>
-                        <User className="h-4 w-4 mr-2" />
-                        {t('messages.viewProfile')}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem>
-                        <Bell className="h-4 w-4 mr-2" />
-                        {t('messages.muteNotifications')}
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setShowReportModal(true)} className="text-destructive">
-                        <Flag className="h-4 w-4 mr-2" />
-                        {t('messages.reportUser')}
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
+                <ChatHeader
+                  contact={activeContact}
+                  onOpenUserActions={() => setShowReportModal(true)}
+                />
                 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {loadingMessages ? (
-                    Array.from({ length: 5 }).map((_, index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          'flex',
-                          index % 2 === 0 ? 'justify-start' : 'justify-end'
-                        )}
-                      >
-                        <div className={cn(
-                          'max-w-[80%] p-3 rounded-lg',
-                          index % 2 === 0 ? 'bg-muted' : 'bg-primary text-primary-foreground'
-                        )}>
-                          <Skeleton className="h-4 w-64" />
-                        </div>
-                      </div>
-                    ))
-                  ) : messages.length === 0 && optimisticMessages.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground">
-                      <p>{t('messages.noMessagesYet')}</p>
-                      <p className="text-sm">{t('messages.startConversation')}</p>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Real messages */}
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={cn(
-                            'flex',
-                            message.sender_id === user?.id ? 'justify-end' : 'justify-start'
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              'max-w-[80%] p-3 rounded-lg',
-                              message.sender_id === user?.id
-                                ? 'bg-primary text-primary-foreground'
-                                : 'bg-muted'
-                            )}
-                          >
-                            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                            <div className="text-xs mt-1 opacity-70 text-right">
-                              {new Date(message.created_at).toLocaleTimeString(undefined, {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {/* Optimistic messages */}
-                      {optimisticMessages.map((message) => (
-                        <div key={message.id} className="flex justify-end">
-                          <div className="max-w-[80%] p-3 rounded-lg bg-primary text-primary-foreground opacity-80">
-                            <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                            <div className="text-xs mt-1 opacity-70 text-right flex justify-end items-center">
-                              <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                              {t('messages.sending')}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      <div ref={messagesEndRef} />
-                    </>
-                  )}
-                </div>
+                <MessagesList
+                  messages={messages}
+                  optimisticMessages={optimisticMessages}
+                  currentUserId={user?.id || ''}
+                  isLoading={loadingMessages}
+                />
                 
-                <div className="border-t p-4">
-                  <div className="flex gap-2">
-                    <Textarea
-                      placeholder={t('messages.typeMessage')}
-                      className="min-h-10 flex-1 resize-none"
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={handleKeyPress}
-                      disabled={sendingMessage}
-                    />
-                    <Button
-                      size="icon"
-                      disabled={!newMessage.trim() || sendingMessage}
-                      onClick={handleSendMessage}
-                    >
-                      {sendingMessage ? (
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                      ) : (
-                        <Send className="h-5 w-5" />
-                      )}
-                    </Button>
-                  </div>
-                </div>
+                <MessageInput
+                  onSendMessage={handleSendMessage}
+                  isSending={sendingMessage}
+                />
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
-                <div className="mb-4 p-4 rounded-full bg-muted">
-                  <Send className="h-12 w-12" />
+              <div className="flex flex-col items-center justify-center h-full p-4 text-center">
+                <div className="mb-4 p-6 rounded-full bg-muted/40">
+                  <Send className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-medium mb-2">{t('messages.selectContact')}</h3>
-                <p className="max-w-md">{t('messages.selectContactDescription')}</p>
+                <h3 className="text-xl font-medium mb-2">{t('messages.selectContact')}</h3>
+                <p className="text-muted-foreground max-w-md">
+                  {t('messages.selectContactDescription')}
+                </p>
               </div>
             )}
           </div>
