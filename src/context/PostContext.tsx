@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import type { User } from "./AuthContext";
-import { useAuth } from "./AuthContext";
+import type { User } from "./auth/types";
+import { useAuth } from "./auth";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -9,7 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 export type Comment = {
   id: string;
   content: string;
-  createdAt: string;
+  createdAt: string; // Changed from Date to string
   userId: string;
   likes: string[]; // array of user IDs who liked this comment
 };
@@ -18,7 +18,7 @@ export type Comment = {
 export type Post = {
   id: string;
   content: string;
-  createdAt: string;
+  createdAt: string; // Changed from Date to string
   userId: string;
   likes: string[]; // array of user IDs who liked the post
   comments: Comment[];
@@ -84,7 +84,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
 
-      const formattedPosts = data.map(post => ({
+      const formattedPosts: Post[] = data.map(post => ({
         id: post.id,
         content: post.content,
         createdAt: post.created_at,
@@ -105,7 +105,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           displayName: post.profiles.display_name,
           avatar: post.profiles.avatar_url || '/placeholder.svg',
           coins: 0,
-          createdAt: new Date().toISOString(),
+          createdAt: new Date().toISOString(), // Converted to string
           email: '',
           school: '',
           friends: [],
@@ -159,7 +159,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       // Optimistically update the state
-      setPosts(prevPosts => [{
+      const newPost: Post = {
         id: data.id,
         content: data.content,
         createdAt: data.created_at,
@@ -174,12 +174,14 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           displayName: user.displayName,
           avatar: user.avatar,
           coins: user.coins,
-          createdAt: user.createdAt.toISOString(),
+          createdAt: user.createdAt, // Now expects string
           email: user.email,
           school: user.school,
           friends: user.friends,
         },
-      }, ...prevPosts]);
+      };
+
+      setPosts(prevPosts => [newPost, ...prevPosts]);
 
       toast({
         title: "Post added",

@@ -152,17 +152,18 @@ const Profile = () => {
         // Process the posts data
         const formattedPosts = postsData.map(post => ({
           id: post.id,
+          userId: post.user_id,
           content: post.content,
-          images: post.images || [],
-          created_at: post.created_at,
-          user_id: post.user_id,
+          images: post.images,
+          createdAt: safeParseDate(post.created_at).toISOString(), // Convert Date to string
           likes: (post.likes || []).map(like => like.user_id || like.id),
           comments: (post.comments || []).map(comment => ({
             id: comment.id,
             content: comment.content,
-            user_id: comment.user_id,
-            created_at: safeParseDate(comment.created_at)
-          }))
+            userId: comment.user_id,
+            createdAt: safeParseDate(comment.created_at).toISOString()
+          })),
+          shares: 0
         }));
         
         setPosts(formattedPosts);
@@ -320,16 +321,7 @@ const Profile = () => {
               posts.map((post) => (
                 <PostCard 
                   key={post.id} 
-                  post={{
-                    id: post.id,
-                    userId: post.user_id,
-                    content: post.content,
-                    images: post.images,
-                    createdAt: safeParseDate(post.created_at).toISOString(), // Convert Date to string
-                    likes: post.likes || [],
-                    comments: post.comments || [],
-                    shares: 0
-                  }} 
+                  post={post}
                   onAction={refreshPosts} 
                 />
               ))
