@@ -18,8 +18,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
 
   const handleSend = async () => {
     if (message.trim() && !isSending) {
-      await onSendMessage(message);
-      setMessage('');
+      try {
+        await onSendMessage(message);
+        setMessage('');
+      } catch (error) {
+        console.error('Failed to send message:', error);
+      }
     }
   };
 
@@ -39,12 +43,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
   }, [message]);
 
   return (
-    <div className="border-t p-3 dark:border-gray-800">
+    <div className="border-t p-3 dark:border-gray-800 bg-background/95 backdrop-blur-sm">
       <div className="flex gap-2 items-end">
         <Textarea
           ref={textareaRef}
           placeholder={t('messages.typeMessage')}
-          className="min-h-[40px] max-h-[150px] flex-1 resize-none py-2 px-3"
+          className="min-h-[40px] max-h-[150px] flex-1 resize-none py-2 px-3 focus-visible:ring-1 focus-visible:ring-primary"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -56,7 +60,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
             variant="ghost"
             size="icon"
             type="button"
-            className="text-muted-foreground"
+            className="text-muted-foreground hover:text-foreground transition-colors"
             disabled={isSending || disabled}
           >
             <Paperclip className="h-5 w-5" />
@@ -66,7 +70,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
             variant="ghost"
             size="icon"
             type="button"
-            className="text-muted-foreground"
+            className="text-muted-foreground hover:text-foreground transition-colors"
             disabled={isSending || disabled}
           >
             <Smile className="h-5 w-5" />
@@ -77,7 +81,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
             size="icon"
             disabled={!message.trim() || isSending || disabled}
             onClick={handleSend}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-primary hover:bg-primary/90 transition-colors"
           >
             {isSending ? (
               <Loader2 className="h-5 w-5 animate-spin" />

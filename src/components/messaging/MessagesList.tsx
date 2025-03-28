@@ -1,8 +1,10 @@
+
 import React, { useRef, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Message {
   id: string;
@@ -70,7 +72,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
   if (messages.length === 0 && optimisticMessages.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center">
-        <div className="bg-muted/40 p-4 rounded-full mb-4">
+        <div className="glass-panel p-6 rounded-full mb-4">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"
@@ -79,13 +81,13 @@ const MessagesList: React.FC<MessagesListProps> = ({
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="h-8 w-8 text-muted-foreground"
+            className="h-10 w-10 text-muted-foreground"
           >
             <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4c0-1.1.9-2 2-2h8a2 2 0 0 1 2 2v5Z" />
             <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
           </svg>
         </div>
-        <h3 className="text-lg font-medium mb-2">{t('messages.noMessagesYet')}</h3>
+        <h3 className="text-xl font-medium mb-3">{t('messages.noMessagesYet')}</h3>
         <p className="text-sm text-muted-foreground max-w-xs">
           {t('messages.startConversation')}
         </p>
@@ -137,65 +139,77 @@ const MessagesList: React.FC<MessagesListProps> = ({
   );
 
   return (
-    <div className="flex-1 p-3 overflow-y-auto chat-scrollbar">
+    <div className="flex-1 p-3 overflow-y-auto chat-scrollbar bg-gradient-to-b from-background to-background/90">
       <div className="space-y-5">
-        {sortedDates.map(date => (
-          <div key={date} className="space-y-3">
-            {groupedMessages[date].map(msg => {
-              if ('isDateDivider' in msg) {
+        <AnimatePresence>
+          {sortedDates.map(date => (
+            <motion.div 
+              key={date} 
+              className="space-y-3"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {groupedMessages[date].map(msg => {
+                if ('isDateDivider' in msg) {
+                  return (
+                    <div key={msg.id} className="flex justify-center my-4">
+                      <div className="px-4 py-1.5 text-xs bg-primary/10 rounded-full text-primary font-medium">
+                        {msg.date}
+                      </div>
+                    </div>
+                  );
+                }
+                
+                const isCurrentUser = msg.sender_id === currentUserId;
+                const isOptimistic = optimisticMessages.some(m => m.id === msg.id);
+                
                 return (
-                  <div key={msg.id} className="flex justify-center my-4">
-                    <div className="px-3 py-1 text-xs bg-muted/40 rounded-full text-muted-foreground">
-                      {msg.date}
+                  <motion.div
+                    key={msg.id}
+                    className={cn(
+                      'flex',
+                      isCurrentUser ? 'justify-end' : 'justify-start'
+                    )}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="flex flex-col max-w-[80%]">
+                      <div
+                        className={cn(
+                          'chat-bubble shadow-sm',
+                          isCurrentUser
+                            ? 'chat-bubble-sender'
+                            : 'chat-bubble-receiver',
+                          isOptimistic && 'opacity-70'
+                        )}
+                      >
+                        {msg.content}
+                      </div>
+                      <div
+                        className={cn(
+                          'message-time',
+                          isCurrentUser ? 'text-right' : 'text-left'
+                        )}
+                      >
+                        {isOptimistic ? (
+                          <span className="flex items-center justify-end">
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            {t('messages.sending')}
+                          </span>
+                        ) : (
+                          formatMessageTime(msg.created_at)
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
-              }
-              
-              const isCurrentUser = msg.sender_id === currentUserId;
-              const isOptimistic = optimisticMessages.some(m => m.id === msg.id);
-              
-              return (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    'flex',
-                    isCurrentUser ? 'justify-end' : 'justify-start'
-                  )}
-                >
-                  <div className="flex flex-col max-w-[80%]">
-                    <div
-                      className={cn(
-                        'chat-bubble',
-                        isCurrentUser
-                          ? 'chat-bubble-sender'
-                          : 'chat-bubble-receiver',
-                        isOptimistic && 'opacity-70'
-                      )}
-                    >
-                      {msg.content}
-                    </div>
-                    <div
-                      className={cn(
-                        'message-time',
-                        isCurrentUser ? 'text-right' : 'text-left'
-                      )}
-                    >
-                      {isOptimistic ? (
-                        <span className="flex items-center justify-end">
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          {t('messages.sending')}
-                        </span>
-                      ) : (
-                        formatMessageTime(msg.created_at)
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ))}
+              })}
+            </motion.div>
+          ))}
+        </AnimatePresence>
         
         <div ref={endOfMessagesRef} />
       </div>

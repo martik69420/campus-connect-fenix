@@ -29,7 +29,7 @@ const TetrisGameWrapper: React.FC = () => {
       <div className="grid grid-cols-1 gap-8">
         <TetrisGame onScoreUpdate={handleScoreUpdate} />
         
-        <Card>
+        <Card className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border border-gray-200 dark:border-gray-700">
           <CardHeader>
             <CardTitle>{t('games.howToPlay')}</CardTitle>
           </CardHeader>
@@ -43,7 +43,7 @@ const TetrisGameWrapper: React.FC = () => {
                 <li>{t('games.tetrisSpacebar')}</li>
                 <li>{t('games.tetrisPKey')}</li>
               </ul>
-              <p>{t('games.earnCoins')}</p>
+              <p className="text-primary font-medium">{t('games.earnCoins')}</p>
             </div>
           </CardContent>
         </Card>

@@ -64,6 +64,25 @@
   @apply bg-white/30 dark:bg-white/5 backdrop-blur-md rounded-lg shadow-lg border border-white/20 dark:border-white/5;
 }
 
+/* Custom animation utilities */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+.pulse-animation {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 /* Custom scrollbar for chat */
 .chat-scrollbar::-webkit-scrollbar {
   width: 8px;
@@ -83,7 +102,7 @@
 
 /* Bubble chat styling */
 .chat-bubble {
-  @apply px-4 py-2 rounded-2xl max-w-[80%] break-words;
+  @apply px-4 py-2.5 rounded-2xl max-w-[80%] break-words;
 }
 
 .chat-bubble-sender {
@@ -110,4 +129,14 @@
 
 .avatar-badge.offline {
   @apply bg-gray-400 border-2 border-white dark:border-gray-900;
+}
+
+/* Hover effects */
+.hover-scale {
+  @apply transition-transform duration-200 hover:scale-105;
+}
+
+/* Card hover effect */
+.card-hover {
+  @apply transition-all duration-300 hover:shadow-lg;
 }
