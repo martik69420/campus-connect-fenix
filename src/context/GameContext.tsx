@@ -1,295 +1,289 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { useAuth } from "./AuthContext";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 
-// Mini game progress type
-export type GameProgress = {
-  trivia: {
-    highScore: number;
-    gamesPlayed: number;
-    lastPlayed?: Date;
-  };
-  snake: {
-    highScore: number;
-    gamesPlayed: number;
-    lastPlayed?: Date;
-  };
-  tetris: {
-    highScore: number;
-    gamesPlayed: number;
-    lastPlayed?: Date;
-  };
+// Define game types
+export type GameType = 'snake' | 'tetris' | 'trivia';
+export type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+
+// Define game state types
+interface GameState {
+  gameType: GameType | null;
+  isPlaying: boolean;
+  score: number;
+  level: number;
+  // Snake game state
+  snakePosition: { x: number; y: number }[];
+  foodPosition: { x: number; y: number };
+  snakeDirection: Direction;
+  // Tetris game state
+  tetrisGrid: number[][];
+  currentTetromino: number[][];
+  tetrominoPosition: { x: number; y: number };
+  // Trivia game state
+  triviaQuestions: any[];
+  currentQuestionIndex: number;
+  selectedAnswerIndex: number | null;
+  correctAnswers: number;
+}
+
+// Define initial game state
+const initialGameState: GameState = {
+  gameType: null,
+  isPlaying: false,
+  score: 0,
+  level: 1,
+  // Snake game state
+  snakePosition: [{ x: 10, y: 10 }],
+  foodPosition: { x: 5, y: 5 },
+  snakeDirection: 'RIGHT',
+  // Tetris game state
+  tetrisGrid: Array(20).fill(null).map(() => Array(10).fill(0)),
+  currentTetromino: [],
+  tetrominoPosition: { x: 4, y: 0 },
+  // Trivia game state
+  triviaQuestions: [],
+  currentQuestionIndex: 0,
+  selectedAnswerIndex: null,
+  correctAnswers: 0,
 };
 
-// Context type
-type GameContextType = {
-  progress: GameProgress;
-  updateTriviaScore: (score: number) => void;
-  updateSnakeScore: (score: number) => void;
-  updateTetrisScore: (score: number) => void;
-  hasDailyRewardAvailable: () => boolean;
-  claimDailyReward: () => boolean;
-  lastRewardClaimed: Date | null;
-};
+// Define game context type
+interface GameContextType {
+  gameState: GameState;
+  startGame: (gameType: GameType) => void;
+  endGameSession: (score: number) => Promise<void>;
+  resetGame: () => void;
+  // Snake game actions
+  moveSnake: () => void;
+  handleSnakeDirection: (direction: Direction) => void;
+  // Tetris game actions
+  rotateTetromino: () => void;
+  moveTetrominoLeft: () => void;
+  moveTetrominoRight: () => void;
+  dropTetromino: () => void;
+  // Trivia game actions
+  loadTriviaQuestions: () => Promise<void>;
+  answerTriviaQuestion: (answerIndex: number) => void;
+  nextTriviaQuestion: () => void;
+  // Scoring and rewards
+  awardCoins: (amount: number) => Promise<void>;
+}
 
-// Create context
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
-// Provider component
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  
-  const { user, addCoins } = useAuth();
+  const [gameState, setGameState] = useState<GameState>(initialGameState);
+  const { user, updateCoins } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
-  const [progress, setProgress] = useState<GameProgress>({
-    trivia: {
-      highScore: 0,
-      gamesPlayed: 0,
-    },
-    snake: {
-      highScore: 0,
-      gamesPlayed: 0,
-    },
-    tetris: {
-      highScore: 0,
-      gamesPlayed: 0,
-    }
-  });
-  
-  const [lastRewardClaimed, setLastRewardClaimed] = useState<Date | null>(null);
+  const navigate = useNavigate();
 
-  // Fetch game progress from database on component mount
-  useEffect(() => {
+  // Game session management
+  const startGame = (gameType: GameType) => {
+    setGameState((prev) => ({
+      ...prev,
+      gameType,
+      isPlaying: true,
+      score: 0,
+      level: 1,
+      currentQuestionIndex: 0,
+      correctAnswers: 0,
+      selectedAnswerIndex: null,
+    }));
+  };
+
+  const endGameSession = async (score: number) => {
+    setGameState((prev) => ({ ...prev, isPlaying: false }));
+    
+    toast({
+      title: t('game.gameOver'),
+      description: t('game.finalScore', { score })
+    });
+
+    const coinsAwarded = Math.round(score / 10);
     if (user) {
-      fetchGameProgress();
+      await awardCoins(coinsAwarded);
     }
-  }, [user]);
-
-  // Fetch game progress from database
-  const fetchGameProgress = async () => {
-    if (!user) return;
-    
-    try {
-      // Get game history for current user
-      const { data: gameData, error: gameError } = await supabase
-        .from('game_history')
-        .select('game_type, score')
-        .eq('user_id', user.id)
-        .order('score', { ascending: false });
-        
-      if (gameError) throw gameError;
-      
-      // Update progress state with data from database
-      if (gameData && gameData.length > 0) {
-        const newProgress = { ...progress };
-        
-        // Process trivia games
-        const triviaGames = gameData.filter(game => game.game_type === 'trivia');
-        if (triviaGames.length > 0) {
-          newProgress.trivia.highScore = triviaGames[0].score; // First item is highest score due to ordering
-          newProgress.trivia.gamesPlayed = triviaGames.length;
-        }
-        
-        // Process snake games
-        const snakeGames = gameData.filter(game => game.game_type === 'snake');
-        if (snakeGames.length > 0) {
-          newProgress.snake.highScore = snakeGames[0].score;
-          newProgress.snake.gamesPlayed = snakeGames.length;
-        }
-        
-        // Process tetris games
-        const tetrisGames = gameData.filter(game => game.game_type === 'tetris');
-        if (tetrisGames.length > 0) {
-          newProgress.tetris.highScore = tetrisGames[0].score;
-          newProgress.tetris.gamesPlayed = tetrisGames.length;
-        }
-        
-        setProgress(newProgress);
-      }
-      
-      // Get last reward claimed date
-      const { data: rewardData, error: rewardError } = await supabase
-        .from('daily_rewards')
-        .select('created_at')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(1);
-        
-      if (rewardError) throw rewardError;
-      
-      if (rewardData && rewardData.length > 0) {
-        setLastRewardClaimed(new Date(rewardData[0].created_at));
-      }
-    } catch (error) {
-      console.error('Error fetching game progress:', error);
-    }
+    navigate('/earn');
   };
 
-  // Check if daily reward is available
-  const hasDailyRewardAvailable = () => {
-    if (!lastRewardClaimed) return true;
-    
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    return lastRewardClaimed < yesterday;
+  const resetGame = () => {
+    setGameState(initialGameState);
   };
 
-  // Save daily reward to database
-  const saveDailyReward = async (coinsRewarded: number) => {
-    if (!user) return;
-    
+  // Snake game logic
+  const moveSnake = () => {
+    setGameState((prev) => {
+      if (!prev.isPlaying || prev.gameType !== 'snake') return prev;
+
+      const newPosition = {
+        x: prev.snakePosition[0].x,
+        y: prev.snakePosition[0].y,
+      };
+
+      switch (prev.snakeDirection) {
+        case 'UP':
+          newPosition.y -= 1;
+          break;
+        case 'DOWN':
+          newPosition.y += 1;
+          break;
+        case 'LEFT':
+          newPosition.x -= 1;
+          break;
+        case 'RIGHT':
+          newPosition.x += 1;
+          break;
+      }
+
+      // Basic collision detection (with walls)
+      if (newPosition.x < 0 || newPosition.x > 19 || newPosition.y < 0 || newPosition.y > 19) {
+        endGameSession(prev.score);
+        return prev;
+      }
+
+      const newSnakePosition = [newPosition, ...prev.snakePosition];
+      newSnakePosition.pop(); // Remove the tail
+
+      return { ...prev, snakePosition: newSnakePosition };
+    });
+  };
+
+  const handleSnakeDirection = (direction: Direction) => {
+    setGameState((prev) => ({ ...prev, snakeDirection: direction }));
+  };
+
+  // Tetris game logic
+  const rotateTetromino = () => {
+    // Implement Tetris rotation logic here
+  };
+
+  const moveTetrominoLeft = () => {
+    // Implement Tetris move left logic here
+  };
+
+  const moveTetrominoRight = () => {
+    // Implement Tetris move right logic here
+  };
+
+  const dropTetromino = () => {
+    // Implement Tetris drop logic here
+  };
+
+  // Trivia game logic
+  const loadTriviaQuestions = async () => {
     try {
-      await supabase
-        .from('daily_rewards')
-        .insert({
-          user_id: user.id,
-          coins_rewarded: coinsRewarded
+      const { data, error } = await supabase
+        .from('trivia_questions')
+        .select('*')
+        .limit(10);
+
+      if (error) {
+        console.error('Error fetching trivia questions:', error);
+        toast({
+          title: t('game.errorLoadingQuestions'),
+          description: error.message,
+          variant: 'destructive',
         });
-    } catch (error) {
-      console.error('Error saving daily reward:', error);
+        return;
+      }
+
+      setGameState((prev) => ({ ...prev, triviaQuestions: data }));
+      toast({
+        title: t('game.questionsLoaded'),
+        description: t('game.startPlaying')
+      });
+    } catch (error: any) {
+      console.error('Failed to load trivia questions:', error);
+      toast({
+        title: t('game.errorLoadingQuestions'),
+        description: error.message,
+        variant: 'destructive',
+      });
     }
   };
 
-  // Save game score to database
-  const saveGameScore = async (gameType: 'trivia' | 'snake' | 'tetris', score: number) => {
+  const answerTriviaQuestion = (answerIndex: number) => {
+    setGameState((prev) => {
+      if (prev.selectedAnswerIndex !== null) return prev;
+
+      const isCorrect = prev.triviaQuestions[prev.currentQuestionIndex].correct_answer === answerIndex;
+      let newScore = prev.score;
+      let newCorrectAnswers = prev.correctAnswers;
+
+      if (isCorrect) {
+        newScore += 100;
+        newCorrectAnswers += 1;
+      }
+
+      return {
+        ...prev,
+        score: newScore,
+        correctAnswers: newCorrectAnswers,
+        selectedAnswerIndex: answerIndex,
+      };
+    });
+  };
+
+  const nextTriviaQuestion = () => {
+    setGameState((prev) => {
+      const nextIndex = prev.currentQuestionIndex + 1;
+      if (nextIndex < prev.triviaQuestions.length) {
+        return {
+          ...prev,
+          currentQuestionIndex: nextIndex,
+          selectedAnswerIndex: null,
+        };
+      } else {
+        endGameSession(prev.score);
+        return prev;
+      }
+    });
+  };
+
+  // Scoring and rewards
+  const awardCoins = async (amount: number) => {
     if (!user) return;
-    
+
     try {
-      await supabase
-        .from('game_history')
-        .insert({
-          user_id: user.id,
-          game_type: gameType,
-          score: score
-        });
-      
+      const newBalance = user.coins + amount;
+      await updateCoins(newBalance);
+
       toast({
-        title: t('games.newHighScore'),
-        description: t('games.scoreUpdated', { score: score.toString() })
+        title: t('game.coinsAwarded'),
+        description: t('game.youWon', { amount }),
       });
-    } catch (error) {
-      console.error(`Error saving ${gameType} score:`, error);
-    }
-  };
-
-  // Claim daily reward
-  const claimDailyReward = (): boolean => {
-    if (!user) return false;
-    
-    if (hasDailyRewardAvailable()) {
-      const rewardAmount = 25;
-      addCoins(rewardAmount);
-      setLastRewardClaimed(new Date());
-      
-      // Save reward to database
-      saveDailyReward(rewardAmount);
-      
+    } catch (error: any) {
+      console.error('Error awarding coins:', error);
       toast({
-        title: t('earn.dailyReward'),
-        description: t('earn.coinsAdded', { amount: '25' })
+        title: t('game.errorAwardingCoins'),
+        description: error.message,
+        variant: 'destructive',
       });
-      
-      return true;
     }
-    
-    return false;
-  };
-
-  // Update trivia game score
-  const updateTriviaScore = (score: number) => {
-    if (!user) return;
-    
-    setProgress(prev => {
-      const newHighScore = score > prev.trivia.highScore;
-      
-      if (newHighScore) {
-        // Award coins for new high score
-        addCoins(score * 2);
-        saveGameScore('trivia', score);
-      } else {
-        // Award some coins for playing
-        addCoins(Math.floor(score / 2));
-      }
-      
-      return {
-        ...prev,
-        trivia: {
-          highScore: newHighScore ? score : prev.trivia.highScore,
-          gamesPlayed: prev.trivia.gamesPlayed + 1,
-          lastPlayed: new Date()
-        }
-      };
-    });
-  };
-
-  // Update snake game score
-  const updateSnakeScore = (score: number) => {
-    if (!user) return;
-    
-    setProgress(prev => {
-      const newHighScore = score > prev.snake.highScore;
-      
-      if (newHighScore) {
-        // Award coins for new high score
-        addCoins(score * 2);
-        saveGameScore('snake', score);
-      } else {
-        // Award some coins for playing
-        addCoins(Math.floor(score / 2));
-      }
-      
-      return {
-        ...prev,
-        snake: {
-          highScore: newHighScore ? score : prev.snake.highScore,
-          gamesPlayed: prev.snake.gamesPlayed + 1,
-          lastPlayed: new Date()
-        }
-      };
-    });
-  };
-
-  // Update tetris game score
-  const updateTetrisScore = (score: number) => {
-    if (!user) return;
-    
-    setProgress(prev => {
-      const newHighScore = score > prev.tetris.highScore;
-      
-      if (newHighScore) {
-        // Award coins for new high score
-        addCoins(score * 2);
-        saveGameScore('tetris', score);
-      } else {
-        // Award some coins for playing
-        addCoins(Math.floor(score / 2));
-      }
-      
-      return {
-        ...prev,
-        tetris: {
-          highScore: newHighScore ? score : prev.tetris.highScore,
-          gamesPlayed: prev.tetris.gamesPlayed + 1,
-          lastPlayed: new Date()
-        }
-      };
-    });
   };
 
   return (
     <GameContext.Provider
       value={{
-        progress,
-        updateTriviaScore,
-        updateSnakeScore,
-        updateTetrisScore,
-        hasDailyRewardAvailable,
-        claimDailyReward,
-        lastRewardClaimed
+        gameState,
+        startGame,
+        endGameSession,
+        resetGame,
+        moveSnake,
+        handleSnakeDirection,
+        rotateTetromino,
+        moveTetrominoLeft,
+        moveTetrominoRight,
+        dropTetromino,
+        loadTriviaQuestions,
+        answerTriviaQuestion,
+        nextTriviaQuestion,
+        awardCoins,
       }}
     >
       {children}
@@ -297,11 +291,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
-// Custom hook for using the game context
-export const useGame = () => {
+export const useGame = (): GameContextType => {
   const context = useContext(GameContext);
-  if (context === undefined) {
-    throw new Error("useGame must be used within a GameProvider");
+  if (!context) {
+    throw new Error('useGame must be used within a GameProvider');
   }
   return context;
 };

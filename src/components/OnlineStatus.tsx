@@ -19,7 +19,7 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   userId, 
   showLabel = false, 
   className = '',
-  showLastActive = true // Changed default to true so it always shows last active when offline
+  showLastActive = true // Default to true so it always shows last active when offline
 }) => {
   const { isUserOnline } = useOnlineStatus([userId]);
   const { t } = useLanguage();
