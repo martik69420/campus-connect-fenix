@@ -87,7 +87,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Show toast for new high score
       toast({
         title: t('games.newHighScore'),
-        description: t('games.scoreUpdated', { score: score.toString() }),
+        description: t('games.scoreUpdated', { score: score.toString() })
       });
     } catch (error) {
       console.error(`Error saving ${gameType} score:`, error);
@@ -105,7 +105,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Show toast for reward
       toast({
         title: t('earn.dailyReward'),
-        description: t('earn.coinsAdded', { amount: '25' }),
+        description: t('earn.coinsAdded', { amount: '25' })
       });
       
       return true;

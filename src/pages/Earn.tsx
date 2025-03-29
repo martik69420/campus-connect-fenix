@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -150,7 +151,7 @@ const Earn = () => {
             
             toast({
               title: t('earn.streakBonus'),
-              description: t('earn.streakBonusDesc', { days: newStreak.toString(), bonus: streakBonus.toString() }),
+              description: t('earn.streakBonusDesc', { days: newStreak.toString(), bonus: streakBonus.toString() })
             });
           }
           
@@ -177,7 +178,7 @@ const Earn = () => {
         toast({
           title: t('earn.alreadyClaimed'),
           description: t('earn.comeBackTomorrow'),
-          variant: "destructive",
+          variant: "destructive"
         });
       }
     } finally {

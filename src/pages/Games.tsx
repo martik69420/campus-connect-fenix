@@ -29,7 +29,7 @@ const Games = () => {
     if (score > 0) {
       toast({
         title: t('games.completed'),
-        description: t('games.scoreEarned', { score: score.toString() }),
+        description: t('games.scoreEarned', { score: score.toString() })
       });
     }
     
