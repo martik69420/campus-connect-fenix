@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,9 +6,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
+  DropdownMenuItem, 
   DropdownMenuSeparator, 
-  DropdownMenuTrigger,
-  DropdownMenuItem
+  DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { 
   Bell, 
@@ -29,22 +30,22 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useNotification } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { formatDistanceToNow } from 'date-fns';
-import NotificationMenu from '@/components/notifications/NotificationMenu';
+import NotificationMenu from '../notifications/NotificationMenu';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotification();
+  const { unreadCount } = useNotification();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
   
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Home', path: '/' },
     { icon: <MessageSquare className="h-5 w-5" />, label: 'Messages', path: '/messages' },
     { icon: <Gamepad2 className="h-5 w-5" />, label: 'Games', path: '/games' },
     { icon: <Search className="h-5 w-5" />, label: 'Search', path: '/search' },
+    { icon: <Bell className="h-5 w-5" />, label: 'Notifications', path: '/notifications' },
     { icon: <User className="h-5 w-5" />, label: 'Friends', path: '/friends' },
     { icon: <Award className="h-5 w-5" />, label: 'Leaderboard', path: '/leaderboard' },
     { icon: <BarChart3 className="h-5 w-5" />, label: 'Earn', path: '/earn' }
@@ -57,37 +58,6 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     navigate('/auth');
-  };
-  
-  const handleNotificationClick = (notification) => {
-    markAsRead(notification.id);
-    
-    if (notification.url) {
-      navigate(notification.url);
-    } else if (notification.relatedId) {
-      if (notification.type === 'like' || notification.type === 'comment') {
-        navigate(`/posts/${notification.relatedId}`);
-      } else if (notification.type === 'friend') {
-        navigate(`/profile/${notification.relatedId}`);
-      }
-    } else if (notification.type === 'message') {
-      navigate('/messages');
-    }
-  };
-  
-  const getNotificationIcon = (type) => {
-    switch (type) {
-      case 'like':
-        return <div className="rounded-full bg-red-500/10 p-1"><Bell className="h-3 w-3 text-red-500" /></div>;
-      case 'comment':
-        return <div className="rounded-full bg-blue-500/10 p-1"><MessageSquare className="h-3 w-3 text-blue-500" /></div>;
-      case 'friend':
-        return <div className="rounded-full bg-green-500/10 p-1"><User className="h-3 w-3 text-green-500" /></div>;
-      case 'message':
-        return <div className="rounded-full bg-purple-500/10 p-1"><MessageSquare className="h-3 w-3 text-purple-500" /></div>;
-      default:
-        return <div className="rounded-full bg-primary/10 p-1"><Bell className="h-3 w-3 text-primary" /></div>;
-    }
   };
   
   return (
@@ -120,7 +90,7 @@ const Navbar = () => {
         <div className="flex items-center space-x-2">
           {user ? (
             <>
-              <DropdownMenu>
+              <DropdownMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen}>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
