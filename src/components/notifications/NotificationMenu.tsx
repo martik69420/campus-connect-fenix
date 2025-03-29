@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -37,23 +38,24 @@ const NotificationMenu = () => {
     fetchNotifications();
   }, [fetchNotifications]);
   
-  const handleNotificationClick = (notification: any, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleNotificationClick = (notification: any) => {
     markAsRead(notification.id);
     
-    // Instead of navigating, we'll just mark as read and show a toast
-    toast({
-      title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
-      description: notification.message,
-    });
+    // Navigate based on notification type and url
+    if (notification.url) {
+      navigate(notification.url);
+    } else if (notification.relatedId && notification.type === 'like') {
+      navigate(`/posts/${notification.relatedId}`);
+    } else if (notification.relatedId && notification.type === 'comment') {
+      navigate(`/posts/${notification.relatedId}`);
+    } else if (notification.relatedId && notification.type === 'friend') {
+      navigate(`/profile/${notification.relatedId}`);
+    } else if (notification.type === 'message') {
+      navigate('/messages');
+    }
   };
   
-  const handleNotificationPermission = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
+  const handleNotificationPermission = async () => {
     const granted = await requestNotificationPermission();
     if (granted) {
       toast({
@@ -124,8 +126,7 @@ const NotificationMenu = () => {
     <DropdownMenuItem
       key={notification.id}
       className={`flex items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted/60' : ''}`}
-      onClick={(e) => handleNotificationClick(notification, e)}
-      onSelect={(e) => e.preventDefault()}
+      onClick={() => handleNotificationClick(notification)}
     >
       <div className="flex gap-3 w-full">
         {notification.sender?.avatar ? (
@@ -162,7 +163,7 @@ const NotificationMenu = () => {
   );
   
   return (
-    <DropdownMenuContent align="end" className="w-80 bg-popover z-50 rounded-md shadow-lg border border-border" onCloseAutoFocus={(e) => e.preventDefault()}>
+    <DropdownMenuContent align="end" className="w-80">
       <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
         <span className="text-lg font-semibold">{t('notifications.all')}</span>
         <div className="flex space-x-1">
@@ -178,16 +179,7 @@ const NotificationMenu = () => {
             </Button>
           )}
           {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                markAllAsRead();
-              }} 
-              className="h-8 text-xs"
-            >
+            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
               <Check className="h-3 w-3 mr-1" />
               {t('notifications.markAllRead')}
             </Button>
@@ -239,11 +231,7 @@ const NotificationMenu = () => {
       <DropdownMenuSeparator />
       <DropdownMenuItem 
         className="py-2 justify-center font-medium text-primary text-center"
-        onClick={(e) => {
-          e.preventDefault();
-          navigate('/notifications');
-        }}
-        onSelect={(e) => e.preventDefault()}
+        onClick={() => navigate('/notifications')}
       >
         View all notifications
       </DropdownMenuItem>

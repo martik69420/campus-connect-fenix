@@ -1,11 +1,10 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { useUploadImage } from '@/hooks/use-upload-image';
 import {
   Form,
   FormControl,
@@ -17,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Camera, Trash2, UserRound } from 'lucide-react';
+import { Loader2, Camera, Image, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -46,8 +45,6 @@ const ProfileUpdateForm = () => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { uploadImage, isUploading } = useUploadImage();
 
   const defaultValues: Partial<ProfileFormValues> = {
     displayName: user?.displayName || '',
@@ -78,58 +75,6 @@ const ProfileUpdateForm = () => {
       setAvatarPreview(user.avatar);
     }
   }, [user?.avatar]);
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      toast({
-        title: "Invalid file type",
-        description: "Please upload a JPG, PNG, GIF, or WebP image.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: "File too large",
-        description: "Please upload an image smaller than 5MB.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Create a local preview
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setAvatarPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-
-    // Upload the file
-    const imageUrl = await uploadImage(file);
-    if (imageUrl) {
-      form.setValue('avatar', imageUrl);
-      toast({
-        title: "Image uploaded",
-        description: "Your profile picture has been uploaded.",
-      });
-    }
-  };
-
-  const triggerFileSelect = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleRemoveAvatar = () => {
-    form.setValue('avatar', '');
-    setAvatarPreview(null);
-  };
 
   async function onSubmit(data: ProfileFormValues) {
     setIsSubmitting(true);
@@ -207,25 +152,15 @@ const ProfileUpdateForm = () => {
         {/* Avatar Preview and Input */}
         <div className="flex flex-col items-center sm:items-start sm:flex-row gap-6 mb-6">
           <div className="relative group">
-            <Avatar className="h-24 w-24 md:h-36 md:w-36 border-2 border-border shadow-md cursor-pointer" onClick={triggerFileSelect}>
+            <Avatar className="h-24 w-24 border-2 border-border">
               <AvatarImage src={avatarPreview || ""} alt={user?.displayName || ""} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+              <AvatarFallback className="bg-primary text-primary-foreground text-xl">
                 {user?.displayName?.charAt(0) || user?.username?.charAt(0) || <UserRound />}
               </AvatarFallback>
-              
-              <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                <Camera className="h-6 w-6 text-white" />
-              </div>
             </Avatar>
-            
-            {/* Hidden file input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              className="hidden"
-              accept="image/jpeg,image/png,image/gif,image/webp"
-              onChange={handleFileUpload}
-            />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+              <Camera className="h-6 w-6 text-white" />
+            </div>
           </div>
           
           <div className="flex-1 space-y-4">
@@ -234,54 +169,33 @@ const ProfileUpdateForm = () => {
               name="avatar"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Profile Picture</FormLabel>
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={triggerFileSelect}
-                        disabled={isUploading}
-                        className="flex-grow md:flex-grow-0"
-                      >
-                        {isUploading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Uploading...
-                          </>
-                        ) : (
-                          <>
-                            <Camera className="mr-2 h-4 w-4" />
-                            Upload Image
-                          </>
-                        )}
-                      </Button>
-                      
-                      {avatarPreview && (
+                  <FormLabel>Profile Picture URL</FormLabel>
+                  <FormControl>
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="https://example.com/avatar.jpg" 
+                        {...field} 
+                        value={field.value || ''} 
+                        className="flex-1"
+                      />
+                      {field.value && (
                         <Button 
                           type="button" 
                           variant="outline" 
-                          onClick={handleRemoveAvatar}
-                          className="flex-grow md:flex-grow-0"
+                          size="icon"
+                          onClick={() => {
+                            form.setValue('avatar', '');
+                            setAvatarPreview(null);
+                          }}
                         >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Remove
+                          <Image className="h-4 w-4" />
                         </Button>
                       )}
                     </div>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Upload a JPG, PNG, GIF or WebP image (max 5MB)
-                    </p>
-                  </div>
-                  <FormControl>
-                    <Input 
-                      placeholder="https://example.com/avatar.jpg" 
-                      {...field} 
-                      value={field.value || ''} 
-                      className="hidden"
-                    />
                   </FormControl>
+                  <p className="text-xs text-muted-foreground">
+                    Enter a URL to an image (JPG, PNG, or GIF)
+                  </p>
                   <FormMessage />
                 </FormItem>
               )}
@@ -350,7 +264,7 @@ const ProfileUpdateForm = () => {
           )}
         />
         
-        <Button type="submit" disabled={isSubmitting || isUploading} className="w-full sm:w-auto">
+        <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto">
           {isSubmitting ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Search, Bell, User, Menu, Home, MessageSquare, Users, Gamepad2, Award, BarChart3, LogOut, Sun, Moon } from "lucide-react";
@@ -14,8 +13,6 @@ import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import NotificationMenu from "@/components/notifications/NotificationMenu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const TopBar: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
@@ -24,7 +21,6 @@ const TopBar: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   // Fetch user's coin balance from the database
   useEffect(() => {
@@ -151,54 +147,31 @@ const TopBar: React.FC = () => {
         {/* User actions */}
         <div className="flex items-center gap-3">
           {/* Theme Toggle */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={toggleTheme}
-                  className="text-muted-foreground"
-                >
-                  {theme === 'dark' ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
-                  <span className="sr-only">Toggle theme</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={toggleTheme}
+            className="text-muted-foreground"
+          >
+            {theme === 'dark' ? (
+              <Sun className="h-5 w-5" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
+            <span className="sr-only">Toggle theme</span>
+          </Button>
 
-          {/* Notifications Dropdown */}
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div>
-                  <DropdownMenu open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="relative">
-                        <Bell className="h-5 w-5" />
-                        {unreadCount > 0 && (
-                          <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground">
-                            {unreadCount > 9 ? '9+' : unreadCount}
-                          </Badge>
-                        )}
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <NotificationMenu />
-                  </DropdownMenu>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Notifications</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          {/* Notifications */}
+          <NavLink to="/notifications" className="relative">
+            <Button variant="ghost" size="icon" className="relative">
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground">
+                  {unreadCount > 9 ? '9+' : unreadCount}
+                </Badge>
+              )}
+            </Button>
+          </NavLink>
 
           {/* Coins display */}
           <NavLink to="/earn" className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full hover:bg-secondary/80 transition-colors">
