@@ -1,3 +1,4 @@
+
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Home, User, Bell, MessageSquare, Users, Gamepad2, Award, BarChart3, Settings, PenSquare } from "lucide-react";
@@ -6,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import OnlineStatus from "@/components/OnlineStatus";
 
 const Sidebar: React.FC = () => {
   const { user } = useAuth();
@@ -62,7 +64,7 @@ const Sidebar: React.FC = () => {
                       className={({ isActive }) => cn(
                         "flex items-center justify-center w-12 h-12 rounded-full transition-all duration-200",
                         isActive 
-                          ? "bg-fenix/10 text-fenix" 
+                          ? "bg-fenix/10 text-fenix shadow-sm" 
                           : "text-muted-foreground hover:bg-secondary hover:text-foreground"
                       )}
                     >
@@ -83,14 +85,21 @@ const Sidebar: React.FC = () => {
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
-              <NavLink to={`/profile/${user?.username}`} className="transition-transform hover:scale-105">
-                <Avatar className="h-12 w-12 border-2 border-background">
-                  <AvatarImage src={user?.avatar} alt={user?.displayName} />
-                  <AvatarFallback className="bg-fenix text-white">
-                    {user?.displayName ? user.displayName.split(' ').map(n => n[0]).join('') : 'U'}
-                  </AvatarFallback>
-                </Avatar>
-              </NavLink>
+              <div className="relative">
+                <NavLink to={`/profile/${user?.username}`} className="transition-transform hover:scale-105">
+                  <Avatar className="h-12 w-12 border-2 border-background">
+                    <AvatarImage src={user?.avatar} alt={user?.displayName} />
+                    <AvatarFallback className="bg-fenix text-white">
+                      {user?.displayName ? user.displayName.split(' ').map(n => n[0]).join('') : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                </NavLink>
+                {user?.id && (
+                  <div className="absolute -top-1 -right-1">
+                    <OnlineStatus userId={user.id} showLabel={false} />
+                  </div>
+                )}
+              </div>
             </TooltipTrigger>
             <TooltipContent side="right">
               <div className="text-sm font-medium">{user?.displayName}</div>

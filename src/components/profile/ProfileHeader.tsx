@@ -65,6 +65,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     setIsDropdownOpen(false);
   };
 
+  const handleMessage = () => {
+    // Navigate to messages with this user preselected
+    if (user && user.id) {
+      navigate(`/messages?user=${user.id}`);
+    } else {
+      navigate('/messages');
+    }
+  };
+
   return (
     <motion.div
       className="relative overflow-hidden rounded-xl"
@@ -128,7 +137,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       )}
                     </Button>
                   )}
-                  <Button variant="outline" onClick={() => navigate('/messages')} className="shadow-sm">
+                  <Button variant="outline" onClick={handleMessage} className="shadow-sm">
                     <MessageCircle className="mr-2 h-4 w-4" />
                     {t('profile.message')}
                   </Button>

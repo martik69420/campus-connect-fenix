@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -37,6 +36,7 @@ const Messages = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
+  const location = window.location;
   
   const [activeContactId, setActiveContactId] = useState<string>('');
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
@@ -48,6 +48,18 @@ const Messages = () => {
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sendingMessage, setSendingMessage] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  
+  // Check for user ID in URL params and set active contact
+  useEffect(() => {
+    if (user && !activeContactId) {
+      const urlParams = new URLSearchParams(location.search);
+      const userIdFromUrl = urlParams.get('user');
+      
+      if (userIdFromUrl) {
+        setActiveContactId(userIdFromUrl);
+      }
+    }
+  }, [user, location, activeContactId]);
   
   // Redirect if not authenticated
   useEffect(() => {
@@ -86,6 +98,13 @@ const Messages = () => {
             contactIds.add(message.sender_id);
           }
         });
+        
+        // Add the user ID from URL if it exists
+        const urlParams = new URLSearchParams(location.search);
+        const userIdFromUrl = urlParams.get('user');
+        if (userIdFromUrl && userIdFromUrl !== user.id) {
+          contactIds.add(userIdFromUrl);
+        }
         
         // Get contact profiles
         const { data: profiles, error: profilesError } = await supabase
@@ -144,10 +163,24 @@ const Messages = () => {
         
         setContacts(contactsList);
         
-        // If there's a contact, set the first one as active
-        if (contactsList.length > 0 && !activeContactId) {
-          setActiveContactId(contactsList[0].id);
-          setActiveContact(contactsList[0]);
+        // If there's a contact and no active contact, set the first one as active, or if we have a user ID from URL
+        if (contactsList.length > 0) {
+          const urlParams = new URLSearchParams(location.search);
+          const userIdFromUrl = urlParams.get('user');
+          
+          if (userIdFromUrl) {
+            const contactFromUrl = contactsList.find(c => c.id === userIdFromUrl);
+            if (contactFromUrl) {
+              setActiveContactId(userIdFromUrl);
+              setActiveContact(contactFromUrl);
+            } else if (!activeContactId) {
+              setActiveContactId(contactsList[0].id);
+              setActiveContact(contactsList[0]);
+            }
+          } else if (!activeContactId) {
+            setActiveContactId(contactsList[0].id);
+            setActiveContact(contactsList[0]);
+          }
         }
       } catch (error) {
         console.error('Failed to fetch contacts:', error);
@@ -264,7 +297,7 @@ const Messages = () => {
         supabase.removeChannel(channel);
       };
     }
-  }, [user, activeContactId, contacts, toast, t]);
+  }, [user, activeContactId, contacts, toast, t, location]);
   
   // Fetch messages when active contact changes
   useEffect(() => {
@@ -439,6 +472,10 @@ const Messages = () => {
               setActiveContact={(contact) => {
                 setActiveContactId(contact.id);
                 setActiveContact(contact);
+                // Update URL without reloading
+                const url = new URL(window.location.href);
+                url.searchParams.set('user', contact.id);
+                window.history.pushState({}, '', url);
               }}
               isLoading={loadingContacts}
               searchQuery={searchQuery}
@@ -471,7 +508,7 @@ const Messages = () => {
             ) : (
               <div className="flex flex-col items-center justify-center h-full p-4 text-center">
                 <div className="mb-4 p-6 rounded-full bg-muted/40">
-                  <Send className="h-12 w-12 text-muted-foreground" />
+                  <MessageSquare className="h-12 w-12 text-muted-foreground" />
                 </div>
                 <h3 className="text-xl font-medium mb-2">{t('messages.selectContact')}</h3>
                 <p className="text-muted-foreground max-w-md">

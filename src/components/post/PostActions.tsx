@@ -135,7 +135,7 @@ const PostActions: React.FC<PostActionsProps> = ({
 
   return (
     <div className={`flex items-center justify-between ${className}`}>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="sm"
@@ -174,7 +174,9 @@ const PostActions: React.FC<PostActionsProps> = ({
           onClick={handleSaveToggle}
           disabled={isSaving || isCheckingSaved}
         >
-          <Bookmark className={`h-4 w-4 mr-1 transition-colors duration-200 ${isSaved ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+          <Bookmark 
+            className={`h-4 w-4 mr-1 transition-colors duration-200 ${isSaved ? 'fill-yellow-400 text-yellow-400' : ''}`} 
+          />
           {isSaved && <span className="text-yellow-400">{t('post.saved')}</span>}
         </Button>
       </div>
