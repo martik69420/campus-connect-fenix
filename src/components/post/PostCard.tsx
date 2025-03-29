@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
@@ -13,6 +14,7 @@ import CommentSection from "./CommentSection";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import SavePostButton from "./SavePostButton";
 
 // Helper function to safely format dates
 const safeFormatDate = (date: Date | string | null | undefined) => {
@@ -245,6 +247,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
               <Share2 className="h-4 w-4" />
               <span>{post.shares}</span>
             </Button>
+            
+            <SavePostButton postId={post.id} />
           </div>
           
           {showComments && (
