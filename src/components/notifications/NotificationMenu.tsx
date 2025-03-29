@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -38,7 +37,10 @@ const NotificationMenu = () => {
     fetchNotifications();
   }, [fetchNotifications]);
   
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     markAsRead(notification.id);
     
     // Navigate based on notification type and url
@@ -126,7 +128,8 @@ const NotificationMenu = () => {
     <DropdownMenuItem
       key={notification.id}
       className={`flex items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted/60' : ''}`}
-      onClick={() => handleNotificationClick(notification)}
+      onClick={(e) => handleNotificationClick(notification, e)}
+      onSelect={(e) => e.preventDefault()}
     >
       <div className="flex gap-3 w-full">
         {notification.sender?.avatar ? (
@@ -231,7 +234,11 @@ const NotificationMenu = () => {
       <DropdownMenuSeparator />
       <DropdownMenuItem 
         className="py-2 justify-center font-medium text-primary text-center"
-        onClick={() => navigate('/notifications')}
+        onClick={(e) => {
+          e.preventDefault();
+          navigate('/notifications');
+        }}
+        onSelect={(e) => e.preventDefault()}
       >
         View all notifications
       </DropdownMenuItem>
