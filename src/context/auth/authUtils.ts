@@ -171,7 +171,7 @@ export async function updateOnlineStatus(userId: string, isOnline: boolean): Pro
     
     const currentTime = new Date().toISOString();
     
-    // Use presence channels instead of direct database updates
+    // Use presence channels for real-time status tracking
     const channel = supabase.channel('online-users');
     
     if (isOnline) {
@@ -181,12 +181,19 @@ export async function updateOnlineStatus(userId: string, isOnline: boolean): Pro
           await channel.track({
             user_id: userId,
             online_at: currentTime,
+            status: 'online'
           });
         }
       });
     } else {
-      // Remove tracking when offline
-      await channel.untrack();
+      // Update status to offline
+      await channel.track({
+        user_id: userId,
+        online_at: currentTime,
+        status: 'offline'
+      });
+      
+      // Clean up channel when going offline
       await supabase.removeChannel(channel);
     }
     

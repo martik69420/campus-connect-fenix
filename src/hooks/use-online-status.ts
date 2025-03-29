@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -17,52 +18,48 @@ export const useOnlineStatus = (userIds: string[] = []) => {
     if (!user?.id) return;
 
     // When component mounts, set user as online
-    const updateStatus = async () => {
+    const updatePresence = async () => {
       try {
-        // Check if user already has a status record
-        const { data, error: checkError } = await supabase
-          .from('user_status')
-          .select('id')
-          .eq('user_id', user.id);
-
-        if (checkError) {
-          console.error("Error checking user status:", checkError);
-          return;
-        }
-
         const currentTime = new Date().toISOString();
-
-        if (data && data.length > 0) {
-          // Update existing status
-          await supabase
-            .from('user_status')
-            .update({
-              is_online: true,
-              last_active: currentTime
-            })
-            .eq('user_id', user.id);
-        } else {
-          // Insert new status
-          await supabase
-            .from('user_status')
-            .insert({
+        
+        // Use presence channels for real-time status tracking
+        const channel = supabase.channel('online-users');
+        
+        await channel.subscribe(async (status) => {
+          if (status === 'SUBSCRIBED') {
+            // Track the user's presence when online
+            await channel.track({
               user_id: user.id,
-              is_online: true,
-              last_active: currentTime
+              online_at: currentTime,
+              status: 'online'
             });
-        }
+            
+            // Store last active time in localStorage as fallback
+            localStorage.setItem('lastActiveTime', currentTime);
+          }
+        });
 
-        // Set offline when the component unmounts
+        // Update presence state periodically to maintain "online" status
+        const pingInterval = setInterval(async () => {
+          const newTime = new Date().toISOString();
+          await channel.track({
+            user_id: user.id,
+            online_at: newTime,
+            status: 'online'
+          });
+          localStorage.setItem('lastActiveTime', newTime);
+        }, 30000); // Update every 30 seconds
+
+        // Set up handler for page close/refresh
         const handleBeforeUnload = () => {
+          const offlineTime = new Date().toISOString();
+          localStorage.setItem('lastOfflineTime', offlineTime);
+          
+          // Use beacon API for reliable offline status update when page closes
           try {
-            // Use appropriate URL format for Supabase REST endpoint
-            const url = `${process.env.SUPABASE_URL || 'https://nqbklvemcxemhgxlnyyq.supabase.co'}/rest/v1/user_status?user_id=eq.${user.id}`;
             navigator.sendBeacon(
-              url,
-              JSON.stringify({
-                is_online: false,
-                last_active: new Date().toISOString()
-              })
+              `${window.location.origin}/api/set-offline`,
+              JSON.stringify({ user_id: user.id, time: offlineTime })
             );
           } catch (error) {
             console.error("Error in beacon send:", error);
@@ -71,121 +68,127 @@ export const useOnlineStatus = (userIds: string[] = []) => {
 
         window.addEventListener('beforeunload', handleBeforeUnload);
 
-        // Set up periodic updates of "last active" to maintain online status
-        const pingInterval = setInterval(async () => {
-          await supabase
-            .from('user_status')
-            .update({ last_active: new Date().toISOString() })
-            .eq('user_id', user.id);
-        }, 30000); // Update every 30 seconds to maintain "online" status
-
         return () => {
           window.removeEventListener('beforeunload', handleBeforeUnload);
           clearInterval(pingInterval);
           
-          // Set offline when the component unmounts (if page isn't being closed)
-          supabase
-            .from('user_status')
-            .update({
-              is_online: false,
-              last_active: new Date().toISOString()
-            })
-            .eq('user_id', user.id);
+          // Set offline when component unmounts (if page isn't being closed)
+          channel.track({
+            user_id: user.id,
+            online_at: new Date().toISOString(),
+            status: 'offline'
+          });
+          
+          // Clean up the channel subscription
+          supabase.removeChannel(channel);
         };
       } catch (error) {
         console.error("Failed to update online status:", error);
       }
     };
 
-    updateStatus();
+    updatePresence();
   }, [user?.id]);
 
+  // Listen for status changes of specified users
   useEffect(() => {
     if (!userIds.length) {
       setIsLoading(false);
       return;
     }
 
-    // Initial fetch of online statuses
+    // Initial fetch of online statuses from presence channel
     const fetchStatuses = async () => {
       try {
         setIsLoading(true);
         
-        const { data, error } = await supabase
-          .from('user_status')
-          .select('*')
-          .in('user_id', userIds);
-
-        if (error) {
-          console.error('Error fetching online statuses:', error);
-          return;
-        }
-
-        const statusMap: Record<string, UserStatus> = {};
+        // Subscribe to the presence channel for all specified users
+        const channel = supabase.channel('online-users-tracking');
         
-        data?.forEach((status) => {
-          // Consider someone online if their last active time is within the last 2 minutes
-          const lastActive = new Date(status.last_active);
-          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+        await channel.subscribe(async (status) => {
+          if (status !== 'SUBSCRIBED') return;
           
-          statusMap[status.user_id] = {
-            isOnline: lastActive > twoMinutesAgo,
-            lastActive: status.last_active
-          };
+          // Get current presence state
+          const presenceState = channel.presenceState();
+          
+          // Process the presence data
+          const statusMap: Record<string, UserStatus> = {};
+          
+          Object.keys(presenceState).forEach(key => {
+            const presences = presenceState[key];
+            presences.forEach(presence => {
+              if (userIds.includes(presence.user_id)) {
+                statusMap[presence.user_id] = {
+                  isOnline: presence.status === 'online',
+                  lastActive: presence.online_at
+                };
+              }
+            });
+          });
+          
+          setOnlineStatuses(statusMap);
+          setIsLoading(false);
         });
-
-        setOnlineStatuses(statusMap);
+        
+        // Handle presence changes (join/leave/sync)
+        channel
+          .on('presence', { event: 'sync' }, () => {
+            const state = channel.presenceState();
+            const newStatusMap: Record<string, UserStatus> = {};
+            
+            Object.keys(state).forEach(key => {
+              const presences = state[key];
+              presences.forEach(presence => {
+                if (userIds.includes(presence.user_id)) {
+                  newStatusMap[presence.user_id] = {
+                    isOnline: presence.status === 'online',
+                    lastActive: presence.online_at
+                  };
+                }
+              });
+            });
+            
+            setOnlineStatuses(newStatusMap);
+          })
+          .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+            setOnlineStatuses(prev => {
+              const updated = { ...prev };
+              newPresences.forEach(presence => {
+                if (userIds.includes(presence.user_id)) {
+                  updated[presence.user_id] = {
+                    isOnline: presence.status === 'online',
+                    lastActive: presence.online_at
+                  };
+                }
+              });
+              return updated;
+            });
+          })
+          .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+            setOnlineStatuses(prev => {
+              const updated = { ...prev };
+              leftPresences.forEach(presence => {
+                if (userIds.includes(presence.user_id)) {
+                  updated[presence.user_id] = {
+                    isOnline: false,
+                    lastActive: presence.online_at
+                  };
+                }
+              });
+              return updated;
+            });
+          });
+          
+        return () => {
+          supabase.removeChannel(channel);
+        };
       } catch (error) {
         console.error('Error in fetchStatuses:', error);
-      } finally {
         setIsLoading(false);
       }
     };
 
     fetchStatuses();
-
-    // Subscribe to changes in online status
-    const channel = supabase
-      .channel('online-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_status',
-          filter: userIds.length > 0 ? `user_id=in.(${userIds.join(',')})` : undefined,
-        },
-        (payload) => {
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const { user_id, last_active } = payload.new as { user_id: string, last_active: string };
-            
-            // Check if the last_active timestamp is recent enough (within 2 minutes)
-            const lastActive = new Date(last_active);
-            const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-            const isRecentlyActive = lastActive > twoMinutesAgo;
-            
-            setOnlineStatuses(prev => ({
-              ...prev,
-              [user_id]: {
-                isOnline: isRecentlyActive,
-                lastActive: last_active
-              }
-            }));
-          }
-        }
-      )
-      .subscribe();
-
-    // Set up a refresh interval to periodically check if "online" users are still active
-    const refreshInterval = setInterval(() => {
-      // Refetch statuses every 30 seconds to ensure status accuracy
-      fetchStatuses();
-    }, 30000);
-
-    return () => {
-      supabase.removeChannel(channel);
-      clearInterval(refreshInterval);
-    };
   }, [userIds.join(',')]);
 
   const isUserOnline = (userId: string): boolean => {

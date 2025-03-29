@@ -32,7 +32,13 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   // Determine what text to show for last active
   const getLastActiveText = () => {
     if (!lastActive) return t('profile.neverActive');
-    return formatDistanceToNow(new Date(lastActive), { addSuffix: true });
+    
+    try {
+      return formatDistanceToNow(new Date(lastActive), { addSuffix: true });
+    } catch (error) {
+      console.error("Error formatting last active time:", error);
+      return t('profile.neverActive');
+    }
   };
   
   const isOnline = isUserOnline(userId);
