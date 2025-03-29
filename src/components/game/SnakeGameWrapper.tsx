@@ -39,7 +39,7 @@ const SnakeGameWrapper: React.FC = () => {
         addCoins(Math.floor(score / 10));
         toast({
           title: "Coins Awarded!",
-          description: `You earned ${Math.floor(score / 10)} coins from your Snake game score.`,
+          description: `You earned ${Math.floor(score / 10)} coins from your Snake game score.`
         });
       }
     } catch (error) {

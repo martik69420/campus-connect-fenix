@@ -7,6 +7,15 @@ import { supabase } from '@/integrations/supabase/client';
 // Game types
 type GameType = 'snake' | 'tetris' | 'trivia';
 
+// Game state structure
+interface GameState {
+  progress: {
+    snake: { gamesPlayed: number; highScore: number };
+    tetris: { gamesPlayed: number; highScore: number };
+    trivia: { gamesPlayed: number; highScore: number };
+  };
+}
+
 interface GameContextType {
   gameScores: Record<GameType, number>;
   updateGameScore: (game: GameType, score: number) => void;
@@ -14,6 +23,14 @@ interface GameContextType {
   isLoading: boolean;
   hasDailyRewardAvailable: boolean;
   claimDailyReward: () => void;
+  
+  // Add missing methods for specific game score updates
+  updateSnakeScore: (score: number) => void;
+  updateTetrisScore: (score: number) => void;
+  updateTriviaScore: (score: number) => void;
+  
+  // Add game state
+  gameState: GameState;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -41,6 +58,15 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [isLoading, setIsLoading] = useState(true);
   const [hasDailyRewardAvailable, setHasDailyRewardAvailable] = useState(false);
+  
+  // Initialize game state
+  const [gameState, setGameState] = useState<GameState>({
+    progress: {
+      snake: { gamesPlayed: 0, highScore: 0 },
+      tetris: { gamesPlayed: 0, highScore: 0 },
+      trivia: { gamesPlayed: 0, highScore: 0 }
+    }
+  });
   
   const { toast } = useToast();
   const { user, addCoins } = useAuth();
@@ -83,6 +109,16 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
         
         setBestScores(scores);
+        
+        // Update game state with high scores
+        setGameState(prevState => ({
+          ...prevState,
+          progress: {
+            snake: { ...prevState.progress.snake, highScore: scores.snake },
+            tetris: { ...prevState.progress.tetris, highScore: scores.tetris },
+            trivia: { ...prevState.progress.trivia, highScore: scores.trivia }
+          }
+        }));
       } catch (error) {
         console.error('Error fetching game scores:', error);
         toast({
@@ -155,6 +191,19 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           [game]: score
         }));
         
+        // Update game state
+        setGameState(prevState => ({
+          ...prevState,
+          progress: {
+            ...prevState.progress,
+            [game]: { 
+              ...prevState.progress[game],
+              highScore: score,
+              gamesPlayed: prevState.progress[game].gamesPlayed + 1
+            }
+          }
+        }));
+        
         // Add to database
         const { error } = await supabase
           .from('game_history')
@@ -182,15 +231,39 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (game === 'trivia' && score > 5) {
           addCoins(score, 'Trivia game score');
         }
+      } else {
+        // Even if not a high score, increment games played
+        setGameState(prevState => ({
+          ...prevState,
+          progress: {
+            ...prevState.progress,
+            [game]: { 
+              ...prevState.progress[game],
+              gamesPlayed: prevState.progress[game].gamesPlayed + 1
+            }
+          }
+        }));
       }
     } catch (error) {
       console.error('Error updating game score:', error);
       toast({
         title: 'Error',
         description: 'Failed to save your game score'
-        
       });
     }
+  };
+  
+  // Game-specific update methods
+  const updateSnakeScore = (score: number) => {
+    updateGameScore('snake', score);
+  };
+  
+  const updateTetrisScore = (score: number) => {
+    updateGameScore('tetris', score);
+  };
+  
+  const updateTriviaScore = (score: number) => {
+    updateGameScore('trivia', score);
   };
   
   const claimDailyReward = async () => {
@@ -239,7 +312,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         bestScores,
         isLoading,
         hasDailyRewardAvailable,
-        claimDailyReward
+        claimDailyReward,
+        updateSnakeScore,
+        updateTetrisScore,
+        updateTriviaScore,
+        gameState
       }}
     >
       {children}

@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useGame } from "@/context/GameContext";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
 import { TriviaGameProps } from "./TriviaGameTypes";
 
@@ -41,7 +41,8 @@ const TRIVIA_QUESTIONS = [
 ];
 
 const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
-  const { gameState, updateTriviaScore } = useGame();
+  const { updateTriviaScore, gameState } = useGame();
+  const { toast } = useToast();
   const [gameStarted, setGameStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -72,7 +73,7 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
       setScore(prev => prev + 10);
       toast({
         title: "Correct!",
-        description: `+10 points`,
+        description: `+10 points`
       });
     }
   };
@@ -93,7 +94,9 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
   const endGame = async () => {
     setGameFinished(true);
     updateTriviaScore(score);
-    await onGameEnd(score);
+    if (onGameEnd) {
+      await onGameEnd(score);
+    }
   };
   
   // Timer for each question
@@ -125,7 +128,7 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
   const gameProgress = ((currentQuestionIndex + 1) / TRIVIA_QUESTIONS.length) * 100;
 
   // References to game progress
-  const triviaProgress = gameState.progress.trivia || { gamesPlayed: 0, highScore: 0 };
+  const triviaProgress = gameState.progress.trivia;
 
   return (
     <Card className="w-full">
