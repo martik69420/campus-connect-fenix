@@ -87,24 +87,7 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
           description: t('post.removedFromSaved'),
         });
       } else {
-        // The critical fix: We need to ensure the user_id is referencing profiles, not auth.users
-        // First check if the user profile exists
-        const { data: userProfile, error: profileError } = await supabase
-          .from('profiles')
-          .select('id')
-          .eq('id', user.id)
-          .single();
-          
-        if (profileError) {
-          console.error('User profile check error:', profileError);
-          throw new Error(t('common.error'));
-        }
-        
-        if (!userProfile) {
-          throw new Error('User profile not found');
-        }
-        
-        // Now save the post with the verified user_id
+        // Save the post
         const { error } = await supabase
           .from('saved_posts')
           .insert({
