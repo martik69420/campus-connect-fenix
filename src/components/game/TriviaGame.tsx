@@ -41,7 +41,7 @@ const TRIVIA_QUESTIONS = [
 ];
 
 const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
-  const { progress, updateTriviaScore } = useGame();
+  const { gameState, updateTriviaScore } = useGame();
   const [gameStarted, setGameStarted] = useState(false);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -124,6 +124,9 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
   // Game progress
   const gameProgress = ((currentQuestionIndex + 1) / TRIVIA_QUESTIONS.length) * 100;
 
+  // References to game progress
+  const triviaProgress = gameState.progress.trivia;
+
   return (
     <Card className="w-full">
       <CardHeader>
@@ -156,12 +159,12 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
               
               <div className="flex items-center justify-center gap-4 mt-4">
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{progress.trivia.gamesPlayed}</div>
+                  <div className="text-2xl font-bold">{triviaProgress.gamesPlayed}</div>
                   <div className="text-sm text-muted-foreground">Games Played</div>
                 </div>
                 <Separator orientation="vertical" className="h-12" />
                 <div className="text-center">
-                  <div className="text-2xl font-bold">{progress.trivia.highScore}</div>
+                  <div className="text-2xl font-bold">{triviaProgress.highScore}</div>
                   <div className="text-sm text-muted-foreground">High Score</div>
                 </div>
               </div>
@@ -262,19 +265,19 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
                 <div className="text-3xl font-bold">{score}</div>
                 <div className="text-sm text-muted-foreground">Final Score</div>
                 
-                {score > progress.trivia.highScore && (
+                {score > triviaProgress.highScore && (
                   <Badge className="mt-2 bg-fenix text-white">New High Score!</Badge>
                 )}
               </div>
               
               <div className="flex items-center justify-center gap-4">
                 <div className="text-center">
-                  <div className="text-xl font-semibold">{Math.max(progress.trivia.highScore, score)}</div>
+                  <div className="text-xl font-semibold">{Math.max(triviaProgress.highScore, score)}</div>
                   <div className="text-sm text-muted-foreground">High Score</div>
                 </div>
                 <Separator orientation="vertical" className="h-12" />
                 <div className="text-center">
-                  <div className="text-xl font-semibold">{progress.trivia.gamesPlayed + 1}</div>
+                  <div className="text-xl font-semibold">{triviaProgress.gamesPlayed + 1}</div>
                   <div className="text-sm text-muted-foreground">Games Played</div>
                 </div>
               </div>
