@@ -1,5 +1,6 @@
 
-import React, { createContext } from 'react';
+import * as React from 'react';
+import { createContext } from 'react';
 import type { AuthContextType } from './types';
 
 // Create context with a default value
