@@ -13,6 +13,7 @@ export interface User {
   lastActive?: string;
   isOnline?: boolean;
   coins: number;
+  // Remove the reference to "friends" property as it's not supported in our schema
 }
 
 // Profile update data structure

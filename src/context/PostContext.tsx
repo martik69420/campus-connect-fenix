@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { User } from "./auth/types";
 import { useAuth } from "./AuthContext";
@@ -108,7 +107,6 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           createdAt: new Date().toISOString(), // Converted to string
           email: '',
           school: '',
-          friends: [],
         } : undefined,
       }));
 
@@ -177,7 +175,6 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: user.email,
           school: user.school,
           createdAt: user.createdAt || new Date().toISOString(),
-          friends: user.friends || [],
         },
       };
 

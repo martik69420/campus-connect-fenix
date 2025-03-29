@@ -22,6 +22,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return null;
     }
     
+    // Map database fields to our User interface
     return {
       id: profileData.id,
       username: profileData.username,
@@ -30,10 +31,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
       avatar: profileData.avatar_url,
       bio: profileData.bio,
       school: profileData.school,
-      location: profileData.location,
+      location: profileData.location || null, // Handle possibly missing field
       createdAt: profileData.created_at,
-      lastActive: profileData.last_active,
-      isOnline: profileData.is_online,
+      lastActive: profileData.last_active || null, // Handle possibly missing field
+      isOnline: profileData.is_online || false, // Handle possibly missing field
       coins: profileData.coins || 0
     };
   } catch (error) {
@@ -218,12 +219,14 @@ export const validateCurrentPassword = async (userId: string, password: string):
 
 export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
   try {
+    const updateData = {
+      is_online: isOnline,
+      last_active: new Date().toISOString()
+    };
+    
     const { error } = await supabase
       .from('profiles')
-      .update({
-        is_online: isOnline,
-        last_active: new Date().toISOString()
-      })
+      .update(updateData)
       .eq('id', userId);
       
     if (error) {
