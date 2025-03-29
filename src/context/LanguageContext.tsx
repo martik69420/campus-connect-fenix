@@ -1,44 +1,33 @@
+
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 // Define the shape of the translation object for each language
-interface LanguageTranslations {
-  [key: string]: string;
-}
+type TranslationKey = string;
 
-// Define the shape of the translations for each key
-interface Translations {
-  [key: string]: {
-    en: string;
-    nl: string;
-    fr: string;
-  };
-}
+// Define the available languages
+type Language = 'en' | 'nl' | 'fr';
 
-// Define a language option type
-interface LanguageOption {
-  code: string;
-  name: string;
-}
+// Define the shape of translations
+type Translations = Record<TranslationKey, Record<Language, string>>;
 
 // Define the context type
-interface LanguageContextType {
-  language: string;
-  setLanguage: (language: string) => void;
-  t: (key: string) => string;
-  availableLanguages: LanguageOption[];
-}
+type LanguageContextType = {
+  language: Language;
+  t: (key: TranslationKey) => string;
+  setLanguage: (language: Language) => void;
+  availableLanguages: { code: Language, name: string }[];
+};
 
-// Default language
-const defaultLanguage = 'en';
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Available languages
-const availableLanguageOptions: LanguageOption[] = [
+// Available languages for the UI
+const availableLanguages: { code: Language, name: string }[] = [
   { code: 'en', name: 'English' },
-  { code: 'nl', name: 'Nederlands' },
-  { code: 'fr', name: 'Français' },
+  { code: 'nl', name: 'Dutch (Nederlands)' },
+  { code: 'fr', name: 'French (Français)' },
 ];
 
-// Initial translations
+// Translations data
 const translations: Translations = {
   'common.loading': {
     en: 'Loading...',
@@ -360,35 +349,54 @@ const translations: Translations = {
     nl: 'Opslaan',
     fr: 'Enregistrer',
   },
+  // Table translations
+  'table.noResults': {
+    en: 'No results found',
+    nl: 'Geen resultaten gevonden',
+    fr: 'Aucun résultat trouvé',
+  },
+  'table.search': {
+    en: 'Search...',
+    nl: 'Zoeken...',
+    fr: 'Rechercher...',
+  },
+  'table.showing': {
+    en: 'Showing',
+    nl: 'Tonen',
+    fr: 'Affichage de',
+  },
+  'table.to': {
+    en: 'to',
+    nl: 'tot',
+    fr: 'à',
+  },
+  'table.of': {
+    en: 'of',
+    nl: 'van',
+    fr: 'sur',
+  },
+  'table.results': {
+    en: 'results',
+    nl: 'resultaten',
+    fr: 'résultats',
+  },
 };
 
-// Create the context
-const LanguageContext = createContext<LanguageContextType>({
-  language: defaultLanguage,
-  setLanguage: () => {},
-  t: (key: string) => translations[key]?.[defaultLanguage] || key, // Basic implementation
-  availableLanguages: availableLanguageOptions,
-});
-
-// Provider component
+// Language Provider component
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<string>(defaultLanguage);
+  const [language, setLanguage] = useState<Language>('en');
 
-  // Function to translate a key
-  const t = useCallback((key: string): string => {
-    const translation = translations[key]?.[language as keyof typeof translations[typeof key]] || 
-                       translations[key]?.[defaultLanguage as keyof typeof translations[typeof key]] || 
-                       key;
-    return translation;
+  // Function to get translation
+  const t = useCallback((key: TranslationKey): string => {
+    if (!translations[key]) {
+      console.warn(`Translation key "${key}" not found.`);
+      return key;
+    }
+    return translations[key][language] || translations[key]['en'] || key;
   }, [language]);
 
   return (
-    <LanguageContext.Provider value={{ 
-      language, 
-      setLanguage, 
-      t,
-      availableLanguages: availableLanguageOptions 
-    }}>
+    <LanguageContext.Provider value={{ language, t, setLanguage, availableLanguages }}>
       {children}
     </LanguageContext.Provider>
   );
@@ -396,5 +404,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
 // Custom hook to use the language context
 export const useLanguage = (): LanguageContextType => {
-  return useContext(LanguageContext);
+  const context = useContext(LanguageContext);
+  if (context === undefined) {
+    throw new Error("useLanguage must be used within a LanguageProvider");
+  }
+  return context;
 };
