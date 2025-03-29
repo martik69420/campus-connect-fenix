@@ -3,11 +3,13 @@ import React, { useState, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
 import { useAuth } from '@/context/AuthContext';
+import { useGame } from '@/context/GameContext';
 import TetrisGame from './TetrisGame';
 
 const TetrisGameWrapper: React.FC = () => {
   const { t } = useLanguage();
-  const { user, addCoins } = useAuth();
+  const { user } = useAuth();
+  const { updateTetrisScore } = useGame();
   const [highScore, setHighScore] = useState(0);
 
   const handleScoreUpdate = useCallback((score: number) => {
@@ -15,12 +17,11 @@ const TetrisGameWrapper: React.FC = () => {
       setHighScore(score);
     }
     
-    // Give coins for every 1000 points
-    const coinsThreshold = 1000;
-    if (score % coinsThreshold === 0 && score > 0 && addCoins) {
-      addCoins(10, `Tetris score milestone: ${score}`);
+    // Save score to game context/history
+    if (score > 0) {
+      updateTetrisScore(score);
     }
-  }, [highScore, addCoins]);
+  }, [highScore, updateTetrisScore]);
 
   return (
     <div className="p-4 max-w-4xl mx-auto">

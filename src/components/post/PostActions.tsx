@@ -170,12 +170,12 @@ const PostActions: React.FC<PostActionsProps> = ({
         <Button
           variant="ghost"
           size="sm"
-          className={`text-muted-foreground hover:text-foreground ${isSaved ? 'text-yellow-500' : ''}`}
+          className={`text-muted-foreground hover:text-foreground transition-colors duration-200`}
           onClick={handleSaveToggle}
           disabled={isSaving || isCheckingSaved}
         >
-          <Bookmark className={`h-4 w-4 mr-1 ${isSaved ? 'fill-yellow-500 text-yellow-500' : ''}`} />
-          {isSaved && <span>{t('post.saved')}</span>}
+          <Bookmark className={`h-4 w-4 mr-1 transition-colors duration-200 ${isSaved ? 'fill-yellow-400 text-yellow-400' : ''}`} />
+          {isSaved && <span className="text-yellow-400">{t('post.saved')}</span>}
         </Button>
       </div>
 

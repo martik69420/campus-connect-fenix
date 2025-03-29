@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,8 +9,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
-import { CoinsIcon, Trophy, Medal, Ban, Info } from 'lucide-react';
+import { CoinsIcon, Trophy, Medal, Info, Gift } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useLanguage } from '@/context/LanguageContext';
 
 type LeaderboardUser = {
   id: string;
@@ -24,8 +26,9 @@ const Leaderboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
+  const { t } = useLanguage();
   
-  const [leaderboardType, setLeaderboardType] = useState<'coins' | 'trivia' | 'snake'>('coins');
+  const [leaderboardType, setLeaderboardType] = useState<'coins' | 'trivia' | 'snake' | 'tetris'>('coins');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [userRank, setUserRank] = useState<LeaderboardUser | null>(null);
@@ -44,7 +47,7 @@ const Leaderboard = () => {
     }
   }, [user, leaderboardType]);
   
-  const fetchLeaderboardData = async (type: 'coins' | 'trivia' | 'snake') => {
+  const fetchLeaderboardData = async (type: 'coins' | 'trivia' | 'snake' | 'tetris') => {
     if (!user) return;
     
     setLoading(true);
@@ -76,7 +79,7 @@ const Leaderboard = () => {
         }
       } else {
         // For game scores
-        const gameType = type === 'trivia' ? 'trivia' : 'snake';
+        const gameType = type === 'trivia' ? 'trivia' : type === 'snake' ? 'snake' : 'tetris';
         
         const { data: gameData, error } = await supabase
           .from('game_history')
@@ -184,36 +187,39 @@ const Leaderboard = () => {
     <AppLayout>
       <div className="max-w-4xl mx-auto p-4">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Leaderboard</h1>
+          <h1 className="text-3xl font-bold mb-2">{t('leaderboard.title')}</h1>
           <p className="text-muted-foreground">
-            See how you rank against other users on the platform
+            {t('leaderboard.description')}
           </p>
         </div>
         
         <Tabs 
           defaultValue="coins" 
           className="w-full" 
-          onValueChange={(value) => setLeaderboardType(value as 'coins' | 'trivia' | 'snake')}
+          onValueChange={(value) => setLeaderboardType(value as 'coins' | 'trivia' | 'snake' | 'tetris')}
         >
-          <TabsList className="grid w-full grid-cols-3 mb-8">
+          <TabsList className="grid w-full grid-cols-4 mb-8">
             <TabsTrigger value="coins" className="text-center">
               <CoinsIcon className="h-4 w-4 mr-2" />
-              <span>Coins</span>
+              <span>{t('common.coins')}</span>
             </TabsTrigger>
             <TabsTrigger value="trivia" className="text-center">
-              <span>Trivia</span>
+              <span>{t('games.triviaGame')}</span>
             </TabsTrigger>
             <TabsTrigger value="snake" className="text-center">
-              <span>Snake</span>
+              <span>{t('games.snakeGame')}</span>
+            </TabsTrigger>
+            <TabsTrigger value="tetris" className="text-center">
+              <span>{t('games.tetrisGame')}</span>
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="coins" className="space-y-4">
             <LeaderboardContent 
-              title="Top Earners" 
+              title={t('leaderboard.topEarners')}
               data={leaderboardData} 
               loading={loading} 
-              unit="coins" 
+              unit={t('common.coins')}
               userRank={userRank}
               getTrophyIcon={getTrophyIcon}
             />
@@ -221,10 +227,10 @@ const Leaderboard = () => {
           
           <TabsContent value="trivia" className="space-y-4">
             <LeaderboardContent 
-              title="Trivia Masters" 
+              title={t('leaderboard.triviaMasters')}
               data={leaderboardData} 
               loading={loading} 
-              unit="points" 
+              unit={t('common.points')}
               userRank={userRank}
               getTrophyIcon={getTrophyIcon}
             />
@@ -232,10 +238,21 @@ const Leaderboard = () => {
           
           <TabsContent value="snake" className="space-y-4">
             <LeaderboardContent 
-              title="Snake Champions" 
+              title={t('leaderboard.snakeChampions')}
               data={leaderboardData} 
               loading={loading} 
-              unit="points" 
+              unit={t('common.points')}
+              userRank={userRank}
+              getTrophyIcon={getTrophyIcon}
+            />
+          </TabsContent>
+          
+          <TabsContent value="tetris" className="space-y-4">
+            <LeaderboardContent 
+              title={t('leaderboard.tetrisChampions')}
+              data={leaderboardData} 
+              loading={loading} 
+              unit={t('common.points')}
               userRank={userRank}
               getTrophyIcon={getTrophyIcon}
             />
@@ -386,14 +403,14 @@ const LeaderboardItem = ({
 };
 
 // Get mock leaderboard data
-const getMockLeaderboardData = (type: 'coins' | 'trivia' | 'snake'): LeaderboardUser[] => {
+const getMockLeaderboardData = (type: 'coins' | 'trivia' | 'snake' | 'tetris'): LeaderboardUser[] => {
   const mockData: LeaderboardUser[] = [
     {
       id: '1',
       username: 'john_doe',
       displayName: 'John Doe',
       avatar: '/placeholder.svg',
-      score: type === 'coins' ? 1250 : 950,
+      score: type === 'coins' ? 1250 : type === 'tetris' ? 15600 : 950,
       position: 1
     },
     {
@@ -401,7 +418,7 @@ const getMockLeaderboardData = (type: 'coins' | 'trivia' | 'snake'): Leaderboard
       username: 'jane_smith',
       displayName: 'Jane Smith',
       avatar: '/placeholder.svg',
-      score: type === 'coins' ? 975 : 825,
+      score: type === 'coins' ? 975 : type === 'tetris' ? 12400 : 825,
       position: 2
     },
     {
@@ -409,7 +426,7 @@ const getMockLeaderboardData = (type: 'coins' | 'trivia' | 'snake'): Leaderboard
       username: 'alex_johnson',
       displayName: 'Alex Johnson',
       avatar: '/placeholder.svg',
-      score: type === 'coins' ? 840 : 780,
+      score: type === 'coins' ? 840 : type === 'tetris' ? 9800 : 780,
       position: 3
     },
     {
@@ -417,7 +434,7 @@ const getMockLeaderboardData = (type: 'coins' | 'trivia' | 'snake'): Leaderboard
       username: 'sarah_parker',
       displayName: 'Sarah Parker',
       avatar: '/placeholder.svg',
-      score: type === 'coins' ? 720 : 650,
+      score: type === 'coins' ? 720 : type === 'tetris' ? 7500 : 650,
       position: 4
     },
     {
@@ -425,7 +442,7 @@ const getMockLeaderboardData = (type: 'coins' | 'trivia' | 'snake'): Leaderboard
       username: 'mike_robinson',
       displayName: 'Mike Robinson',
       avatar: '/placeholder.svg',
-      score: type === 'coins' ? 680 : 520,
+      score: type === 'coins' ? 680 : type === 'tetris' ? 5200 : 520,
       position: 5
     }
   ];

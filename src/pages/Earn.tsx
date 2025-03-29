@@ -1,329 +1,358 @@
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
+import { Badge } from '@/components/ui/badge';
+import { Calendar, Gift, Trophy, Award, CoinsIcon, GamepadIcon, Users, LucideIcon, Clock } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
+import { useGame } from '@/context/GameContext';
+import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/context/LanguageContext';
 import AppLayout from '@/components/layout/AppLayout';
-import { CheckCircle, Coins, Award, Trophy, Calendar, CheckCircle2, Users, MessageSquare, Gamepad2, UserPlus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { supabase } from '@/integrations/supabase/client';
+
+interface EarnTask {
+  id: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  coinsReward: number;
+  completionCriteria: string;
+  isCompleted: boolean;
+  progress: number;
+  target: number;
+  route: string;
+}
 
 const Earn = () => {
+  const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, addCoins } = useAuth();
+  const { t } = useLanguage();
+  const { user, isAuthenticated, isLoading, addCoins } = useAuth();
+  const { hasDailyRewardAvailable, claimDailyReward, lastRewardClaimed } = useGame();
+  const [dailyStreak, setDailyStreak] = useState(0);
+  const [lastClaimedDate, setLastClaimedDate] = useState<Date | null>(null);
+  const [isClaiming, setIsClaiming] = useState(false);
   
-  const [dailyRewardClaimed, setDailyRewardClaimed] = useState(false);
-  const [completedTasks, setCompletedTasks] = useState<Record<string, boolean>>({});
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate('/auth');
+    }
+  }, [isAuthenticated, isLoading, navigate]);
   
-  const tasks = [
+  // Load daily streak from local storage
+  useEffect(() => {
+    if (user) {
+      // Load streak data
+      const storedStreak = localStorage.getItem(`streak_${user.id}`);
+      const storedDate = localStorage.getItem(`lastClaimed_${user.id}`);
+      
+      if (storedStreak) {
+        setDailyStreak(parseInt(storedStreak));
+      }
+      
+      if (storedDate) {
+        setLastClaimedDate(new Date(storedDate));
+      }
+    }
+  }, [user]);
+  
+  // Check if streak is broken (more than 48 hours since last claim)
+  useEffect(() => {
+    if (lastClaimedDate && user) {
+      const now = new Date();
+      const twoDaysAgo = new Date(now);
+      twoDaysAgo.setHours(now.getHours() - 48);
+      
+      if (lastClaimedDate < twoDaysAgo) {
+        // Reset streak if more than 48 hours have passed
+        setDailyStreak(0);
+        localStorage.setItem(`streak_${user.id}`, '0');
+      }
+    }
+  }, [lastClaimedDate, user]);
+  
+  // Sample tasks
+  const earnTasks: EarnTask[] = [
     {
-      id: 'create-post',
-      title: 'Create a post',
-      description: 'Share something with your campus community',
-      reward: 10,
-      icon: MessageSquare,
-      completionRate: 0
+      id: 'daily',
+      title: t('earn.dailyLogin'),
+      description: t('earn.dailyLoginDesc'),
+      icon: Calendar,
+      coinsReward: 25,
+      completionCriteria: t('earn.completionOnce'),
+      isCompleted: !hasDailyRewardAvailable,
+      progress: hasDailyRewardAvailable ? 0 : 1,
+      target: 1,
+      route: '/'
     },
     {
-      id: 'add-friend',
-      title: 'Add a friend',
-      description: 'Connect with someone from your school',
-      reward: 20,
-      icon: UserPlus,
-      completionRate: 0
+      id: 'games',
+      title: t('earn.playGames'),
+      description: t('earn.playGamesDesc'),
+      icon: GamepadIcon,
+      coinsReward: 50,
+      completionCriteria: t('earn.gameCompletion'),
+      isCompleted: false,
+      progress: 0,
+      target: 3,
+      route: '/games'
     },
     {
-      id: 'play-game',
-      title: 'Play a game',
-      description: 'Play any game in the Games section',
-      reward: 15,
-      icon: Gamepad2,
-      completionRate: 0
-    },
-    {
-      id: 'complete-profile',
-      title: 'Complete your profile',
-      description: 'Fill out all fields in your profile',
-      reward: 30,
-      icon: CheckCircle2,
-      completionRate: user?.bio !== undefined ? 100 : 0
-    },
-    {
-      id: 'invite-friend',
-      title: 'Invite a friend',
-      description: 'Invite a friend to join Campus Fenix',
-      reward: 50,
+      id: 'friends',
+      title: t('earn.inviteFriends'),
+      description: t('earn.inviteFriendsDesc'),
       icon: Users,
-      completionRate: 0
-    },
-  ];
-  
-  const achievements = [
-    {
-      id: 'social-butterfly',
-      title: 'Social Butterfly',
-      description: 'Add 5 friends to your network',
+      coinsReward: 100,
+      completionCriteria: t('earn.perFriend'),
+      isCompleted: false,
       progress: 0,
-      total: 5,
-      reward: 100,
-      icon: Users
+      target: 5,
+      route: '/add-friends'
     },
     {
-      id: 'content-creator',
-      title: 'Content Creator',
-      description: 'Create 10 posts',
+      id: 'leaderboard',
+      title: t('earn.reachTop10'),
+      description: t('earn.reachTop10Desc'),
+      icon: Trophy,
+      coinsReward: 500,
+      completionCriteria: t('earn.oneTime'),
+      isCompleted: false,
       progress: 0,
-      total: 10,
-      reward: 150,
-      icon: MessageSquare
-    },
-    {
-      id: 'game-master',
-      title: 'Game Master',
-      description: 'Score 1000 points in games',
-      progress: 0,
-      total: 1000,
-      reward: 200,
-      icon: Trophy
+      target: 1,
+      route: '/leaderboard'
     }
   ];
   
+  // Claim daily reward with streak
   const handleClaimDailyReward = async () => {
     if (!user) return;
     
+    setIsClaiming(true);
+    
     try {
-      // Check if already claimed today
-      const today = new Date().toISOString().split('T')[0];
-      
-      const { data: existingReward, error: checkError } = await supabase
-        .from('daily_rewards')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`);
+      if (hasDailyRewardAvailable) {
+        // Calculate streak bonus
+        const newStreak = dailyStreak + 1;
+        const streakBonus = Math.min(Math.floor(newStreak / 5) * 5, 25); // 5 coins per 5 days, max 25
+        const totalReward = 25 + streakBonus;
         
-      if (checkError) {
-        console.error("Check daily reward error:", checkError);
-        throw checkError;
-      }
-      
-      if (existingReward && existingReward.length > 0) {
+        // Claim basic reward
+        const claimed = claimDailyReward();
+        
+        if (claimed) {
+          // Add streak bonus separately if streak > 1
+          if (newStreak > 1 && streakBonus > 0) {
+            addCoins(streakBonus, `Daily streak bonus (${newStreak} days)`);
+            
+            toast({
+              title: t('earn.streakBonus'),
+              description: t('earn.streakBonusDesc', { days: newStreak.toString(), bonus: streakBonus.toString() }),
+            });
+          }
+          
+          // Save streak data
+          setDailyStreak(newStreak);
+          const now = new Date();
+          setLastClaimedDate(now);
+          
+          // Save to local storage
+          localStorage.setItem(`streak_${user.id}`, newStreak.toString());
+          localStorage.setItem(`lastClaimed_${user.id}`, now.toISOString());
+          
+          // Save streak to database 
+          try {
+            await supabase.from('daily_rewards').insert({
+              user_id: user.id,
+              coins_rewarded: totalReward
+            });
+          } catch (err) {
+            console.error("Error saving streak to database:", err);
+          }
+        }
+      } else {
         toast({
-          title: "Already claimed",
-          description: "You've already claimed your daily reward today",
-          variant: "destructive"
+          title: t('earn.alreadyClaimed'),
+          description: t('earn.comeBackTomorrow'),
+          variant: "destructive",
         });
-        return;
       }
-      
-      // Add reward record
-      const coinsAmount = 25; // Daily reward amount
-      
-      const { error: rewardError } = await supabase
-        .from('daily_rewards')
-        .insert({
-          user_id: user.id,
-          coins_rewarded: coinsAmount
-        });
-        
-      if (rewardError) {
-        console.error("Add daily reward error:", rewardError);
-        throw rewardError;
-      }
-      
-      // Update user coins
-      addCoins(coinsAmount, "Daily login reward");
-      
-      setDailyRewardClaimed(true);
-      
-      toast({
-        title: "Daily reward claimed!",
-        description: `You've earned ${coinsAmount} coins for logging in today!`,
-      });
-      
-    } catch (error: any) {
-      console.error("Daily reward error:", error);
-      toast({
-        title: "Failed to claim reward",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive"
-      });
+    } finally {
+      setIsClaiming(false);
     }
   };
   
-  const handleCompleteTask = (taskId: string, reward: number) => {
-    if (completedTasks[taskId]) return;
+  const getTimeUntilNextReward = () => {
+    if (!lastClaimedDate) return null;
     
-    // In a real app, verify task completion
+    const now = new Date();
+    const nextRewardTime = new Date(lastClaimedDate);
+    nextRewardTime.setDate(nextRewardTime.getDate() + 1);
     
-    // Mark task as completed
-    setCompletedTasks(prev => ({
-      ...prev,
-      [taskId]: true
-    }));
+    const diff = nextRewardTime.getTime() - now.getTime();
+    if (diff <= 0) return null;
     
-    // Add coins
-    addCoins(reward, `Task completed: ${taskId}`);
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
     
-    toast({
-      title: "Task completed!",
-      description: `You earned ${reward} coins!`,
-    });
+    return `${hours}h ${minutes}m`;
   };
+  
+  const nextRewardTime = getTimeUntilNextReward();
+  
+  // Animations
+  const container = {
+    hidden: { opacity: 0 },
+    show: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.1
+      }
+    }
+  };
+  
+  const item = {
+    hidden: { opacity: 0, y: 20 },
+    show: { opacity: 1, y: 0 }
+  };
+  
+  if (isLoading) {
+    return (
+      <AppLayout>
+        <div className="flex justify-center items-center min-h-[60vh]">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      </AppLayout>
+    );
+  }
   
   return (
     <AppLayout>
-      <div className="max-w-4xl mx-auto p-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <div>
-            <h1 className="text-3xl font-bold">Earn Coins</h1>
-            <p className="text-muted-foreground">Complete tasks and earn coins to unlock rewards</p>
-          </div>
-          <div className="flex items-center bg-card border rounded-lg p-3 shadow-sm">
-            <Coins className="h-6 w-6 text-yellow-500 mr-2" />
-            <div>
-              <div className="text-xl font-bold">{user?.coins || 0}</div>
-              <div className="text-xs text-muted-foreground">Your coins</div>
-            </div>
-          </div>
-        </div>
+      <div className="container py-8 max-w-4xl">
+        <h1 className="text-3xl font-bold mb-2">{t('earn.earnCoins')}</h1>
+        <p className="text-muted-foreground mb-8">{t('earn.earnCoinsDesc')}</p>
         
-        {/* Daily Reward */}
-        <Card className="mb-8">
-          <CardHeader className="pb-3">
-            <CardTitle>Daily Reward</CardTitle>
-            <CardDescription>Claim your daily coins just for logging in</CardDescription>
-          </CardHeader>
-          <CardContent className="pb-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <div className="bg-primary/10 p-3 rounded-lg mr-4">
-                  <Calendar className="h-8 w-8 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-medium">Login Reward</h3>
-                  <p className="text-sm text-muted-foreground">Log in every day to earn coins</p>
-                </div>
+        {/* Daily Streak Section */}
+        <motion.div 
+          className="mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <Card className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/10 border border-amber-200 dark:border-amber-800">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center text-amber-800 dark:text-amber-300">
+                <Award className="mr-2 h-5 w-5" />
+                {t('earn.dailyStreak')}
+                {dailyStreak > 0 && (
+                  <Badge variant="secondary" className="ml-2 bg-amber-200 text-amber-800 dark:bg-amber-800 dark:text-amber-200">
+                    {dailyStreak} {t('earn.days')}
+                  </Badge>
+                )}
+              </CardTitle>
+              <CardDescription>{t('earn.streakDesc')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-2 flex-wrap mb-4">
+                {[...Array(7)].map((_, i) => (
+                  <div key={i} className={`w-10 h-10 rounded-full flex items-center justify-center ${i < dailyStreak % 7 ? 'bg-amber-400 text-amber-950 dark:bg-amber-500' : 'bg-amber-100 text-amber-400 dark:bg-amber-800/40 dark:text-amber-600'} font-medium`}>
+                    {i + 1}
+                  </div>
+                ))}
               </div>
-              <div className="text-2xl font-bold text-yellow-500">+25</div>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button 
-              className="w-full" 
-              onClick={handleClaimDailyReward} 
-              disabled={dailyRewardClaimed}
-            >
-              {dailyRewardClaimed ? (
-                <>
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Claimed
-                </>
-              ) : (
-                'Claim Reward'
+              
+              {dailyStreak >= 5 && (
+                <div className="text-sm text-amber-600 dark:text-amber-400 mb-3">
+                  <span className="font-medium">+{Math.min(Math.floor(dailyStreak / 5) * 5, 25)} {t('earn.coinsPerDay')}</span> - {t('earn.streakBonusText')}
+                </div>
               )}
-            </Button>
-          </CardFooter>
-        </Card>
+            </CardContent>
+            <CardFooter>
+              <div className="w-full">
+                <Button 
+                  onClick={handleClaimDailyReward} 
+                  disabled={!hasDailyRewardAvailable || isClaiming}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white"
+                >
+                  {isClaiming ? (
+                    <span className="flex items-center">
+                      <span className="animate-spin mr-2 h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                      {t('common.loading')}
+                    </span>
+                  ) : hasDailyRewardAvailable ? (
+                    <span className="flex items-center">
+                      <Gift className="mr-2 h-4 w-4" />
+                      {t('earn.claimDaily')} (+25 {t('common.coins')})
+                    </span>
+                  ) : (
+                    <span className="flex items-center">
+                      <Clock className="mr-2 h-4 w-4" />
+                      {nextRewardTime ? `${t('earn.nextReward')}: ${nextRewardTime}` : t('earn.checkBackTomorrow')}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </CardFooter>
+          </Card>
+        </motion.div>
         
-        {/* Tasks */}
-        <h2 className="text-2xl font-bold mb-4">Tasks</h2>
-        <div className="grid md:grid-cols-2 gap-4 mb-8">
-          {tasks.map((task) => (
-            <motion.div 
-              key={task.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-            >
+        {/* Earn Tasks */}
+        <motion.div 
+          className="space-y-4"
+          variants={container}
+          initial="hidden"
+          animate="show"
+        >
+          <h2 className="text-2xl font-bold mb-4">{t('earn.ways')}</h2>
+          
+          {earnTasks.map((task) => (
+            <motion.div key={task.id} variants={item}>
               <Card>
-                <CardHeader className="pb-3">
+                <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 p-2 rounded-lg">
-                        <task.icon className="h-5 w-5 text-primary" />
+                    <div className="flex items-center">
+                      <div className="mr-4 p-2 bg-primary/10 rounded-lg">
+                        <task.icon className="h-6 w-6 text-primary" />
                       </div>
-                      <CardTitle className="text-lg">{task.title}</CardTitle>
+                      <div>
+                        <CardTitle className="text-lg">{task.title}</CardTitle>
+                        <CardDescription>{task.description}</CardDescription>
+                      </div>
                     </div>
-                    <div className="text-xl font-bold text-yellow-500">+{task.reward}</div>
+                    <Badge variant="outline" className="flex items-center">
+                      <CoinsIcon className="h-3.5 w-3.5 mr-1 text-amber-500" />
+                      {task.coinsReward}
+                    </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className="pb-3">
-                  <p className="text-sm text-muted-foreground mb-3">{task.description}</p>
-                  <Progress value={task.completionRate} className="h-2" />
-                </CardContent>
-                <CardFooter>
-                  <Button 
-                    variant={completedTasks[task.id] ? "secondary" : "outline"} 
-                    className="w-full"
-                    onClick={() => handleCompleteTask(task.id, task.reward)}
-                    disabled={completedTasks[task.id] || task.completionRate < 100}
-                  >
-                    {completedTasks[task.id] ? (
-                      <>
-                        <CheckCircle className="mr-2 h-4 w-4" />
-                        Completed
-                      </>
-                    ) : task.completionRate >= 100 ? (
-                      'Claim Reward'
-                    ) : (
-                      'In Progress'
-                    )}
-                  </Button>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          ))}
-        </div>
-        
-        {/* Achievements */}
-        <h2 className="text-2xl font-bold mb-4">Achievements</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          {achievements.map((achievement) => (
-            <motion.div 
-              key={achievement.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <Card>
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-primary/10 p-2 rounded-lg">
-                        <achievement.icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <CardTitle className="text-lg">{achievement.title}</CardTitle>
-                    </div>
-                    <div className="text-xl font-bold text-yellow-500">+{achievement.reward}</div>
+                <CardContent>
+                  <div className="flex items-center justify-between text-sm text-muted-foreground mb-2">
+                    <div>{task.completionCriteria}</div>
+                    <div className="font-medium">{task.progress}/{task.target}</div>
                   </div>
-                </CardHeader>
-                <CardContent className="pb-3">
-                  <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
-                  <div className="flex justify-between text-sm mb-1">
-                    <span>Progress</span>
-                    <span>{achievement.progress}/{achievement.total}</span>
-                  </div>
-                  <Progress 
-                    value={(achievement.progress / achievement.total) * 100} 
-                    className="h-2" 
+                  <Progress
+                    value={(task.progress / task.target) * 100}
+                    className="h-2"
                   />
                 </CardContent>
                 <CardFooter>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant={task.isCompleted ? "outline" : "default"}
                     className="w-full"
-                    disabled={achievement.progress < achievement.total}
+                    onClick={() => navigate(task.route)}
+                    disabled={task.isCompleted}
                   >
-                    {achievement.progress >= achievement.total ? 'Claim Reward' : 'In Progress'}
+                    {task.isCompleted ? t('earn.completed') : t('earn.goTo')}
                   </Button>
                 </CardFooter>
               </Card>
             </motion.div>
           ))}
-        </div>
+        </motion.div>
       </div>
     </AppLayout>
   );
