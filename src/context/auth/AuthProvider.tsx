@@ -1,5 +1,6 @@
-import React, { createContext, useState, useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast";
+
+import React, { useState, useEffect, useCallback } from "react";
+import { useToast } from "@/hooks/use-toast"; // Make sure we're importing from the correct location
 import { User, AuthContextType, ProfileUpdateData } from "./types";
 import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
 import { supabase } from "@/integrations/supabase/client";

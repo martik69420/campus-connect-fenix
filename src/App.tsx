@@ -40,8 +40,8 @@ function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <ThemeProvider>
+    <ThemeProvider>
+      <AuthProvider>
         <LanguageProvider>
           <NotificationProvider>
             <PostProvider>
@@ -70,8 +70,8 @@ function App() {
             </PostProvider>
           </NotificationProvider>
         </LanguageProvider>
-      </ThemeProvider>
-    </AuthProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
