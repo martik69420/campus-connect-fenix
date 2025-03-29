@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Camera, Image, UserRound } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { supabase } from '@/integrations/supabase/client';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, {
@@ -78,7 +79,24 @@ const ProfileUpdateForm = () => {
   async function onSubmit(data: ProfileFormValues) {
     setIsSubmitting(true);
     try {
+      // Ensure we save the avatar URL to Supabase
       const success = await updateUserProfile(data);
+      
+      // If we're using Supabase auth, also update the profile in Supabase
+      try {
+        await supabase
+          .from('profiles')
+          .update({
+            display_name: data.displayName,
+            bio: data.bio,
+            school: data.school,
+            avatar_url: data.avatar,
+            location: data.location,
+          })
+          .eq('id', user?.id);
+      } catch (error) {
+        console.error('Failed to update profile in Supabase:', error);
+      }
       
       if (success) {
         toast({

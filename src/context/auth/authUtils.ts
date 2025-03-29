@@ -225,9 +225,26 @@ export async function getCurrentUser() {
 
 export async function updateUserProfile(userId: string, data: ProfileUpdateData): Promise<boolean> {
   try {
-    // Implement profile update logic here
+    if (!userId) return false;
+    
     console.log('Updating profile for user:', userId, 'with data:', data);
-    // In a real implementation, this would update the user's profile in the database
+    
+    // Update the profile in the profiles table
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        display_name: data.displayName,
+        bio: data.bio,
+        school: data.school,
+        avatar_url: data.avatar,
+        location: data.location,
+      })
+      .eq('id', userId);
+    
+    if (error) {
+      console.error('Failed to update profile:', error);
+      return false;
+    }
     
     return true;
   } catch (error) {
