@@ -101,7 +101,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     setReplyText("");
   };
   
-  const handleSubmitReply = (e: React.FormEvent, commentId: string) => {
+  // Fixed: Removed the commentId parameter since handleComment doesn't take it
+  const handleSubmitReply = (e: React.FormEvent) => {
     e.preventDefault();
     if (replyText.trim()) {
       setNewComment(replyText);
@@ -274,7 +275,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                         animate={{ opacity: 1, height: "auto" }}
                         exit={{ opacity: 0, height: 0 }}
                       >
-                        <form onSubmit={(e) => handleSubmitReply(e, comment.id)} className="flex gap-2">
+                        <form onSubmit={handleSubmitReply} className="flex gap-2">
                           <Avatar className="h-6 w-6 flex-shrink-0">
                             <AvatarImage src={user?.avatar} alt={user?.displayName} />
                             <AvatarFallback>
