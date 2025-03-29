@@ -1,4 +1,3 @@
-
 import { AuthChangeEvent, Session, SupabaseClient } from '@supabase/supabase-js';
 import { comparePassword, hashPassword } from '@/lib/password-utils';
 import { Database } from '@/integrations/supabase/types';
@@ -172,47 +171,30 @@ export async function updateOnlineStatus(userId: string, isOnline: boolean): Pro
     
     const currentTime = new Date().toISOString();
     
-    // Check if a status record already exists
-    const { data, error: checkError } = await supabase
-      .from('user_status')
-      .select('id')
-      .eq('user_id', userId)
-      .maybeSingle();
-      
-    if (checkError) {
-      console.error("Error checking user status:", checkError);
-      return false;
+    // Use presence channels instead of direct database updates
+    const channel = supabase.channel('online-users');
+    
+    if (isOnline) {
+      // Track user's presence when online
+      await channel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          await channel.track({
+            user_id: userId,
+            online_at: currentTime,
+          });
+        }
+      });
+    } else {
+      // Remove tracking when offline
+      await channel.untrack();
+      await supabase.removeChannel(channel);
     }
     
-    if (data) {
-      // Update existing status
-      const { error } = await supabase
-        .from('user_status')
-        .update({
-          is_online: isOnline,
-          last_active: currentTime
-        })
-        .eq('user_id', userId);
-        
-      if (error) {
-        console.error("Error updating online status:", error);
-        return false;
-      }
-    } else {
-      // Insert new status
-      const { error } = await supabase
-        .from('user_status')
-        .insert({
-          user_id: userId,
-          is_online: isOnline,
-          last_active: currentTime
-        });
-        
-      if (error) {
-        console.error("Error inserting online status:", error);
-        return false;
-      }
-    }
+    // Also store the status in localStorage as a fallback
+    localStorage.setItem(
+      isOnline ? 'lastActiveTime' : 'lastOfflineTime',
+      currentTime
+    );
     
     return true;
   } catch (error) {

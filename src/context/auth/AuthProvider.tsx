@@ -100,19 +100,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (user) {
-        // Use navigator.sendBeacon for better reliability
+        // Update localStorage directly for better reliability on page unload
+        localStorage.setItem('lastOfflineTime', new Date().toISOString());
+
+        // Try to use sendBeacon if available
         try {
-          // Use appropriate URL format for Supabase REST endpoint
-          const url = `${process.env.SUPABASE_URL || 'https://nqbklvemcxemhgxlnyyq.supabase.co'}/rest/v1/user_status?user_id=eq.${user.id}`;
-          navigator.sendBeacon(
-            url,
-            JSON.stringify({ 
-              is_online: false,
-              last_active: new Date().toISOString()
-            })
-          );
+          const channel = supabase.channel('online-users');
+          channel.untrack();
         } catch (error) {
-          console.error("Error in beacon send:", error);
+          console.error("Error in beforeunload handler:", error);
         }
       }
     };
