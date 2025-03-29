@@ -1,5 +1,5 @@
 
-import { Notification } from '@/context/NotificationContext';
+import type { Notification as AppNotification } from '@/context/NotificationContext';
 import { useToast } from '@/hooks/use-toast';
 
 class PushNotificationService {
@@ -78,7 +78,7 @@ class PushNotificationService {
   /**
    * Process and display an app notification as a push notification
    */
-  public processNotification(notification: Notification): void {
+  public processNotification(notification: AppNotification): void {
     if (!this.isPermissionGranted) {
       return;
     }
@@ -99,7 +99,7 @@ class PushNotificationService {
     });
   }
 
-  private getNotificationTitle(notification: Notification): string {
+  private getNotificationTitle(notification: AppNotification): string {
     const senderName = notification.sender?.name || 'Campus Connect';
     
     switch (notification.type) {
