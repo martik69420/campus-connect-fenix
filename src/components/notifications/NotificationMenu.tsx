@@ -163,7 +163,7 @@ const NotificationMenu = () => {
   );
   
   return (
-    <DropdownMenuContent align="end" className="w-80">
+    <DropdownMenuContent align="end" className="w-80 bg-popover z-50 rounded-md shadow-lg border border-border">
       <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
         <span className="text-lg font-semibold">{t('notifications.all')}</span>
         <div className="flex space-x-1">
