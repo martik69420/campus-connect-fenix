@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -168,7 +167,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           score: score
         });
       
-      // Fix: Change toast call to use single object parameter
       toast({
         title: t('games.newHighScore'),
         description: t('games.scoreUpdated', { score: score.toString() })
@@ -190,7 +188,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Save reward to database
       saveDailyReward(rewardAmount);
       
-      // Fix: Change toast call to use single object parameter
       toast({
         title: t('earn.dailyReward'),
         description: t('earn.coinsAdded', { amount: '25' })
