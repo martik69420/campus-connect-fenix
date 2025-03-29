@@ -151,7 +151,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           score: score
         });
       
-      // Show toast for new high score
+      // Show toast for new high score - FIX: Using object format for toast
       toast({
         title: t('games.newHighScore'),
         description: t('games.scoreUpdated', { score: score.toString() })
@@ -173,7 +173,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Save reward to database
       saveDailyReward(rewardAmount);
       
-      // Show toast for reward
+      // Show toast for reward - FIX: Using object format for toast
       toast({
         title: t('earn.dailyReward'),
         description: t('earn.coinsAdded', { amount: '25' })
