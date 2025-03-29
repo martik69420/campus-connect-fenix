@@ -1,5 +1,4 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Search, Bell, User, Menu, Home, MessageSquare, Users, Gamepad2, Award, BarChart3, LogOut, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
@@ -12,15 +11,50 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
 const TopBar: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   const { unreadCount } = useNotification();
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
+
+  // Fetch user's coin balance from the database
+  useEffect(() => {
+    const fetchUserCoins = async () => {
+      if (user?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('coins')
+            .eq('id', user.id)
+            .single();
+            
+          if (error) {
+            console.error('Error fetching user coins:', error);
+            return;
+          }
+          
+          if (data && data.coins !== undefined && data.coins !== user.coins) {
+            // Only update if there's a difference to avoid infinite loops
+            updateUser({ coins: data.coins });
+          }
+        } catch (error) {
+          console.error('Failed to fetch user coins:', error);
+        }
+      }
+    };
+    
+    fetchUserCoins();
+    
+    // Set up a polling interval to keep coins in sync
+    const interval = setInterval(fetchUserCoins, 60000); // Check every minute
+    
+    return () => clearInterval(interval);
+  }, [user?.id, user?.coins, updateUser]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();

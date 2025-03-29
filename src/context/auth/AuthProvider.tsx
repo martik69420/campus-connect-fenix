@@ -246,7 +246,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Logged out",
-        description: "You have been logged out successfully",
+        description: "You have been logged out successfully"
       });
     }
   };
@@ -261,8 +261,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Add coins to user balance
-  const addCoins = (amount: number, reason?: string) => {
+  // Add coins to user balance and update in database
+  const addCoins = async (amount: number, reason?: string) => {
     if (user) {
       const newCoins = user.coins + amount;
       const updatedUser = { ...user, coins: newCoins };
@@ -271,9 +271,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update localStorage to ensure consistency
       localStorage.setItem("fenixUser", JSON.stringify(updatedUser));
       
+      // Update coins in database
+      try {
+        await supabase
+          .from('profiles')
+          .update({ coins: newCoins })
+          .eq('id', user.id);
+      } catch (error) {
+        console.error("Error updating coins in database:", error);
+      }
+      
       toast({
         title: `+${amount} coins`,
-        description: reason || "Coins added to your balance",
+        description: reason || "Coins added to your balance"
       });
     }
   };

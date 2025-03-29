@@ -8,11 +8,13 @@ import SnakeGameWrapper from '@/components/game/SnakeGameWrapper';
 import TriviaGame from '@/components/game/TriviaGame';
 import TetrisGameWrapper from '@/components/game/TetrisGameWrapper';
 import { useAuth } from '@/context/AuthContext';
+import { useGame } from '@/context/GameContext';
 
 const Games = () => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const { addCoins } = useAuth();
+  const { updateTriviaScore } = useGame();
   const [activeTab, setActiveTab] = useState('snake');
   
   // Create an async wrapper function for TriviaGame's onGameEnd
@@ -20,10 +22,8 @@ const Games = () => {
     // Handle the trivia game end event
     console.log("Trivia game ended with score:", score);
     
-    // Add coins based on score
-    if (score > 0) {
-      addCoins(score);
-    }
+    // Update game progress
+    updateTriviaScore(score);
     
     // Show toast when game ends
     if (score > 0) {

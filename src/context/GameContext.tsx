@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -60,6 +60,73 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [lastRewardClaimed, setLastRewardClaimed] = useState<Date | null>(null);
 
+  // Fetch game progress from database on component mount
+  useEffect(() => {
+    if (user) {
+      fetchGameProgress();
+    }
+  }, [user]);
+
+  // Fetch game progress from database
+  const fetchGameProgress = async () => {
+    if (!user) return;
+    
+    try {
+      // Get game history for current user
+      const { data: gameData, error: gameError } = await supabase
+        .from('game_history')
+        .select('game_type, score')
+        .eq('user_id', user.id)
+        .order('score', { ascending: false });
+        
+      if (gameError) throw gameError;
+      
+      // Update progress state with data from database
+      if (gameData && gameData.length > 0) {
+        const newProgress = { ...progress };
+        
+        // Process trivia games
+        const triviaGames = gameData.filter(game => game.game_type === 'trivia');
+        if (triviaGames.length > 0) {
+          newProgress.trivia.highScore = triviaGames[0].score; // First item is highest score due to ordering
+          newProgress.trivia.gamesPlayed = triviaGames.length;
+        }
+        
+        // Process snake games
+        const snakeGames = gameData.filter(game => game.game_type === 'snake');
+        if (snakeGames.length > 0) {
+          newProgress.snake.highScore = snakeGames[0].score;
+          newProgress.snake.gamesPlayed = snakeGames.length;
+        }
+        
+        // Process tetris games
+        const tetrisGames = gameData.filter(game => game.game_type === 'tetris');
+        if (tetrisGames.length > 0) {
+          newProgress.tetris.highScore = tetrisGames[0].score;
+          newProgress.tetris.gamesPlayed = tetrisGames.length;
+        }
+        
+        setProgress(newProgress);
+      }
+      
+      // Get last reward claimed date
+      const { data: rewardData, error: rewardError } = await supabase
+        .from('daily_rewards')
+        .select('created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+        
+      if (rewardError) throw rewardError;
+      
+      if (rewardData && rewardData.length > 0) {
+        setLastRewardClaimed(new Date(rewardData[0].created_at));
+      }
+    } catch (error) {
+      console.error('Error fetching game progress:', error);
+    }
+  };
+
   // Check if daily reward is available
   const hasDailyRewardAvailable = () => {
     if (!lastRewardClaimed) return true;
@@ -99,8 +166,12 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return false;
     
     if (hasDailyRewardAvailable()) {
-      addCoins(25);
+      const rewardAmount = 25;
+      addCoins(rewardAmount);
       setLastRewardClaimed(new Date());
+      
+      // Save reward to database
+      saveDailyReward(rewardAmount);
       
       // Show toast for reward
       toast({
@@ -112,6 +183,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     return false;
+  };
+
+  // Save daily reward to database
+  const saveDailyReward = async (coinsRewarded: number) => {
+    if (!user) return;
+    
+    try {
+      await supabase
+        .from('daily_rewards')
+        .insert({
+          user_id: user.id,
+          coins_rewarded: coinsRewarded
+        });
+    } catch (error) {
+      console.error('Error saving daily reward:', error);
+    }
   };
 
   // Update trivia game score
