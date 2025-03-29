@@ -1,5 +1,5 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
 import { Heart, SendHorizontal } from "lucide-react";
@@ -10,6 +10,7 @@ import { usePost, Post } from "@/context/PostContext";
 import { useAuth } from "@/context/auth";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { supabase } from '@/integrations/supabase/client';
 
 interface CommentSectionProps {
   post: Post;
@@ -26,6 +27,34 @@ const CommentSection: React.FC<CommentSectionProps> = ({
 }) => {
   const { getUserById, likeComment } = usePost();
   const { user } = useAuth();
+  const [commentUsers, setCommentUsers] = useState<Record<string, any>>({});
+  
+  useEffect(() => {
+    // Fetch user profiles for each comment
+    const fetchCommentUsers = async () => {
+      if (!post.comments || post.comments.length === 0) return;
+      
+      const userIds = [...new Set(post.comments.map(comment => comment.userId))];
+      
+      if (userIds.length === 0) return;
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', userIds);
+        
+      if (!error && data) {
+        const usersMap = data.reduce((acc, user) => {
+          acc[user.id] = user;
+          return acc;
+        }, {} as Record<string, any>);
+        
+        setCommentUsers(usersMap);
+      }
+    };
+    
+    fetchCommentUsers();
+  }, [post.comments]);
   
   const handleLikeComment = (commentId: string) => {
     likeComment(post.id, commentId);
@@ -43,7 +72,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         <Avatar className="h-8 w-8 flex-shrink-0">
           <AvatarImage src={user?.avatar} alt={user?.displayName} />
           <AvatarFallback>
-            {user?.displayName.split(' ').map(n => n[0]).join('')}
+            {user?.displayName ? user.displayName.split(' ').map(n => n[0]).join('') : 'U'}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 relative">
@@ -68,7 +97,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         {post.comments && post.comments.length > 0 ? (
           <div className="space-y-3">
             {post.comments.map((comment) => {
-              const commentUser = getUserById(comment.userId);
+              const commentUser = commentUsers[comment.userId] || getUserById(comment.userId);
               const isLiked = user ? comment.likes.includes(user.id) : false;
               
               return (
@@ -81,19 +110,19 @@ const CommentSection: React.FC<CommentSectionProps> = ({
                   exit="exit"
                   layout
                 >
-                  <Link to={`/profile/${comment.userId}`}>
+                  <Link to={`/profile/${commentUser?.username || comment.userId}`}>
                     <Avatar className="h-8 w-8 flex-shrink-0">
-                      <AvatarImage src={commentUser?.avatar} alt={commentUser?.displayName} />
+                      <AvatarImage src={commentUser?.avatar_url} alt={commentUser?.display_name} />
                       <AvatarFallback>
-                        {commentUser?.displayName.split(' ').map(n => n[0]).join('')}
+                        {commentUser?.display_name ? commentUser.display_name.split(' ').map(n => n[0]).join('') : 'U'}
                       </AvatarFallback>
                     </Avatar>
                   </Link>
                   <div className="flex-1">
                     <div className="bg-secondary rounded-lg p-3">
                       <div className="flex justify-between items-start">
-                        <Link to={`/profile/${comment.userId}`} className="font-medium text-sm hover:underline">
-                          {commentUser?.displayName}
+                        <Link to={`/profile/${commentUser?.username || comment.userId}`} className="font-medium text-sm hover:underline">
+                          {commentUser?.display_name || "User"}
                         </Link>
                         <span className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}

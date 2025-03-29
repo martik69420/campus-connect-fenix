@@ -13,7 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 import CommentSection from "./CommentSection";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from '@/integrations/supabase/client';
 import SavePostButton from "./SavePostButton";
 
 // Helper function to safely format dates

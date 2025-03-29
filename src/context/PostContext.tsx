@@ -72,7 +72,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { data, error } = await supabase
         .from('posts')
         .select(`
-          id, content, created_at, user_id, 
+          id, content, created_at, user_id, images,
           likes:likes(id, user_id),
           comments:comments(id, content, user_id, created_at),
           profiles:profiles(id, username, display_name, avatar_url)
@@ -97,7 +97,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           likes: []
         })),
         shares: 0,
-        images: [],
+        images: post.images || [],
         user: post.profiles ? {
           id: post.profiles.id,
           username: post.profiles.username,
@@ -171,7 +171,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: user.id,
           username: user.username,
           displayName: user.displayName,
-          avatar: user.avatar,
+          avatar: user.avatar || '/placeholder.svg',
           coins: user.coins,
           email: user.email,
           school: user.school,

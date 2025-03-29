@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -99,6 +98,13 @@ const ProfileUpdateForm = () => {
       }
       
       if (success) {
+        // Update local user state with new data to reflect changes immediately
+        if (user) {
+          user.displayName = data.displayName;
+          user.avatar = data.avatar || user.avatar;
+          user.school = data.school;
+        }
+        
         toast({
           title: "Profile updated",
           description: "Your profile has been updated successfully",
