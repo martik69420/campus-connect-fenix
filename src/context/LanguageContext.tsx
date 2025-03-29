@@ -956,6 +956,33 @@ export const translations: Translations = {
     nl: '{{amount}} munten toegevoegd aan je saldo',
     fr: '{{amount}} pièces ajoutées à votre solde',
   },
+
+  // Leaderboard 
+  'leaderboard.topEarners': {
+    en: 'Top Earners',
+    nl: 'Top Verdieners',
+    fr: 'Meilleurs Gagnants',
+  },
+  'leaderboard.triviaMasters': {
+    en: 'Trivia Masters',
+    nl: 'Quiz Masters',
+    fr: 'Maîtres de Quiz',
+  },
+  'leaderboard.snakeChampions': {
+    en: 'Snake Champions',
+    nl: 'Slang Kampioenen',
+    fr: 'Champions du Serpent',
+  },
+  'leaderboard.tetrisChampions': {
+    en: 'Tetris Champions',
+    nl: 'Tetris Kampioenen',
+    fr: 'Champions de Tetris',
+  },
+  'leaderboard.description': {
+    en: 'Check where you stand among other players',
+    nl: 'Bekijk waar je staat tussen andere spelers',
+    fr: 'Vérifiez où vous vous situez parmi les autres joueurs',
+  },
 };
 
 interface LanguageContextProps {
@@ -978,29 +1005,4 @@ const LanguageContext = createContext<LanguageContextProps>({
   ]
 });
 
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>(defaultLanguage);
-  const auth = useAuth();
-  const { user, isAuthenticated } = auth;
-  
-  // Fetch the user's language preference when they authenticate
-  useEffect(() => {
-    const fetchLanguagePreference = async () => {
-      try {
-        // First check localStorage for a language preference
-        const storedLang = localStorage.getItem('preferredLanguage');
-        if (storedLang && ['en', 'nl', 'fr'].includes(storedLang)) {
-          setLanguageState(storedLang as LanguageCode);
-        }
-        
-        // If authenticated, fetch from database
-        if (isAuthenticated && user?.id) {
-          try {
-            const { data, error } = await supabase
-              .from('user_settings')
-              .select('language')
-              .eq('user_id', user.id)
-              .single();
-              
-            if (error) {
-              console.error('Error fetching language preference:', error);
+export function LanguageProvider({ children }: { children: React.React
