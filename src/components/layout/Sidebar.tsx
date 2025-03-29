@@ -1,3 +1,4 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -46,13 +47,13 @@ const NAV_ITEMS = [
 ];
 
 const Sidebar = () => {
-  const { user, signOut, isLoading } = useAuth();
+  const { user, logout, isLoading } = useAuth();
   const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const location = useLocation();
 
   const handleSignOut = async () => {
-    await signOut();
+    await logout();
   };
 
   return (
