@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import * as React from "react";
 import { toast } from "@/hooks/use-toast"; 
 import { User, AuthContextType, ProfileUpdateData } from "./types";
 import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
@@ -7,11 +7,11 @@ import { AuthContext } from "./context";
 
 // Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = React.useState<User | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   // Safely update online status
-  const safeUpdateOnlineStatus = useCallback(async (userId: string, isOnline: boolean) => {
+  const safeUpdateOnlineStatus = React.useCallback(async (userId: string, isOnline: boolean) => {
     if (!userId) return false;
     
     try {
@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Check for existing session on mount
-  useEffect(() => {
+  React.useEffect(() => {
     let isMounted = true;
     
     const checkExistingUser = async () => {
@@ -89,14 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [safeUpdateOnlineStatus]);
 
   // Update localStorage when user changes
-  useEffect(() => {
+  React.useEffect(() => {
     if (user) {
       localStorage.setItem("fenixUser", JSON.stringify(user));
     }
   }, [user]);
 
   // Set up beforeunload event to update online status when user leaves
-  useEffect(() => {
+  React.useEffect(() => {
     const handleBeforeUnload = () => {
       if (user) {
         // Update localStorage directly for better reliability on page unload
