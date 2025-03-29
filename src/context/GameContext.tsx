@@ -123,7 +123,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [gameState, setGameState] = useState<GameState>(initialGameState);
-  const { user, addCoins } = useAuth(); // Changed from updateCoins to addCoins
+  const { user, addCoins } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
   const navigate = useNavigate();
