@@ -22,7 +22,6 @@ import Friends from './pages/Friends';
 import AddFriends from './pages/AddFriends';
 import Earn from './pages/Earn';
 import Leaderboard from './pages/Leaderboard';
-import Table from './pages/Table';
 
 function App() {
   return (
@@ -46,7 +45,6 @@ function App() {
                   <Route path="/add-friends" element={<AddFriends />} />
                   <Route path="/earn" element={<Earn />} />
                   <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="/table" element={<Table />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
                 <Toaster />

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,6 +10,7 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import PostCard from '@/components/post/PostCard';
 import { useAuth } from '@/context/AuthContext';
 import { usePost } from '@/context/PostContext';
+import { formatDistanceToNow } from 'date-fns';
 
 // Helper function to safely parse dates
 const safeParseDate = (dateString: string | null): Date => {
@@ -27,6 +29,23 @@ const safeParseDate = (dateString: string | null): Date => {
   }
 };
 
+// Interface for saved posts
+interface SavedPost {
+  id: string;
+  post_id: string;
+  post: {
+    id: string;
+    content: string;
+    created_at: string;
+    user_id: string;
+    profiles: {
+      username: string;
+      display_name: string;
+      avatar_url?: string;
+    }
+  }
+}
+
 type FriendStatus = 'not_friend' | 'pending_sent' | 'pending_received' | 'friends';
 
 const Profile = () => {
@@ -38,9 +57,11 @@ const Profile = () => {
   
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
+  const [savedPosts, setSavedPosts] = useState<SavedPost[]>([]);
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('not_friend');
   const [loading, setLoading] = useState(true);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [loadingSavedPosts, setLoadingSavedPosts] = useState(false);
   const [loadingFriendAction, setLoadingFriendAction] = useState(false);
   
   useEffect(() => {
@@ -122,6 +143,11 @@ const Profile = () => {
       // Fetch posts for this profile
       if (processedProfile) {
         fetchProfilePosts(processedProfile.id);
+        
+        // If viewing own profile, fetch saved posts
+        if (user.id === processedProfile.id) {
+          fetchSavedPosts();
+        }
       }
       
     } catch (error: any) {
@@ -190,6 +216,49 @@ const Profile = () => {
       setPosts([]);
     } finally {
       setLoadingPosts(false);
+    }
+  };
+  
+  const fetchSavedPosts = async () => {
+    if (!user) return;
+    
+    try {
+      setLoadingSavedPosts(true);
+      
+      const { data, error } = await supabase
+        .from('saved_posts')
+        .select(`
+          id,
+          post_id,
+          post:posts(
+            id,
+            content,
+            created_at,
+            user_id,
+            profiles:profiles(
+              username,
+              display_name,
+              avatar_url
+            )
+          )
+        `)
+        .eq('user_id', user.id);
+        
+      if (error) {
+        throw error;
+      }
+      
+      setSavedPosts(data || []);
+      
+    } catch (error: any) {
+      console.error('Error fetching saved posts:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load saved posts',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingSavedPosts(false);
     }
   };
   
@@ -268,6 +337,39 @@ const Profile = () => {
       fetchProfilePosts(profile.id);
       // Also refresh global posts
       fetchPosts();
+      // Refresh saved posts if on own profile
+      if (user && user.id === profile.id) {
+        fetchSavedPosts();
+      }
+    }
+  };
+  
+  const handleRemoveSavedPost = async (postId: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('saved_posts')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('post_id', postId);
+        
+      if (error) throw error;
+      
+      // Update saved posts list
+      setSavedPosts(prev => prev.filter(post => post.post_id !== postId));
+      
+      toast({
+        title: "Post removed",
+        description: "Post has been removed from your saved posts",
+      });
+    } catch (error: any) {
+      console.error('Error removing saved post:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove saved post',
+        variant: 'destructive',
+      });
     }
   };
   
@@ -352,10 +454,59 @@ const Profile = () => {
           
           {isOwnProfile && (
             <TabsContent value="saved" className="space-y-6">
-              <div className="text-center py-10">
-                <h3 className="text-lg font-medium">Saved posts</h3>
-                <p className="text-muted-foreground mt-1">This feature is coming soon!</p>
-              </div>
+              {loadingSavedPosts ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <div key={i} className="rounded-lg border shadow-sm p-4 space-y-4">
+                    <div className="flex items-center space-x-2">
+                      <Skeleton className="h-12 w-12 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-32" />
+                        <Skeleton className="h-3 w-20" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-24 w-full" />
+                    <div className="flex space-x-4">
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
+                      <Skeleton className="h-8 w-16" />
+                    </div>
+                  </div>
+                ))
+              ) : savedPosts.length > 0 ? (
+                savedPosts.map((savedPost) => {
+                  if (!savedPost.post) return null;
+                  
+                  // Convert to PostCard format
+                  const post = {
+                    id: savedPost.post.id,
+                    userId: savedPost.post.user_id,
+                    content: savedPost.post.content,
+                    createdAt: savedPost.post.created_at,
+                    likes: [],
+                    comments: [],
+                    shares: 0
+                  };
+                  
+                  return (
+                    <div key={savedPost.id} className="relative">
+                      <PostCard post={post} onAction={refreshPosts} />
+                      <button
+                        onClick={() => handleRemoveSavedPost(savedPost.post_id)}
+                        className="absolute top-4 right-4 bg-red-100 hover:bg-red-200 text-red-800 text-xs font-medium px-2.5 py-1 rounded-full transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="text-center py-10">
+                  <h3 className="text-lg font-medium">No saved posts</h3>
+                  <p className="text-muted-foreground mt-1">
+                    You haven't saved any posts yet. Use the bookmark button on posts to save them.
+                  </p>
+                </div>
+              )}
             </TabsContent>
           )}
         </Tabs>
