@@ -1,6 +1,5 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useAuth } from './auth';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 // Define available languages
@@ -639,6 +638,11 @@ export const translations: Translations = {
     nl: 'Offline',
     fr: 'Hors ligne',
   },
+  'profile.away': {
+    en: 'Away',
+    nl: 'Afwezig',
+    fr: 'Absent',
+  },
   'profile.userOnline': {
     en: 'User is online',
     nl: 'Gebruiker is online',
@@ -648,6 +652,11 @@ export const translations: Translations = {
     en: 'User is offline',
     nl: 'Gebruiker is offline',
     fr: 'Utilisateur est hors ligne',
+  },
+  'profile.userAway': {
+    en: 'User is away',
+    nl: 'Gebruiker is afwezig',
+    fr: 'Utilisateur est absent',
   },
   'profile.loading': {
     en: 'Loading status...',
@@ -679,6 +688,11 @@ export const translations: Translations = {
     nl: 'Bio',
     fr: 'Bio',
   },
+  'profile.noBio': {
+    en: 'No bio available',
+    nl: 'Geen bio beschikbaar',
+    fr: 'Aucune bio disponible',
+  },
   'profile.displayName': {
     en: 'Display Name',
     nl: 'Weergavenaam',
@@ -693,6 +707,66 @@ export const translations: Translations = {
     en: 'Location',
     nl: 'Locatie',
     fr: 'Emplacement',
+  },
+  'profile.joined': {
+    en: 'Joined',
+    nl: 'Lid geworden',
+    fr: 'Inscrit',
+  },
+  'profile.aboutMe': {
+    en: 'About Me',
+    nl: 'Over Mij',
+    fr: 'À Propos de Moi',
+  },
+  'profile.readMore': {
+    en: 'Read more',
+    nl: 'Meer lezen',
+    fr: 'Lire plus',
+  },
+  'profile.readLess': {
+    en: 'Read less',
+    nl: 'Minder lezen',
+    fr: 'Lire moins',
+  },
+  'profile.addFriend': {
+    en: 'Add Friend',
+    nl: 'Vriend Toevoegen',
+    fr: 'Ajouter un Ami',
+  },
+  'profile.removeFriend': {
+    en: 'Remove Friend',
+    nl: 'Vriend Verwijderen',
+    fr: 'Supprimer un Ami',
+  },
+  'profile.message': {
+    en: 'Message',
+    nl: 'Bericht',
+    fr: 'Message',
+  },
+  'profile.adding': {
+    en: 'Adding...',
+    nl: 'Toevoegen...',
+    fr: 'Ajout en cours...',
+  },
+  'profile.removing': {
+    en: 'Removing...',
+    nl: 'Verwijderen...',
+    fr: 'Suppression en cours...',
+  },
+  'profile.reportProfile': {
+    en: 'Report Profile',
+    nl: 'Profiel Rapporteren',
+    fr: 'Signaler le Profil',
+  },
+  'profile.blockProfile': {
+    en: 'Block Profile',
+    nl: 'Profiel Blokkeren',
+    fr: 'Bloquer le Profil',
+  },
+  'profile.privacySettings': {
+    en: 'Privacy Settings',
+    nl: 'Privacy-instellingen',
+    fr: 'Paramètres de Confidentialité',
   },
   
   // Coins
@@ -939,179 +1013,4 @@ export const translations: Translations = {
   },
   'earn.alreadyClaimed': {
     en: 'Already Claimed',
-    nl: 'Al Geclaimd',
-    fr: 'Déjà Réclamé',
-  },
-  'earn.comeBackTomorrow': {
-    en: 'Come back tomorrow for your next reward',
-    nl: 'Kom morgen terug voor je volgende beloning',
-    fr: 'Revenez demain pour votre prochaine récompense',
-  },
-  'earn.dailyReward': {
-    en: 'Daily Reward',
-    nl: 'Dagelijkse Beloning',
-    fr: 'Récompense Quotidienne',
-  },
-  'earn.coinsAdded': {
-    en: '{{amount}} coins added to your balance',
-    nl: '{{amount}} munten toegevoegd aan je saldo',
-    fr: '{{amount}} pièces ajoutées à votre solde',
-  },
-
-  // Leaderboard 
-  'leaderboard.topEarners': {
-    en: 'Top Earners',
-    nl: 'Top Verdieners',
-    fr: 'Meilleurs Gagnants',
-  },
-  'leaderboard.triviaMasters': {
-    en: 'Trivia Masters',
-    nl: 'Quiz Masters',
-    fr: 'Maîtres de Quiz',
-  },
-  'leaderboard.snakeChampions': {
-    en: 'Snake Champions',
-    nl: 'Slang Kampioenen',
-    fr: 'Champions du Serpent',
-  },
-  'leaderboard.tetrisChampions': {
-    en: 'Tetris Champions',
-    nl: 'Tetris Kampioenen',
-    fr: 'Champions de Tetris',
-  },
-  'leaderboard.description': {
-    en: 'Check where you stand among other players',
-    nl: 'Bekijk waar je staat tussen andere spelers',
-    fr: 'Vérifiez où vous vous situez parmi les autres joueurs',
-  },
-};
-
-interface LanguageContextProps {
-  language: LanguageCode;
-  setLanguage: (language: LanguageCode) => Promise<void>;
-  t: (key: string) => string;
-  availableLanguages: Array<{ code: LanguageCode, name: string }>;
-}
-
-const defaultLanguage: LanguageCode = 'nl';
-
-const LanguageContext = createContext<LanguageContextProps>({
-  language: defaultLanguage,
-  setLanguage: async () => {},
-  t: () => '',
-  availableLanguages: [
-    { code: 'nl', name: 'Nederlands' },
-    { code: 'en', name: 'English' },
-    { code: 'fr', name: 'Français' }
-  ]
-});
-
-export function LanguageProvider({ children }: { children: React.ReactNode }) {
-  const [language, setLanguageState] = useState<LanguageCode>(defaultLanguage);
-  const auth = useAuth();
-  const { user, isAuthenticated } = auth;
-  
-  // Fetch the user's language preference when they authenticate
-  useEffect(() => {
-    const fetchLanguagePreference = async () => {
-      try {
-        // First check localStorage for a language preference
-        const storedLang = localStorage.getItem('preferredLanguage');
-        if (storedLang && ['en', 'nl', 'fr'].includes(storedLang)) {
-          setLanguageState(storedLang as LanguageCode);
-        }
-        
-        // If authenticated, fetch from database
-        if (isAuthenticated && user?.id) {
-          try {
-            const { data, error } = await supabase
-              .from('user_settings')
-              .select('language')
-              .eq('user_id', user.id)
-              .single();
-              
-            if (error) {
-              console.error('Error fetching language preference:', error);
-              return;
-            }
-            
-            if (data && data.language) {
-              setLanguageState(data.language as LanguageCode);
-              localStorage.setItem('preferredLanguage', data.language);
-            }
-          } catch (err) {
-            console.error('Error in database query:', err);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching language preference:', err);
-      }
-    };
-    
-    fetchLanguagePreference();
-  }, [isAuthenticated, user]);
-  
-  // Function to set language and update user preference
-  const setLanguage = async (newLanguage: LanguageCode) => {
-    setLanguageState(newLanguage);
-    localStorage.setItem('preferredLanguage', newLanguage);
-    
-    // If user is authenticated, update their preference in the database
-    if (isAuthenticated && user?.id) {
-      try {
-        const { error } = await supabase
-          .from('user_settings')
-          .upsert({
-            user_id: user.id,
-            language: newLanguage
-          }, {
-            onConflict: 'user_id'
-          });
-        
-        if (error) {
-          console.error('Error updating language preference:', error);
-        }
-      } catch (err) {
-        console.error('Error saving language preference:', err);
-      }
-    }
-  };
-  
-  // Function to translate a key
-  const t = (key: string, params?: Record<string, string | number>): string => {
-    if (!translations[key]) {
-      console.warn(`Translation key not found: ${key}`);
-      return key;
-    }
-    
-    let translatedText = translations[key][language] || translations[key].en || key;
-    
-    // Replace parameters in the translated text
-    if (params) {
-      Object.entries(params).forEach(([paramKey, paramValue]) => {
-        translatedText = translatedText.replace(`{{${paramKey}}}`, String(paramValue));
-      });
-    }
-    
-    return translatedText;
-  };
-  
-  return (
-    <LanguageContext.Provider value={{ 
-      language, 
-      setLanguage, 
-      t, 
-      availableLanguages: [
-        { code: 'nl', name: 'Nederlands' },
-        { code: 'en', name: 'English' },
-        { code: 'fr', name: 'Français' }
-      ] 
-    }}>
-      {children}
-    </LanguageContext.Provider>
-  );
-}
-
-export const useLanguage = () => useContext(LanguageContext);
-
-export default LanguageContext;
+    nl: 'Al Ge
