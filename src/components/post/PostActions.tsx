@@ -120,8 +120,6 @@ const PostActions: React.FC<PostActionsProps> = ({
             size="sm"
             className="text-muted-foreground hover:text-foreground"
             onClick={onShowComments}
-            aria-label={t('post.showComments')}
-            title={t('post.showComments')}
           >
             <MessageSquare className="h-4 w-4 mr-1" />
             {commentCount > 0 && <span>{commentCount}</span>}

@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
-import { MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -15,10 +15,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client';
 import SavePostButton from "./SavePostButton";
-import OnlineStatus from '../OnlineStatus';
-import { useToast } from "@/hooks/use-toast";
-import { useLanguage } from "@/context/LanguageContext";
-import PostActions from "./PostActions";
 
 // Helper function to safely format dates
 const safeFormatDate = (date: Date | string | null | undefined) => {
@@ -82,10 +78,8 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
-  const { likePost, unlikePost, commentOnPost, sharePost, deletePost } = usePost();
+  const { likePost, commentOnPost, sharePost, deletePost } = usePost();
   const { user } = useAuth();
-  const { toast } = useToast();
-  const { t } = useLanguage();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -111,37 +105,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
   
   const isLiked = user ? post.likes.includes(user.id) : false;
   
-  const handleLikeToggle = () => {
-    if (!user) {
-      toast({
-        title: t('common.signInRequired'),
-        description: t('post.signInToLike'),
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (isLiked) {
-      unlikePost(post.id);
-    } else {
-      likePost(post.id);
-    }
-    
+  const handleLike = () => {
+    likePost(post.id);
     if (onAction) onAction();
   };
   
   const handleComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (newComment.trim() && !isSubmitting) {
-      if (!user) {
-        toast({
-          title: t('common.signInRequired'),
-          description: t('post.signInToComment'),
-          variant: "destructive"
-        });
-        return;
-      }
-      
       setIsSubmitting(true);
       commentOnPost(post.id, newComment);
       setNewComment("");
@@ -159,10 +130,6 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
   const handleDelete = () => {
     deletePost(post.id);
     if (onAction) onAction();
-  };
-
-  const handleShowComments = () => {
-    setShowComments(!showComments);
   };
 
   const cardVariants = {
@@ -183,17 +150,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
         <CardHeader className="p-4 pb-0 flex flex-row items-start justify-between space-y-0">
           <div className="flex items-start gap-3">
             <Link to={postUser ? `/profile/${postUser.username}` : "#"}>
-              <div className="relative">
-                <Avatar className="h-10 w-10 border border-border">
-                  <AvatarImage src={postUser?.avatar_url || "/placeholder.svg"} alt={postUser?.display_name || "User"} />
-                  <AvatarFallback className="bg-muted text-foreground font-medium">
-                    {postUser?.display_name ? postUser.display_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="absolute -bottom-1 -right-1">
-                  <OnlineStatus userId={post.userId} showLabel={false} />
-                </div>
-              </div>
+              <Avatar className="h-10 w-10 border border-border">
+                <AvatarImage src={postUser?.avatar_url || "/placeholder.svg"} alt={postUser?.display_name || "User"} />
+                <AvatarFallback className="bg-muted text-foreground font-medium">
+                  {postUser?.display_name ? postUser.display_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
+                </AvatarFallback>
+              </Avatar>
             </Link>
             <div>
               <div className="flex items-center gap-2">
@@ -219,11 +181,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
             <DropdownMenuContent align="end">
               {user?.id === post.userId && (
                 <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                  {t('common.delete')}
+                  Delete post
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem>{t('post.report')}</DropdownMenuItem>
-              <DropdownMenuItem>{t('post.copyLink')}</DropdownMenuItem>
+              <DropdownMenuItem>Report post</DropdownMenuItem>
+              <DropdownMenuItem>Copy link</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </CardHeader>
@@ -252,18 +214,42 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
         </CardContent>
         
         <CardFooter className="px-4 pt-0 pb-4 flex flex-col">
-          <PostActions
-            postId={post.id}
-            isLiked={isLiked}
-            likeCount={post.likes.length}
-            commentCount={post.comments.length}
-            onLikeToggle={handleLikeToggle}
-            onShowComments={handleShowComments}
-            onShare={handleShare}
-            onDelete={user?.id === post.userId ? handleDelete : undefined}
-            isOwnPost={user?.id === post.userId}
-            postTitle={post.content.substring(0, 30) + (post.content.length > 30 ? '...' : '')}
-          />
+          <div className="flex items-center justify-between w-full">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className={cn(
+                "gap-2 font-normal", 
+                isLiked && "text-fenix-dark"
+              )}
+              onClick={handleLike}
+            >
+              <Heart className={cn("h-4 w-4", isLiked && "fill-current")} />
+              <span>{post.likes.length}</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2 font-normal"
+              onClick={() => setShowComments(!showComments)}
+            >
+              <MessageCircle className="h-4 w-4" />
+              <span>{post.comments.length}</span>
+            </Button>
+            
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="gap-2 font-normal"
+              onClick={handleShare}
+            >
+              <Share2 className="h-4 w-4" />
+              <span>{post.shares}</span>
+            </Button>
+            
+            <SavePostButton postId={post.id} />
+          </div>
           
           {showComments && (
             <>
