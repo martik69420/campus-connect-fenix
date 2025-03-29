@@ -1,8 +1,8 @@
 
 import React, { useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { PostProvider } from './context/PostContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -40,9 +40,9 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <LanguageProvider>
           <NotificationProvider>
             <PostProvider>
               <GameProvider>
@@ -69,9 +69,9 @@ function App() {
               </GameProvider>
             </PostProvider>
           </NotificationProvider>
-        </AuthProvider>
-      </LanguageProvider>
-    </ThemeProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
