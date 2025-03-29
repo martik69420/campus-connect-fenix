@@ -1,7 +1,7 @@
+
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
-import { useTheme } from "@/context/ThemeContext";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -45,7 +45,6 @@ const NAV_ITEMS = [
 
 const Sidebar = () => {
   const { user, logout, isLoading } = useAuth();
-  const { theme, setTheme } = useTheme();
   const { t } = useLanguage();
   const location = useLocation();
 
@@ -54,7 +53,7 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="w-64 flex-shrink-0 border-r border-border flex flex-col">
+    <div className="w-64 flex-shrink-0 border-r border-border flex flex-col h-screen fixed left-0 top-0 overflow-y-auto">
       <div className="p-4">
         <Link to="/" className="font-bold text-lg flex items-center">
           <img src="/logo.svg" alt="Logo" className="mr-2 h-6 w-6" />
@@ -120,18 +119,6 @@ const Sidebar = () => {
             </li>
           ))}
         </ul>
-      </div>
-
-      <Separator />
-
-      <div className="p-4">
-        <Button
-          variant="outline"
-          className="w-full justify-start gap-2"
-          onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-        >
-          {theme === "light" ? "Dark" : "Light"} Mode
-        </Button>
       </div>
     </div>
   );
