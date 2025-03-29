@@ -9,6 +9,7 @@ import { Image as ImageIcon, X, Loader2, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/AuthContext';
 import { usePost } from '@/context/PostContext';
+import { supabase } from '@/integrations/supabase/client';
 
 interface CreatePostFormProps {
   onPostCreated?: () => void;
@@ -17,6 +18,7 @@ interface CreatePostFormProps {
 const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
   const [content, setContent] = useState('');
   const [images, setImages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMentions, setShowMentions] = useState(false);
@@ -29,32 +31,27 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
   
   // Handle image upload
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // This is just a mock for demo purposes
-    // In a real app, you would upload to a storage service
     if (!e.target.files || e.target.files.length === 0) return;
     
     setIsUploading(true);
     
-    // Mock upload delay
-    setTimeout(() => {
-      const newImages = Array.from(e.target.files || []).map(file => {
-        // In a real app, this would be the URL from your storage service
-        return URL.createObjectURL(file);
-      });
-      
-      setImages(prev => [...prev, ...newImages]);
-      setIsUploading(false);
-      
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    }, 1000);
+    const newFiles = Array.from(e.target.files);
+    const newImageUrls = newFiles.map(file => URL.createObjectURL(file));
+    
+    setImageFiles(prev => [...prev, ...newFiles]);
+    setImages(prev => [...prev, ...newImageUrls]);
+    setIsUploading(false);
+    
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
   
   // Remove an image
   const removeImage = (index: number) => {
     setImages(prev => prev.filter((_, i) => i !== index));
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
   
   // Insert mention
@@ -76,8 +73,41 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     }
   };
   
+  // Upload images to Supabase Storage
+  const uploadImages = async (): Promise<string[]> => {
+    if (imageFiles.length === 0) return [];
+    
+    const uploadedUrls: string[] = [];
+    
+    for (const file of imageFiles) {
+      const fileName = `${Date.now()}-${file.name}`;
+      const { data, error } = await supabase.storage
+        .from('post-images')
+        .upload(`public/${fileName}`, file);
+      
+      if (error) {
+        console.error('Error uploading image:', error);
+        toast({
+          title: 'Image upload failed',
+          description: error.message,
+          variant: 'destructive'
+        });
+        continue;
+      }
+      
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('post-images')
+        .getPublicUrl(`public/${fileName}`);
+      
+      uploadedUrls.push(publicUrl);
+    }
+    
+    return uploadedUrls;
+  };
+  
   // Handle post submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!content.trim() && images.length === 0) {
@@ -91,26 +121,41 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     
     setIsSubmitting(true);
     
-    // Create post
-    createPost(content, images.length > 0 ? images : undefined)
-      .then(() => {
-        // Reset form
-        setContent('');
-        setImages([]);
-        
-        toast({
-          title: "Post created!",
-          description: "Your post has been published.",
-        });
-        
-        // Notify parent component
-        if (onPostCreated) {
-          onPostCreated();
-        }
-      })
-      .finally(() => {
-        setIsSubmitting(false);
+    try {
+      // Upload images if any
+      let uploadedImageUrls: string[] = [];
+      
+      if (imageFiles.length > 0) {
+        uploadedImageUrls = await uploadImages();
+      }
+      
+      // Create post
+      await createPost(content, uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined);
+      
+      // Reset form
+      setContent('');
+      setImages([]);
+      setImageFiles([]);
+      
+      toast({
+        title: "Post created!",
+        description: "Your post has been published.",
       });
+      
+      // Notify parent component
+      if (onPostCreated) {
+        onPostCreated();
+      }
+    } catch (error) {
+      console.error('Error creating post:', error);
+      toast({
+        title: "Error creating post",
+        description: "Could not create your post. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
   
   return (
