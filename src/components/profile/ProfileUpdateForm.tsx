@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -78,24 +79,40 @@ const ProfileUpdateForm = () => {
   async function onSubmit(data: ProfileFormValues) {
     setIsSubmitting(true);
     try {
-      // Ensure we save the avatar URL to Supabase
-      const success = await updateUserProfile(data);
+      console.log("Updating profile with data:", data);
       
-      // If we're using Supabase auth, also update the profile in Supabase
+      // First update the user profile in Supabase directly
       try {
-        await supabase
+        const { error } = await supabase
           .from('profiles')
           .update({
             display_name: data.displayName,
             bio: data.bio,
             school: data.school,
-            avatar_url: data.avatar,
+            avatar_url: data.avatar, // This is the key field for avatar
             location: data.location,
           })
           .eq('id', user?.id);
-      } catch (error) {
-        console.error('Failed to update profile in Supabase:', error);
+          
+        if (error) {
+          console.error('Failed to update profile in Supabase:', error);
+          throw error;
+        }
+        
+        console.log("Profile updated in Supabase successfully");
+      } catch (supabaseError) {
+        console.error('Supabase update error:', supabaseError);
+        toast({
+          title: "Database Error",
+          description: "There was an error updating your profile in the database.",
+          variant: "destructive",
+        });
+        setIsSubmitting(false);
+        return;
       }
+      
+      // Then update the local profile state via auth context
+      const success = await updateUserProfile(data);
       
       if (success) {
         // Update local user state with new data to reflect changes immediately
@@ -103,6 +120,8 @@ const ProfileUpdateForm = () => {
           user.displayName = data.displayName;
           user.avatar = data.avatar || user.avatar;
           user.school = data.school;
+          user.bio = data.bio;
+          user.location = data.location;
         }
         
         toast({
@@ -111,9 +130,8 @@ const ProfileUpdateForm = () => {
         });
       } else {
         toast({
-          title: "Failed to update profile",
-          description: "There was an error updating your profile. Please try again.",
-          variant: "destructive",
+          title: "Failed to update profile state",
+          description: "Your profile was saved to the database but there was an error updating your local profile. Try refreshing the page.",
         });
       }
     } catch (error) {

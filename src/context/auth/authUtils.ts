@@ -236,7 +236,7 @@ export async function updateUserProfile(userId: string, data: ProfileUpdateData)
         display_name: data.displayName,
         bio: data.bio,
         school: data.school,
-        avatar_url: data.avatar,
+        avatar_url: data.avatar, // Ensure this matches the column name in the profiles table
         location: data.location,
       })
       .eq('id', userId);

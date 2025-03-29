@@ -187,10 +187,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...prevUser,
             displayName: data.displayName ?? prevUser.displayName,
             avatar: data.avatar ?? prevUser.avatar,
+            bio: data.bio ?? prevUser.bio,
             school: data.school ?? prevUser.school,
             location: data.location ?? prevUser.location
           };
         });
+        
+        // Update localStorage to ensure consistency
+        localStorage.setItem("fenixUser", JSON.stringify({
+          ...user,
+          displayName: data.displayName ?? user.displayName,
+          avatar: data.avatar ?? user.avatar,
+          bio: data.bio ?? user.bio,
+          school: data.school ?? user.school,
+          location: data.location ?? user.location
+        }));
         
         return true;
       }
