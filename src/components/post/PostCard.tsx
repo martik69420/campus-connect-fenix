@@ -146,7 +146,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
       exit="exit"
       layout
     >
-      <Card className="overflow-hidden mb-4 border-border">
+      <Card className="overflow-hidden mb-4 border-border shadow-md hover:shadow-lg transition-shadow duration-300">
         <CardHeader className="p-4 pb-0 flex flex-row items-start justify-between space-y-0">
           <div className="flex items-start gap-3">
             <Link to={postUser ? `/profile/${postUser.username}` : "#"}>
@@ -218,24 +218,24 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
         </CardContent>
         
         <CardFooter className="px-4 pt-0 pb-4 flex flex-col">
-          <div className="flex items-center justify-between w-full">
+          <div className="flex items-center justify-between w-full mb-2 bg-secondary/30 rounded-full px-2 py-1">
             <Button 
               variant="ghost" 
               size="sm" 
               className={cn(
-                "gap-2 font-normal", 
-                isLiked && "text-fenix-dark"
+                "gap-2 font-normal rounded-full transition-colors", 
+                isLiked ? "text-fenix-dark hover:bg-fenix-dark/10" : "hover:bg-secondary"
               )}
               onClick={handleLike}
             >
-              <Heart className={cn("h-4 w-4", isLiked && "fill-current")} />
+              <Heart className={cn("h-4 w-4", isLiked && "fill-current text-fenix-dark")} />
               <span>{post.likes.length}</span>
             </Button>
             
             <Button 
               variant="ghost" 
               size="sm" 
-              className="gap-2 font-normal"
+              className="gap-2 font-normal rounded-full transition-colors hover:bg-secondary"
               onClick={() => setShowComments(!showComments)}
             >
               <MessageCircle className="h-4 w-4" />
@@ -245,7 +245,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
             <Button 
               variant="ghost" 
               size="sm" 
-              className="gap-2 font-normal"
+              className="gap-2 font-normal rounded-full transition-colors hover:bg-secondary"
               onClick={handleShare}
             >
               <Share2 className="h-4 w-4" />
@@ -256,15 +256,23 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
           </div>
           
           {showComments && (
-            <>
-              <Separator className="my-3" />
-              <CommentSection 
-                post={post} 
-                newComment={newComment}
-                setNewComment={setNewComment}
-                handleComment={handleComment}
-              />
-            </>
+            <AnimatePresence>
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="w-full"
+              >
+                <Separator className="my-3" />
+                <CommentSection 
+                  post={post} 
+                  newComment={newComment}
+                  setNewComment={setNewComment}
+                  handleComment={handleComment}
+                />
+              </motion.div>
+            </AnimatePresence>
           )}
         </CardFooter>
       </Card>
