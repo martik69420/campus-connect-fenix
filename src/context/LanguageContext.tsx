@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -1014,4 +1015,118 @@ export const translations: Translations = {
   
   'earn.alreadyClaimed': {
     en: 'Already Claimed',
-    nl: 'Al Geclaimed
+    nl: 'Al Geclaimed',
+    fr: 'Déjà Réclamé',
+  },
+};
+
+// Create language context
+type LanguageContextType = {
+  language: LanguageCode;
+  setLanguage: (language: LanguageCode) => void;
+  t: (key: string, variables?: Record<string, string | number>) => string;
+};
+
+const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
+
+export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const [language, setLanguageState] = useState<LanguageCode>('en');
+  const [loading, setLoading] = useState(true);
+
+  // Load user's language preference from Supabase
+  useEffect(() => {
+    const loadLanguagePreference = async () => {
+      setLoading(true);
+      if (user) {
+        try {
+          const { data, error } = await supabase
+            .from('profiles')
+            .select('language_preference')
+            .eq('id', user.id)
+            .single();
+
+          if (error) {
+            console.error('Error loading language preference:', error);
+          } else if (data && data.language_preference) {
+            setLanguageState(data.language_preference as LanguageCode);
+          }
+        } catch (error) {
+          console.error('Failed to load language preference:', error);
+        }
+      }
+      setLoading(false);
+    };
+
+    loadLanguagePreference();
+  }, [user]);
+
+  // Update user's language preference in Supabase
+  const setLanguage = async (newLanguage: LanguageCode) => {
+    setLanguageState(newLanguage);
+    
+    if (user) {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ language_preference: newLanguage })
+          .eq('id', user.id);
+
+        if (error) {
+          console.error('Error updating language preference:', error);
+        }
+      } catch (error) {
+        console.error('Failed to update language preference:', error);
+      }
+    }
+    
+    // Store in localStorage for non-authenticated users or as a fallback
+    localStorage.setItem('languagePreference', newLanguage);
+  };
+
+  // Translation function
+  const t = (key: string, variables?: Record<string, string | number>): string => {
+    // Check if the key exists in our translations
+    if (!translations[key]) {
+      console.warn(`Translation key not found: ${key}`);
+      return key;
+    }
+
+    // Get the translated string for the current language
+    let translatedText = translations[key][language] || translations[key].en;
+
+    // Replace variables if provided
+    if (variables) {
+      Object.entries(variables).forEach(([varKey, varValue]) => {
+        translatedText = translatedText.replace(
+          new RegExp(`{{${varKey}}}`, 'g'), 
+          String(varValue)
+        );
+      });
+    }
+
+    return translatedText;
+  };
+
+  // Context value
+  const contextValue: LanguageContextType = {
+    language,
+    setLanguage,
+    t,
+  };
+
+  return (
+    <LanguageContext.Provider value={contextValue}>
+      {!loading && children}
+    </LanguageContext.Provider>
+  );
+};
+
+// Custom hook for using the language context
+export const useLanguage = (): LanguageContextType => {
+  const context = useContext(LanguageContext);
+  if (!context) {
+    throw new Error('useLanguage must be used within a LanguageProvider');
+  }
+  return context;
+};
