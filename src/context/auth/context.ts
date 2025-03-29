@@ -1,9 +1,9 @@
 
-import React from 'react';
+import { createContext } from 'react';
 import type { AuthContextType } from './types';
 
 // Create context with a default value
-export const AuthContext = React.createContext<AuthContextType>({
+export const AuthContext = createContext<AuthContextType>({
   user: null,
   isAuthenticated: false,
   isLoading: true,
