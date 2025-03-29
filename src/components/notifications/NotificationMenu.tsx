@@ -43,21 +43,17 @@ const NotificationMenu = () => {
     
     markAsRead(notification.id);
     
-    // Navigate based on notification type and url
-    if (notification.url) {
-      navigate(notification.url);
-    } else if (notification.relatedId && notification.type === 'like') {
-      navigate(`/posts/${notification.relatedId}`);
-    } else if (notification.relatedId && notification.type === 'comment') {
-      navigate(`/posts/${notification.relatedId}`);
-    } else if (notification.relatedId && notification.type === 'friend') {
-      navigate(`/profile/${notification.relatedId}`);
-    } else if (notification.type === 'message') {
-      navigate('/messages');
-    }
+    // Instead of navigating, we'll just mark as read and show a toast
+    toast({
+      title: notification.type.charAt(0).toUpperCase() + notification.type.slice(1),
+      description: notification.message,
+    });
   };
   
-  const handleNotificationPermission = async () => {
+  const handleNotificationPermission = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
     const granted = await requestNotificationPermission();
     if (granted) {
       toast({
@@ -166,7 +162,7 @@ const NotificationMenu = () => {
   );
   
   return (
-    <DropdownMenuContent align="end" className="w-80 bg-popover z-50 rounded-md shadow-lg border border-border">
+    <DropdownMenuContent align="end" className="w-80 bg-popover z-50 rounded-md shadow-lg border border-border" onCloseAutoFocus={(e) => e.preventDefault()}>
       <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
         <span className="text-lg font-semibold">{t('notifications.all')}</span>
         <div className="flex space-x-1">
@@ -182,7 +178,16 @@ const NotificationMenu = () => {
             </Button>
           )}
           {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                markAllAsRead();
+              }} 
+              className="h-8 text-xs"
+            >
               <Check className="h-3 w-3 mr-1" />
               {t('notifications.markAllRead')}
             </Button>
