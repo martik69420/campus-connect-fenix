@@ -1,7 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/AuthContext';
@@ -41,10 +43,14 @@ interface ReportModalProps {
   targetName?: string;
 }
 
-interface ReportFormValues {
-  reason: ReportReason;
-  details: string;
-}
+const reportFormSchema = z.object({
+  reason: z.enum(['spam', 'inappropriate', 'harassment', 'hate_speech', 'violence', 'other'], {
+    required_error: "Please select a reason",
+  }),
+  details: z.string().max(500, "Details cannot exceed 500 characters"),
+});
+
+type ReportFormValues = z.infer<typeof reportFormSchema>;
 
 const reasonOptions: { value: ReportReason; label: string }[] = [
   { value: 'spam', label: 'Spam' },
@@ -64,8 +70,10 @@ const ReportModal: React.FC<ReportModalProps> = ({
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const form = useForm<ReportFormValues>({
+    resolver: zodResolver(reportFormSchema),
     defaultValues: {
       reason: 'inappropriate',
       details: ''
@@ -83,6 +91,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
     }
     
     try {
+      setIsSubmitting(true);
+      
       if (type === 'user') {
         const { error } = await supabase
           .from('user_reports')
@@ -125,6 +135,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
   
@@ -193,8 +205,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
-              <Button type="submit">
-                Submit Report
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? "Submitting..." : "Submit Report"}
               </Button>
             </DialogFooter>
           </form>

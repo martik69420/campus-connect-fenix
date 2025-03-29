@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, ShieldAlert, UserX } from "lucide-react";
@@ -15,6 +16,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import OnlineStatus from "@/components/OnlineStatus";
+import ReportModal from "@/components/ReportModal";
 import type { User } from "@/context/AuthContext";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
@@ -41,6 +43,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const navigate = useNavigate();
   const [showFullBio, setShowFullBio] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   const toggleBio = () => {
     setShowFullBio(!showFullBio);
@@ -55,7 +58,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
   const showReadMore = user?.bio && user.bio.length > 150;
 
   const handleReportProfile = () => {
-    console.log('Report profile clicked');
+    setShowReportModal(true);
     setIsDropdownOpen(false);
   };
 
@@ -223,6 +226,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           </div>
         )}
       </div>
+
+      {/* Report Modal */}
+      {showReportModal && user && (
+        <ReportModal
+          open={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          type="user"
+          targetId={user.id}
+          targetName={user.displayName || user.username}
+        />
+      )}
     </motion.div>
   );
 };
