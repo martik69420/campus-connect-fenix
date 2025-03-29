@@ -22,6 +22,7 @@ const TopBar: React.FC = () => {
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
 
   // Fetch user's coin balance from the database
   useEffect(() => {
@@ -163,7 +164,7 @@ const TopBar: React.FC = () => {
           </Button>
 
           {/* Notifications Dropdown */}
-          <DropdownMenu>
+          <DropdownMenu open={isNotificationOpen} onOpenChange={setIsNotificationOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
