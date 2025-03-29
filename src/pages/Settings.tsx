@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -15,6 +14,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import { BellRing, Globe, Palette, Shield, User2, Moon, Sun, LogOut } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import ProfileUpdateForm from '@/components/profile/ProfileUpdateForm';
 
 const Settings = () => {
   const { user, logout, isAuthenticated } = useAuth();
@@ -113,7 +113,7 @@ const Settings = () => {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 mb-6">
                     <Avatar className="h-16 w-16">
                       <AvatarImage src={user.avatar || ""} alt={user.displayName || ""} />
                       <AvatarFallback className="text-lg">
@@ -126,9 +126,7 @@ const Settings = () => {
                     </div>
                   </div>
 
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    {t('settings.updateProfile')}
-                  </Button>
+                  <ProfileUpdateForm />
                 </CardContent>
               </Card>
 
