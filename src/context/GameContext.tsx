@@ -99,7 +99,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return false;
     
     if (hasDailyRewardAvailable()) {
-      addCoins(25, "Daily login reward");
+      addCoins(25);
       setLastRewardClaimed(new Date());
       
       // Show toast for reward
@@ -123,11 +123,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (newHighScore) {
         // Award coins for new high score
-        addCoins(score * 2, "New trivia high score");
+        addCoins(score * 2);
         saveGameScore('trivia', score);
       } else {
         // Award some coins for playing
-        addCoins(Math.floor(score / 2), "Trivia game played");
+        addCoins(Math.floor(score / 2));
       }
       
       return {
@@ -150,11 +150,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (newHighScore) {
         // Award coins for new high score
-        addCoins(score * 2, "New snake high score");
+        addCoins(score * 2);
         saveGameScore('snake', score);
       } else {
         // Award some coins for playing
-        addCoins(Math.floor(score / 2), "Snake game played");
+        addCoins(Math.floor(score / 2));
       }
       
       return {
@@ -177,11 +177,11 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (newHighScore) {
         // Award coins for new high score
-        addCoins(score * 2, "New tetris high score");
+        addCoins(score * 2);
         saveGameScore('tetris', score);
       } else {
         // Award some coins for playing
-        addCoins(Math.floor(score / 2), "Tetris game played");
+        addCoins(Math.floor(score / 2));
       }
       
       return {

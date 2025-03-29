@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -147,7 +146,7 @@ const Earn = () => {
         if (claimed) {
           // Add streak bonus separately if streak > 1
           if (newStreak > 1 && streakBonus > 0) {
-            addCoins(streakBonus, `Daily streak bonus (${newStreak} days)`);
+            addCoins(streakBonus);
             
             toast({
               title: t('earn.streakBonus'),
