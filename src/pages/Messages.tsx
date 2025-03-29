@@ -10,7 +10,7 @@ import MessageInput from '@/components/messaging/MessageInput';
 import MessagesList from '@/components/messaging/MessagesList';
 import ChatHeader from '@/components/messaging/ChatHeader';
 import ContactsList from '@/components/messaging/ContactsList';
-import { Send } from 'lucide-react';
+import { Send, MessageSquare } from 'lucide-react';
 
 interface Message {
   id: string;
