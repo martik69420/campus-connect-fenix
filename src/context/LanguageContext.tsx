@@ -12,6 +12,13 @@ export type Translations = {
   };
 };
 
+// Language metadata
+export const availableLanguages = [
+  { code: 'en', name: 'English' },
+  { code: 'nl', name: 'Nederlands' },
+  { code: 'fr', name: 'Français' }
+];
+
 // Define translations
 export const translations: Translations = {
   // Common
@@ -1025,6 +1032,7 @@ type LanguageContextType = {
   language: LanguageCode;
   setLanguage: (language: LanguageCode) => void;
   t: (key: string, variables?: Record<string, string | number>) => string;
+  availableLanguages: Array<{ code: LanguageCode; name: string }>;
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -1042,14 +1050,14 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         try {
           const { data, error } = await supabase
             .from('profiles')
-            .select('language_preference')
+            .select('language')
             .eq('id', user.id)
             .single();
 
           if (error) {
             console.error('Error loading language preference:', error);
-          } else if (data && data.language_preference) {
-            setLanguageState(data.language_preference as LanguageCode);
+          } else if (data && data.language) {
+            setLanguageState(data.language as LanguageCode);
           }
         } catch (error) {
           console.error('Failed to load language preference:', error);
@@ -1069,7 +1077,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       try {
         const { error } = await supabase
           .from('profiles')
-          .update({ language_preference: newLanguage })
+          .update({ language: newLanguage })
           .eq('id', user.id);
 
         if (error) {
@@ -1113,6 +1121,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     language,
     setLanguage,
     t,
+    availableLanguages,
   };
 
   return (
