@@ -130,9 +130,10 @@ const ReportModal: React.FC<ReportModalProps> = ({
       form.reset();
       onClose();
     } catch (error: any) {
+      console.error("Error submitting report:", error);
       toast({
         title: "Failed to submit report",
-        description: error.message,
+        description: error.message || "An unexpected error occurred",
         variant: "destructive"
       });
     } finally {

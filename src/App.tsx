@@ -25,9 +25,9 @@ import Leaderboard from './pages/Leaderboard';
 
 function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <LanguageProvider>
+    <ThemeProvider>
+      <LanguageProvider>
+        <AuthProvider>
           <PostProvider>
             <NotificationProvider>
               <GameProvider>
@@ -51,9 +51,9 @@ function App() {
               </GameProvider>
             </NotificationProvider>
           </PostProvider>
-        </LanguageProvider>
-      </ThemeProvider>
-    </AuthProvider>
+        </AuthProvider>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

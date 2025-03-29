@@ -14,6 +14,16 @@ import {
 } from '@/components/ui/dropdown-menu';
 import SavePostButton from './SavePostButton';
 import ReportModal from '@/components/ReportModal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface PostActionsProps {
   postId: string;
@@ -46,9 +56,47 @@ const PostActions: React.FC<PostActionsProps> = ({
   const { toast } = useToast();
   const { t } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleReport = () => {
+    if (!user) {
+      toast({
+        title: t('common.signInRequired'),
+        description: t('post.signInToReport'),
+        variant: "destructive"
+      });
+      return;
+    }
     setShowReportModal(true);
+  };
+
+  const handleDelete = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = () => {
+    if (onDelete) {
+      onDelete();
+    }
+    setShowDeleteConfirm(false);
+  };
+
+  const handleCopyLink = () => {
+    try {
+      const postUrl = `${window.location.origin}/post/${postId}`;
+      navigator.clipboard.writeText(postUrl);
+      toast({
+        title: t('post.linkCopied'),
+        description: t('post.linkCopiedDesc'),
+      });
+    } catch (error) {
+      console.error('Failed to copy link:', error);
+      toast({
+        title: t('common.error'),
+        description: t('post.linkCopyFailed'),
+        variant: "destructive"
+      });
+    }
   };
 
   return (
@@ -98,23 +146,16 @@ const PostActions: React.FC<PostActionsProps> = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {isOwnPost && onDelete ? (
-                <DropdownMenuItem onClick={onDelete} className="text-destructive focus:text-destructive">
+                <DropdownMenuItem onClick={handleDelete} className="text-destructive focus:text-destructive">
                   {t('common.delete')}
                 </DropdownMenuItem>
               ) : (
-                <>
-                  <DropdownMenuItem onClick={handleReport}>
-                    {t('post.report')}
-                  </DropdownMenuItem>
-                </>
+                <DropdownMenuItem onClick={handleReport}>
+                  {t('post.report')}
+                </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={() => {
-                navigator.clipboard.writeText(window.location.origin + '/post/' + postId);
-                toast({
-                  title: t('post.linkCopied'),
-                  description: t('post.linkCopiedDesc'),
-                });
-              }}>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleCopyLink}>
                 {t('post.copyLink')}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -132,6 +173,27 @@ const PostActions: React.FC<PostActionsProps> = ({
           targetName={postTitle}
         />
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('post.confirmDelete')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('post.confirmDeleteDesc')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {t('common.delete')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
