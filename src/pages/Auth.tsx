@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { GraduationCap, Users } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,6 @@ import { Label } from '@/components/ui/label';
 
 const Auth = () => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const { isAuthenticated, isLoading, user } = useAuth();
   
@@ -100,7 +100,6 @@ interface FormProps {
 
 const LoginForm = ({ loading, setLoading }: FormProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -126,6 +125,12 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
         toast({
           title: "Login successful",
           description: "Welcome back!",
+        });
+      } else {
+        toast({
+          title: "Login failed",
+          description: "Invalid username or password",
+          variant: "destructive",
         });
       }
     } catch (error: any) {
@@ -181,7 +186,6 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
 
 const RegisterForm = ({ loading, setLoading }: FormProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
   const { register } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -220,6 +224,12 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
         toast({
           title: "Registration successful",
           description: "Welcome to Campus Fenix!",
+        });
+      } else {
+        toast({
+          title: "Registration failed",
+          description: "Something went wrong. Please try again.",
+          variant: "destructive",
         });
       }
     } catch (error: any) {

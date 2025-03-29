@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect, useCallback } from "react";
-import { useToast } from "@/hooks/use-toast"; // Make sure we're importing from the correct location
+import { toast } from "@/hooks/use-toast"; // Import toast function instead of useToast hook
 import { User, AuthContextType, ProfileUpdateData } from "./types";
 import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,7 +9,6 @@ import { AuthContext } from "./context";
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
 
   // Safely update online status
   const safeUpdateOnlineStatus = useCallback(async (userId: string, isOnline: boolean) => {
