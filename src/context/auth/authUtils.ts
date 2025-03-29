@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -267,6 +266,106 @@ export const updateOnlineStatus = async (userId: string, isOnline: boolean): Pro
     return true;
   } catch (error) {
     console.error("Error in updateOnlineStatus:", error);
+    return false;
+  }
+};
+
+export const blockUser = async (userId: string, blockedUserId: string): Promise<boolean> => {
+  try {
+    // Check if block already exists
+    const { data: existingBlock, error: checkError } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('blocked_user_id', blockedUserId)
+      .single();
+      
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error("Error checking existing block:", checkError);
+      return false;
+    }
+    
+    // If block already exists, return success
+    if (existingBlock) {
+      return true;
+    }
+    
+    // Create new block
+    const { error } = await supabase
+      .from('user_blocks')
+      .insert({
+        user_id: userId,
+        blocked_user_id: blockedUserId
+      });
+      
+    if (error) {
+      console.error("Error blocking user:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in blockUser:", error);
+    return false;
+  }
+};
+
+export const unblockUser = async (userId: string, blockedUserId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('user_blocks')
+      .delete()
+      .eq('user_id', userId)
+      .eq('blocked_user_id', blockedUserId);
+      
+    if (error) {
+      console.error("Error unblocking user:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in unblockUser:", error);
+    return false;
+  }
+};
+
+export const getBlockedUsers = async (userId: string): Promise<string[]> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_blocks')
+      .select('blocked_user_id')
+      .eq('user_id', userId);
+      
+    if (error) {
+      console.error("Error getting blocked users:", error);
+      return [];
+    }
+    
+    return data.map(block => block.blocked_user_id);
+  } catch (error) {
+    console.error("Error in getBlockedUsers:", error);
+    return [];
+  }
+};
+
+export const isUserBlocked = async (userId: string, otherUserId: string): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('user_blocks')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('blocked_user_id', otherUserId)
+      .single();
+      
+    if (error && error.code !== 'PGRST116') {
+      console.error("Error checking if user is blocked:", error);
+      return false;
+    }
+    
+    return !!data;
+  } catch (error) {
+    console.error("Error in isUserBlocked:", error);
     return false;
   }
 };
