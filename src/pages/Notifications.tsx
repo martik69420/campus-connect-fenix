@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -7,7 +6,8 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, Check, CoinsIcon, Heart, MessageSquare, RefreshCw, UserPlus } from 'lucide-react';
+import { Bell, Check, CoinsIcon, Heart, MessageSquare, RefreshCw, UserPlus, BellOff } from 'lucide-react';
+import { useNotification } from '@/context/NotificationContext';
 
 type Notification = {
   id: string;
@@ -21,6 +21,7 @@ type Notification = {
 const Notifications = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { requestNotificationPermission, isNotificationPermissionGranted } = useNotification();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -203,12 +204,39 @@ const Notifications = () => {
     }
   };
 
+  const handleEnablePushNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      toast({
+        title: "Push notifications enabled",
+        description: "You will now receive notifications when the app is in the background",
+      });
+    } else {
+      toast({
+        title: "Permission denied",
+        description: "Please enable notifications in your browser settings",
+        variant: "destructive"
+      });
+    }
+  };
+
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-3xl font-bold">Notifications</h1>
           <div className="flex space-x-2">
+            {!isNotificationPermissionGranted && 'Notification' in window && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleEnablePushNotifications}
+                className="flex items-center gap-1"
+              >
+                <Bell className="h-4 w-4" />
+                Enable Push
+              </Button>
+            )}
             <Button 
               variant="outline" 
               size="sm"
@@ -228,6 +256,15 @@ const Notifications = () => {
             </Button>
           </div>
         </div>
+
+        {!('Notification' in window) && (
+          <div className="mb-4 p-4 border rounded-lg bg-muted flex items-center">
+            <BellOff className="h-5 w-5 mr-2 text-muted-foreground" />
+            <p className="text-sm text-muted-foreground">
+              Push notifications are not supported in your browser
+            </p>
+          </div>
+        )}
 
         {loading ? (
           <div className="space-y-4">

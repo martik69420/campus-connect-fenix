@@ -17,10 +17,20 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNotification } from '@/context/NotificationContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useToast } from '@/hooks/use-toast';
 
 const NotificationMenu = () => {
   const navigate = useNavigate();
-  const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotification();
+  const { toast } = useToast();
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    fetchNotifications, 
+    requestNotificationPermission,
+    isNotificationPermissionGranted
+  } = useNotification();
   const { t } = useLanguage();
   
   // Refresh notifications when menu opens
@@ -42,6 +52,22 @@ const NotificationMenu = () => {
       navigate(`/profile/${notification.relatedId}`);
     } else if (notification.type === 'message') {
       navigate('/messages');
+    }
+  };
+  
+  const handleNotificationPermission = async () => {
+    const granted = await requestNotificationPermission();
+    if (granted) {
+      toast({
+        title: "Notifications enabled",
+        description: "You will now receive push notifications",
+      });
+    } else {
+      toast({
+        title: "Notification permission denied",
+        description: "Enable notifications in your browser settings to receive alerts",
+        variant: "destructive"
+      });
     }
   };
   
@@ -140,12 +166,25 @@ const NotificationMenu = () => {
     <DropdownMenuContent align="end" className="w-80">
       <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
         <span className="text-lg font-semibold">{t('notifications.all')}</span>
-        {unreadCount > 0 && (
-          <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
-            <Check className="h-3 w-3 mr-1" />
-            {t('notifications.markAllRead')}
-          </Button>
-        )}
+        <div className="flex space-x-1">
+          {!isNotificationPermissionGranted && 'Notification' in window && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleNotificationPermission} 
+              className="h-8 text-xs"
+              title="Enable push notifications"
+            >
+              <Bell className="h-3 w-3 mr-1" />
+            </Button>
+          )}
+          {unreadCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
+              <Check className="h-3 w-3 mr-1" />
+              {t('notifications.markAllRead')}
+            </Button>
+          )}
+        </div>
       </DropdownMenuLabel>
       
       <ScrollArea className="h-[400px]">

@@ -9,6 +9,7 @@ import React, {
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useNavigate } from 'react-router-dom';
+import PushNotificationService from '@/services/PushNotificationService';
 
 // Define the structure of a notification
 export interface Notification {
@@ -41,6 +42,8 @@ export interface NotificationContextProps {
   toggleLikeNotifications: () => void;
   toggleFriendNotifications: () => void;
   toggleSystemNotifications: () => void;
+  requestNotificationPermission: () => Promise<boolean>;
+  isNotificationPermissionGranted: boolean;
 }
 
 // Create the context with a default value
@@ -58,11 +61,29 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [showLikeNotifications, setShowLikeNotifications] = useState(true);
   const [showFriendNotifications, setShowFriendNotifications] = useState(true);
   const [showSystemNotifications, setShowSystemNotifications] = useState(true);
+  const [isNotificationPermissionGranted, setIsNotificationPermissionGranted] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
+  
+  const pushNotificationService = PushNotificationService.getInstance();
 
   // Calculate the number of unread notifications
   const unreadCount = notifications.filter((notification) => !notification.read).length;
+
+  // Check notification permission on component mount
+  useEffect(() => {
+    // Only check if browser supports Notification API
+    if ('Notification' in window) {
+      setIsNotificationPermissionGranted(Notification.permission === 'granted');
+    }
+  }, []);
+
+  // Request permission for push notifications
+  const requestNotificationPermission = async () => {
+    const granted = await pushNotificationService.requestPermission();
+    setIsNotificationPermissionGranted(granted);
+    return granted;
+  };
 
   // Function to fetch notifications (replace with your actual data fetching logic)
   const fetchNotifications = useCallback(async () => {
@@ -166,6 +187,31 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => clearInterval(intervalId);
   }, [fetchNotifications]);
 
+  // Process new notifications for push notification
+  useEffect(() => {
+    // Find unread notifications and show push notification for them
+    const unreadNotifications = notifications.filter(notification => !notification.read);
+    
+    if (unreadNotifications.length > 0) {
+      // Only show the most recent unread notification as a push notification
+      const latestNotification = unreadNotifications[0];
+      
+      // Process notification based on its type and user's preferences
+      const shouldShow = 
+        (latestNotification.type === 'message' && showMessageNotifications) || 
+        (latestNotification.type === 'like' && showLikeNotifications) || 
+        (latestNotification.type === 'friend' && showFriendNotifications) || 
+        (latestNotification.type === 'system' && showSystemNotifications) ||
+        latestNotification.type === 'comment' || 
+        latestNotification.type === 'mention' || 
+        latestNotification.type === 'coin';
+        
+      if (shouldShow) {
+        pushNotificationService.processNotification(latestNotification);
+      }
+    }
+  }, [notifications, showMessageNotifications, showLikeNotifications, showFriendNotifications, showSystemNotifications]);
+
   // Function to mark a notification as read
   const markAsRead = async (id: string) => {
     setNotifications((prevNotifications) =>
@@ -231,6 +277,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     toggleLikeNotifications,
     toggleFriendNotifications,
     toggleSystemNotifications,
+    requestNotificationPermission,
+    isNotificationPermissionGranted
   };
 
   return (

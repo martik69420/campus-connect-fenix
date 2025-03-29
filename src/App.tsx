@@ -1,59 +1,77 @@
 
-import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { AuthProvider } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
+import { PostProvider } from './context/PostContext';
+import { NotificationProvider } from './context/NotificationContext';
+import { GameProvider } from './context/GameContext';
+import { Toaster } from '@/components/ui/toaster';
+import NotificationPermissionBanner from '@/components/notifications/NotificationPermissionBanner';
+
 import Auth from './pages/Auth';
 import Index from './pages/Index';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
-import Settings from './pages/Settings';
 import Games from './pages/Games';
 import Snake from './pages/Snake';
-import Search from './pages/Search';
-import NotFound from './pages/NotFound';
-import { Toaster } from './components/ui/toaster';
-import { AuthProvider } from './context/AuthContext';
-import { PostProvider } from './context/PostContext';
-import { NotificationProvider } from './context/NotificationContext';
-import { LanguageProvider } from './context/LanguageContext';
-import { GameProvider } from './context/GameContext';
-import { ThemeProvider } from './context/ThemeContext';
+import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
+import Leaderboard from './pages/Leaderboard';
 import Friends from './pages/Friends';
 import AddFriends from './pages/AddFriends';
 import Earn from './pages/Earn';
-import Leaderboard from './pages/Leaderboard';
+import Search from './pages/Search';
+import NotFound from './pages/NotFound';
 
 function App() {
+  useEffect(() => {
+    // Register service worker for PWA support on load
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js').then(registration => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }).catch(error => {
+          console.log('ServiceWorker registration failed: ', error);
+        });
+      });
+    }
+  }, []);
+
   return (
-    <AuthProvider>
+    <ThemeProvider>
       <LanguageProvider>
-        <ThemeProvider>
-          <PostProvider>
-            <NotificationProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <PostProvider>
               <GameProvider>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/profile/:username" element={<Profile />} />
-                  <Route path="/messages" element={<Messages />} />
-                  <Route path="/settings" element={<Settings />} />
-                  <Route path="/games" element={<Games />} />
-                  <Route path="/snake" element={<Snake />} />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/notifications" element={<Notifications />} />
-                  <Route path="/friends" element={<Friends />} />
-                  <Route path="/add-friends" element={<AddFriends />} />
-                  <Route path="/earn" element={<Earn />} />
-                  <Route path="/leaderboard" element={<Leaderboard />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
+                <div className="app dark:bg-background">
+                  <NotificationPermissionBanner />
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/profile/:username" element={<Profile />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/games" element={<Games />} />
+                    <Route path="/snake" element={<Snake />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/friends" element={<Friends />} />
+                    <Route path="/add-friends" element={<AddFriends />} />
+                    <Route path="/earn" element={<Earn />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                  <Toaster />
+                </div>
               </GameProvider>
-            </NotificationProvider>
-          </PostProvider>
-        </ThemeProvider>
+            </PostProvider>
+          </NotificationProvider>
+        </AuthProvider>
       </LanguageProvider>
-    </AuthProvider>
+    </ThemeProvider>
   );
 }
 
