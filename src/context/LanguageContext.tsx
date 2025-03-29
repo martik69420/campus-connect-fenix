@@ -301,6 +301,7 @@ export const translations: Translations = {
     en: 'Dutch',
     nl: 'Nederlands',
     fr: 'Néerlandais',
+    fr: 'Néerlandais',
   },
   'settings.language.french': {
     en: 'French',
@@ -372,7 +373,7 @@ export const translations: Translations = {
     nl: 'Thema bijwerken mislukt',
     fr: 'Échec de la mise à jour du thème',
   },
-  'settings.languageSettings': {
+   'settings.languageSettings': {
     en: 'Language Settings',
     nl: 'Taalinstellingen',
     fr: 'Paramètres de Langue',
@@ -1013,5 +1014,4 @@ export const translations: Translations = {
   },
   
   'earn.alreadyClaimed': {
-    en: 'Already Claimed',
-    nl: 'Al Geclaim
+    en:
