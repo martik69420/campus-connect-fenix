@@ -11,7 +11,7 @@ import Snake from './pages/Snake';
 import Search from './pages/Search';
 import NotFound from './pages/NotFound';
 import { Toaster } from './components/ui/toaster';
-import { AuthProvider } from './context/auth/AuthProvider';
+import { AuthProvider } from './context/auth';
 import { PostProvider } from './context/PostContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { LanguageProvider } from './context/LanguageContext';
