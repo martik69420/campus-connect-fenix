@@ -43,7 +43,7 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
           return;
         }
         
-        if (data?.last_active) {
+        if (data && data.last_active) {
           setLastActive(new Date(data.last_active));
         }
       } catch (error) {
@@ -67,7 +67,7 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          if (payload.new && payload.new.last_active) {
+          if (payload.new && 'last_active' in payload.new && payload.new.last_active) {
             setLastActive(new Date(payload.new.last_active));
           }
         }

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/context/AuthContext";
@@ -11,6 +12,10 @@ interface GameContextType {
   loading: boolean;
   claimDailyReward: () => Promise<void>;
   fetchTriviaQuestions: () => Promise<void>;
+  hasDailyRewardAvailable: boolean;
+  updateSnakeScore: (score: number) => Promise<void>;
+  updateTetrisScore: (score: number) => Promise<void>;
+  updateTriviaScore: (score: number) => Promise<void>;
 }
 
 interface GameState {
@@ -18,13 +23,15 @@ interface GameState {
   triviaQuestions: any[];
   currentTriviaQuestion: number;
   score: number;
+  progress: number;
 }
 
 const defaultGameState: GameState = {
   lastDailyReward: null,
   triviaQuestions: [],
   currentTriviaQuestion: 0,
-  score: 0
+  score: 0,
+  progress: 0
 };
 
 const GameContext = createContext<GameContextType>({
@@ -32,7 +39,11 @@ const GameContext = createContext<GameContextType>({
   setGameState: () => {},
   loading: false,
   claimDailyReward: async () => {},
-  fetchTriviaQuestions: async () => {}
+  fetchTriviaQuestions: async () => {},
+  hasDailyRewardAvailable: false,
+  updateSnakeScore: async () => {},
+  updateTetrisScore: async () => {},
+  updateTriviaScore: async () => {}
 });
 
 export const useGame = () => useContext(GameContext);
@@ -40,6 +51,7 @@ export const useGame = () => useContext(GameContext);
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [gameState, setGameState] = useState<GameState>(defaultGameState);
   const [loading, setLoading] = useState(false);
+  const [hasDailyRewardAvailable, setHasDailyRewardAvailable] = useState(false);
   const { user, addCoins } = useAuth();
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -73,7 +85,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast({
           title: t('earn.alreadyClaimed'),
           description: t('earn.comeBackTomorrow'),
-          variant: "warning"
+          variant: "default"
         });
         return;
       }
@@ -154,7 +166,8 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setGameState(prev => ({
         ...prev,
         triviaQuestions: mockTriviaQuestions,
-        currentTriviaQuestion: 0
+        currentTriviaQuestion: 0,
+        progress: 0
       }));
       
       toast({
@@ -174,12 +187,70 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Add game score update functions
+  const updateGameScore = async (gameType: string, score: number) => {
+    if (!user) return;
+    
+    try {
+      // Record score in database
+      const { error } = await supabase
+        .from('game_history')
+        .insert({
+          user_id: user.id,
+          game_type: gameType,
+          score: score
+        });
+        
+      if (error) throw error;
+      
+      // Award coins based on the score
+      const coinsToAward = Math.floor(score / 10);
+      if (coinsToAward > 0) {
+        addCoins(coinsToAward, `${t('games.earnedFrom')} ${gameType}`);
+      }
+      
+      toast({
+        title: t('games.scoreRecorded'),
+        description: t('games.scoreValue', { score }),
+      });
+      
+    } catch (error) {
+      console.error(`Error recording ${gameType} score:`, error);
+      toast({
+        title: t('error.title'),
+        description: t('error.tryAgain'),
+        variant: "destructive"
+      });
+    }
+  };
+  
+  const updateSnakeScore = async (score: number) => {
+    await updateGameScore('Snake', score);
+  };
+  
+  const updateTetrisScore = async (score: number) => {
+    await updateGameScore('Tetris', score);
+  };
+  
+  const updateTriviaScore = async (score: number) => {
+    await updateGameScore('Trivia', score);
+    
+    setGameState(prev => ({
+      ...prev,
+      score
+    }));
+  };
+
   const value: GameContextType = {
     gameState,
     setGameState,
     loading,
     claimDailyReward,
-    fetchTriviaQuestions
+    fetchTriviaQuestions,
+    hasDailyRewardAvailable,
+    updateSnakeScore,
+    updateTetrisScore,
+    updateTriviaScore
   };
 
   return (

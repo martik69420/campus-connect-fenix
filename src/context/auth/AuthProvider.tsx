@@ -102,8 +102,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         // Use navigator.sendBeacon for better reliability
         try {
+          const url = `${supabase.getUrl()}/rest/v1/user_status?user_id=eq.${user.id}`;
           navigator.sendBeacon(
-            `${supabase.supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
+            url,
             JSON.stringify({ 
               is_online: false,
               last_active: new Date().toISOString()
@@ -190,6 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             displayName: data.displayName ?? prevUser.displayName,
             avatar: data.avatar ?? prevUser.avatar,
             school: data.school ?? prevUser.school,
+            location: data.location ?? prevUser.location
           };
         });
         

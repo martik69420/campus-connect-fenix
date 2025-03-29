@@ -58,8 +58,9 @@ export const useOnlineStatus = (userIds: string[] = []) => {
         const handleBeforeUnload = () => {
           try {
             // Use navigator.sendBeacon for better reliability during page unload
+            const url = `${supabase.getUrl()}/rest/v1/user_status?user_id=eq.${user.id}`;
             navigator.sendBeacon(
-              `${supabase.supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
+              url,
               JSON.stringify({
                 is_online: false,
                 last_active: new Date().toISOString()
@@ -156,7 +157,7 @@ export const useOnlineStatus = (userIds: string[] = []) => {
         },
         (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const { user_id, is_online, last_active } = payload.new;
+            const { user_id, is_online, last_active } = payload.new as { user_id: string, is_online: boolean, last_active: string };
             
             // Check if the last_active timestamp is recent enough (within 3 minutes)
             const lastActive = new Date(last_active);
