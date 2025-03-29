@@ -202,7 +202,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
                 <img 
                   key={index} 
                   src={img} 
-                  alt={`Post image ${index + 1}`} 
+                  alt={`Post image ${index + 1}`}
+                  onError={(e) => {
+                    console.error(`Failed to load image: ${img}`);
+                    e.currentTarget.src = '/placeholder.svg';
+                  }}
                   className={cn(
                     "w-full h-auto object-cover rounded-lg", 
                     post.images && post.images.length === 1 && "max-h-[350px]"

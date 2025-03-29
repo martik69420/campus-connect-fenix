@@ -80,27 +80,33 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     const uploadedUrls: string[] = [];
     
     for (const file of imageFiles) {
-      const fileName = `${Date.now()}-${file.name}`;
-      const { data, error } = await supabase.storage
-        .from('post-images')
-        .upload(`public/${fileName}`, file);
-      
-      if (error) {
-        console.error('Error uploading image:', error);
-        toast({
-          title: 'Image upload failed',
-          description: error.message,
-          variant: 'destructive'
-        });
-        continue;
+      try {
+        const fileName = `${Date.now()}-${file.name}`;
+        // Upload to the 'post-images' bucket we just created
+        const { data, error } = await supabase.storage
+          .from('post-images')
+          .upload(`public/${fileName}`, file);
+        
+        if (error) {
+          console.error('Error uploading image:', error);
+          toast({
+            title: 'Image upload failed',
+            description: error.message,
+            variant: 'destructive'
+          });
+          continue;
+        }
+        
+        // Get public URL
+        const { data: { publicUrl } } = supabase.storage
+          .from('post-images')
+          .getPublicUrl(`public/${fileName}`);
+        
+        console.log('Uploaded image URL:', publicUrl);
+        uploadedUrls.push(publicUrl);
+      } catch (error) {
+        console.error('Exception during image upload:', error);
       }
-      
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('post-images')
-        .getPublicUrl(`public/${fileName}`);
-      
-      uploadedUrls.push(publicUrl);
     }
     
     return uploadedUrls;
@@ -127,6 +133,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
       
       if (imageFiles.length > 0) {
         uploadedImageUrls = await uploadImages();
+        console.log('Final uploaded URLs:', uploadedImageUrls);
       }
       
       // Create post
