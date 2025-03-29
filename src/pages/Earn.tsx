@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/context/AuthContext';
 import { useGame } from '@/context/GameContext';
@@ -15,12 +15,7 @@ const Earn = () => {
   const { t } = useLanguage();
 
   const handleClaimDailyReward = () => {
-    const claimed = claimDailyReward();
-    if (claimed) {
-      // Reward claimed successfully
-    } else {
-      // Reward already claimed or not available
-    }
+    claimDailyReward();
   };
 
   return (
@@ -41,8 +36,8 @@ const Earn = () => {
                   25
                 </Badge>
               </div>
-              <Button onClick={handleClaimDailyReward} disabled={!hasDailyRewardAvailable()} className="w-full">
-                {hasDailyRewardAvailable() ? t('earn.claimReward') : t('earn.claimed')}
+              <Button onClick={handleClaimDailyReward} disabled={!hasDailyRewardAvailable} className="w-full">
+                {hasDailyRewardAvailable ? t('earn.claimReward') : t('earn.claimed')}
               </Button>
             </CardContent>
           </Card>

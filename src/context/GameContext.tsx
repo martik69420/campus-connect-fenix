@@ -1,10 +1,27 @@
 
-import React, { createContext, useState, useContext } from "react";
+import React, { createContext, useState, useContext, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+
+interface GameProgressType {
+  gamesPlayed: number;
+  highScore: number;
+}
+
+interface GameState {
+  lastDailyReward: string | null;
+  triviaQuestions: any[];
+  currentTriviaQuestion: number;
+  score: number;
+  progress: {
+    snake: GameProgressType;
+    tetris: GameProgressType;
+    trivia: GameProgressType;
+  };
+}
 
 interface GameContextType {
   gameState: GameState;
@@ -18,20 +35,16 @@ interface GameContextType {
   updateTriviaScore: (score: number) => Promise<void>;
 }
 
-interface GameState {
-  lastDailyReward: string | null;
-  triviaQuestions: any[];
-  currentTriviaQuestion: number;
-  score: number;
-  progress: number;
-}
-
 const defaultGameState: GameState = {
   lastDailyReward: null,
   triviaQuestions: [],
   currentTriviaQuestion: 0,
   score: 0,
-  progress: 0
+  progress: {
+    snake: { gamesPlayed: 0, highScore: 0 },
+    tetris: { gamesPlayed: 0, highScore: 0 },
+    trivia: { gamesPlayed: 0, highScore: 0 }
+  }
 };
 
 const GameContext = createContext<GameContextType>({
@@ -84,8 +97,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (existingRewards) {
         toast({
           title: t('earn.alreadyClaimed'),
-          description: t('earn.comeBackTomorrow'),
-          variant: "default"
+          description: t('earn.comeBackTomorrow')
         });
         return;
       }
@@ -123,8 +135,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Error claiming daily reward:", error);
       toast({
         title: t('error.title'),
-        description: t('error.tryAgain'),
-        variant: "destructive"
+        description: t('error.tryAgain')
       });
     } finally {
       setLoading(false);
@@ -167,7 +178,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...prev,
         triviaQuestions: mockTriviaQuestions,
         currentTriviaQuestion: 0,
-        progress: 0
+        progress: {
+          ...prev.progress,
+          trivia: prev.progress.trivia
+        }
       }));
       
       toast({
@@ -179,8 +193,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.error("Error fetching trivia questions:", error);
       toast({
         title: t('error.title'),
-        description: t('error.tryAgain'),
-        variant: "destructive"
+        description: t('error.tryAgain')
       });
     } finally {
       setLoading(false);
@@ -211,15 +224,14 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: t('games.scoreRecorded'),
-        description: t('games.scoreValue', { score }),
+        description: t('games.scoreValue', { score })
       });
       
     } catch (error) {
       console.error(`Error recording ${gameType} score:`, error);
       toast({
         title: t('error.title'),
-        description: t('error.tryAgain'),
-        variant: "destructive"
+        description: t('error.tryAgain')
       });
     }
   };

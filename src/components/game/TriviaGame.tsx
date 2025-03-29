@@ -125,7 +125,7 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
   const gameProgress = ((currentQuestionIndex + 1) / TRIVIA_QUESTIONS.length) * 100;
 
   // References to game progress
-  const triviaProgress = gameState.progress.trivia;
+  const triviaProgress = gameState.progress.trivia || { gamesPlayed: 0, highScore: 0 };
 
   return (
     <Card className="w-full">

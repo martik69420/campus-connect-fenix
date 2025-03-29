@@ -57,8 +57,8 @@ export const useOnlineStatus = (userIds: string[] = []) => {
         // Set offline when the component unmounts
         const handleBeforeUnload = () => {
           try {
-            // Use navigator.sendBeacon for better reliability during page unload
-            const url = `${supabase.getUrl()}/rest/v1/user_status?user_id=eq.${user.id}`;
+            // Use appropriate URL format for Supabase REST endpoint
+            const url = `${process.env.SUPABASE_URL || 'https://nqbklvemcxemhgxlnyyq.supabase.co'}/rest/v1/user_status?user_id=eq.${user.id}`;
             navigator.sendBeacon(
               url,
               JSON.stringify({

@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, AuthContextType, ProfileUpdateData } from "./types";
@@ -102,7 +103,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         // Use navigator.sendBeacon for better reliability
         try {
-          const url = `${supabase.getUrl()}/rest/v1/user_status?user_id=eq.${user.id}`;
+          // Use appropriate URL format for Supabase REST endpoint
+          const url = `${process.env.SUPABASE_URL || 'https://nqbklvemcxemhgxlnyyq.supabase.co'}/rest/v1/user_status?user_id=eq.${user.id}`;
           navigator.sendBeacon(
             url,
             JSON.stringify({ 

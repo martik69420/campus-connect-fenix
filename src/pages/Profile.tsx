@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -90,7 +91,7 @@ const Profile = () => {
         displayName: profileData.display_name || profileData.username,
         avatar: profileData.avatar_url,
         bio: profileData.bio,
-        location: profileData.location,
+        location: profileData.location || null, // Ensure location is defined even if null
         school: profileData.school,
         createdAt: profileData.created_at,
         email: profileData.email
