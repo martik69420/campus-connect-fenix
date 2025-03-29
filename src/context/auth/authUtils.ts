@@ -1,254 +1,239 @@
-import { AuthChangeEvent, Session, SupabaseClient } from '@supabase/supabase-js';
-import { comparePassword, hashPassword } from '@/lib/password-utils';
-import { Database } from '@/integrations/supabase/types';
-import { ProfileUpdateData } from './types';
 import { supabase } from '@/integrations/supabase/client';
+import type { User, ProfileUpdateData } from './types';
 
-type User = Database['public']['Tables']['profiles']['Row'];
-type UserAttributes = Omit<User, 'id' | 'created_at' | 'updated_at'>;
-
-export async function getSession({ supabase }: { supabase: SupabaseClient }) {
-  const {
-    data: { session },
-    error,
-  } = await supabase.auth.getSession();
-
-  if (error) {
-    console.error('Error getting session:', error);
-    return null;
-  }
-
-  return session;
-}
-
-export async function getProfile({
-  supabase,
-  session,
-}: {
-  supabase: SupabaseClient;
-  session: Session | null;
-}) {
-  if (!session) {
-    return null;
-  }
-
-  const { data: profile, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', session?.user.id)
-    .single();
-
-  if (error) {
-    console.error('Error getting profile:', error);
-    return null;
-  }
-
-  return profile;
-}
-
-export async function subscribeToAuthChanges({
-  supabase,
-  callback,
-}: {
-  supabase: SupabaseClient;
-  callback: (event: AuthChangeEvent, session: Session | null) => void;
-}) {
-  return supabase.auth.onAuthStateChange(callback);
-}
-
-export async function updateProfile({
-  supabase,
-  user,
-  attributes,
-}: {
-  supabase: SupabaseClient;
-  user: Session['user'];
-  attributes: UserAttributes;
-}) {
-  const { error } = await supabase.from('profiles').upsert({
-    id: user.id,
-    ...attributes,
-  });
-
-  if (error) {
-    console.error('Error updating profile:', error);
-    throw error;
-  }
-}
-
-export async function signOut({ supabase }: { supabase: SupabaseClient }) {
-  const { error } = await supabase.auth.signOut();
-
-  if (error) {
-    console.error('Error signing out:', error);
-    throw error;
-  }
-}
-
-// Adding the missing exports that AuthProvider.tsx is trying to import
-
-export async function loginUser(username: string, password: string) {
+// Re-export these functions to be used by the AuthProvider
+export const getCurrentUser = async (): Promise<User | null> => {
   try {
-    // Implement login logic here
-    // This is a placeholder implementation
-    console.log('Login attempt for:', username);
-    // In a real implementation, this would validate credentials against the database
+    const { data: { session }, error } = await supabase.auth.getSession();
     
-    // For demo purposes, return a mock user
-    return {
-      id: 'user-123',
-      username: username,
-      email: `${username}@example.com`,
-      displayName: username,
-      school: 'Demo School',
-      coins: 100
-    };
-  } catch (error) {
-    console.error('Login error:', error);
-    return null;
-  }
-}
-
-export async function registerUser(
-  username: string,
-  email: string,
-  displayName: string,
-  school: string,
-  password: string
-) {
-  try {
-    // Implement registration logic here
-    // This is a placeholder implementation
-    console.log('Registration attempt for:', username);
-    
-    // For demo purposes, return success with a mock user
-    return {
-      success: true,
-      user: {
-        id: 'user-123',
-        username,
-        email,
-        displayName,
-        school,
-        coins: 0
-      }
-    };
-  } catch (error) {
-    console.error('Registration error:', error);
-    return { success: false, user: null };
-  }
-}
-
-export async function changePassword(userId: string, newPassword: string): Promise<boolean> {
-  try {
-    // Implement password change logic here
-    console.log('Changing password for user:', userId);
-    // In a real implementation, this would update the password in the database
-    
-    return true;
-  } catch (error) {
-    console.error('Password change error:', error);
-    return false;
-  }
-}
-
-export async function validateCurrentPassword(userId: string, password: string): Promise<boolean> {
-  try {
-    // Implement password validation logic here
-    console.log('Validating password for user:', userId);
-    // In a real implementation, this would check the password against the stored hash
-    
-    return true;
-  } catch (error) {
-    console.error('Password validation error:', error);
-    return false;
-  }
-}
-
-export async function updateOnlineStatus(userId: string, isOnline: boolean): Promise<boolean> {
-  try {
-    if (!userId) return false;
-    
-    const currentTime = new Date().toISOString();
-    
-    // Use presence channels for real-time status tracking
-    const channel = supabase.channel('online-users');
-    
-    if (isOnline) {
-      // Track user's presence when online
-      await channel.subscribe(async (status) => {
-        if (status === 'SUBSCRIBED') {
-          await channel.track({
-            user_id: userId,
-            online_at: currentTime,
-            status: 'online'
-          });
-        }
-      });
-    } else {
-      // Update status to offline
-      await channel.track({
-        user_id: userId,
-        online_at: currentTime,
-        status: 'offline'
-      });
-      
-      // Clean up channel when going offline
-      await supabase.removeChannel(channel);
+    if (error || !session) {
+      console.error("Error getting session:", error);
+      return null;
     }
     
-    // Also store the status in localStorage as a fallback
-    localStorage.setItem(
-      isOnline ? 'lastActiveTime' : 'lastOfflineTime',
-      currentTime
-    );
+    const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
     
-    return true;
+    if (profileError || !profileData) {
+      console.error("Error getting profile:", profileError);
+      return null;
+    }
+    
+    return {
+      id: profileData.id,
+      username: profileData.username,
+      email: profileData.email,
+      displayName: profileData.display_name,
+      avatar: profileData.avatar_url,
+      bio: profileData.bio,
+      school: profileData.school,
+      location: profileData.location,
+      createdAt: profileData.created_at,
+      lastActive: profileData.last_active,
+      isOnline: profileData.is_online,
+      coins: profileData.coins || 0
+    };
   } catch (error) {
-    console.error('Online status update error:', error);
-    return false;
-  }
-}
-
-export async function getCurrentUser() {
-  try {
-    // Implement get current user logic here
-    // This is a placeholder implementation
-    // In a real implementation, this would retrieve the current user from the session
-    
+    console.error("Error in getCurrentUser:", error);
     return null;
+  }
+};
+
+export const loginUser = async (username: string, password: string): Promise<User | null> => {
+  try {
+    // First find the user's email using their username
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('username', username)
+      .single();
+      
+    if (userError || !userData || !userData.email) {
+      console.error("Error finding user by username:", userError);
+      return null;
+    }
+    
+    // Now log in with the email and password
+    const { data: { session }, error } = await supabase.auth.signInWithPassword({
+      email: userData.email,
+      password
+    });
+    
+    if (error || !session) {
+      console.error("Error logging in:", error);
+      return null;
+    }
+    
+    // Get the full user profile
+    return await getCurrentUser();
   } catch (error) {
-    console.error('Get current user error:', error);
+    console.error("Error in loginUser:", error);
     return null;
   }
-}
+};
 
-export async function updateUserProfile(userId: string, data: ProfileUpdateData): Promise<boolean> {
+export const registerUser = async (
+  username: string, 
+  email: string,
+  displayName: string, 
+  school: string, 
+  password: string
+): Promise<{ success: boolean; user: User | null }> => {
   try {
-    if (!userId) return false;
+    // Check if username is already taken
+    const { data: existingUser, error: existingUserError } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', username)
+      .single();
+      
+    if (existingUser) {
+      console.error("Username already taken");
+      return { success: false, user: null };
+    }
     
-    console.log('Updating profile for user:', userId, 'with data:', data);
+    // Sign up with Supabase Auth
+    const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password
+    });
     
-    // Update the profile in the profiles table
+    if (signUpError || !authUser) {
+      console.error("Error signing up:", signUpError);
+      return { success: false, user: null };
+    }
+    
+    // Create profile entry
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: authUser.id,
+        username,
+        email,
+        display_name: displayName,
+        school,
+        avatar_url: '',
+        bio: '',
+        coins: 100 // Starting coins
+      });
+      
+    if (profileError) {
+      console.error("Error creating profile:", profileError);
+      return { success: false, user: null };
+    }
+    
+    // Return the new user
+    const newUser: User = {
+      id: authUser.id,
+      username,
+      email,
+      displayName,
+      school,
+      avatar: '',
+      bio: '',
+      createdAt: new Date().toISOString(),
+      coins: 100
+    };
+    
+    return { success: true, user: newUser };
+  } catch (error) {
+    console.error("Error in registerUser:", error);
+    return { success: false, user: null };
+  }
+};
+
+export const updateUserProfile = async (userId: string, data: ProfileUpdateData): Promise<boolean> => {
+  try {
     const { error } = await supabase
       .from('profiles')
       .update({
         display_name: data.displayName,
+        avatar_url: data.avatar,
         bio: data.bio,
         school: data.school,
-        avatar_url: data.avatar, // Ensure this matches the column name in the profiles table
-        location: data.location,
+        location: data.location
       })
       .eq('id', userId);
-    
+      
     if (error) {
-      console.error('Failed to update profile:', error);
+      console.error("Error updating profile:", error);
       return false;
     }
     
     return true;
   } catch (error) {
-    console.error('Profile update error:', error);
+    console.error("Error in updateUserProfile:", error);
     return false;
   }
-}
+};
+
+export const changePassword = async (userId: string, newPassword: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+    
+    if (error) {
+      console.error("Error changing password:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in changePassword:", error);
+    return false;
+  }
+};
+
+export const validateCurrentPassword = async (userId: string, password: string): Promise<boolean> => {
+  try {
+    // Get user's email
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('id', userId)
+      .single();
+      
+    if (error || !data || !data.email) {
+      console.error("Error getting user email:", error);
+      return false;
+    }
+    
+    // Try to sign in with current credentials
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: data.email,
+      password
+    });
+    
+    // If no error, password is valid
+    return !signInError;
+  } catch (error) {
+    console.error("Error validating password:", error);
+    return false;
+  }
+};
+
+export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('profiles')
+      .update({
+        is_online: isOnline,
+        last_active: new Date().toISOString()
+      })
+      .eq('id', userId);
+      
+    if (error) {
+      console.error("Error updating online status:", error);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Error in updateOnlineStatus:", error);
+    return false;
+  }
+};

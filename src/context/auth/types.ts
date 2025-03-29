@@ -1,26 +1,30 @@
 
+// User interface that matches Supabase structure
 export interface User {
   id: string;
   username: string;
-  email: string;
-  displayName: string;
-  school: string;
-  avatar?: string;
-  coins: number;
-  createdAt?: string; // Add createdAt property
-  bio?: string; // Add bio property
-  friends?: string[]; // Add friends property
-  location?: string; // Add location property
-}
-
-export interface ProfileUpdateData {
+  email?: string;
   displayName?: string;
+  avatar?: string;
   bio?: string;
   school?: string;
-  avatar?: string;
-  location?: string; // Add location property
+  location?: string;
+  createdAt?: string;
+  lastActive?: string;
+  isOnline?: boolean;
+  coins: number;
 }
 
+// Profile update data structure
+export interface ProfileUpdateData {
+  displayName?: string;
+  avatar?: string;
+  bio?: string;
+  school?: string;
+  location?: string;
+}
+
+// Auth context type
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
@@ -33,7 +37,7 @@ export interface AuthContextType {
     school: string,
     password: string
   ) => Promise<boolean>;
-  logout: () => Promise<void>;
+  logout: () => void;
   updateUser: (userData: Partial<User>) => void;
   addCoins: (amount: number, reason?: string) => void;
   updatePassword: (newPassword: string) => Promise<boolean>;
