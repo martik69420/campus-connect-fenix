@@ -1,7 +1,7 @@
 
 import React, { useEffect } from 'react';
 import { Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider } from './context/auth';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { PostProvider } from './context/PostContext';
