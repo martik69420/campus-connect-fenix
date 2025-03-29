@@ -100,20 +100,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     // Simulate fetching notifications from an API or database
     const mockNotifications: Notification[] = [
       {
-        id: '1',
-        type: 'message',
-        message: 'You have a new message from John Doe',
-        timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-        read: false,
-        relatedId: 'user123',
-        url: '/messages',
-        sender: {
-          id: 'user123',
-          name: 'John Doe',
-          avatar: 'https://i.pravatar.cc/150?u=user123',
-        }
-      },
-      {
         id: '2',
         type: 'like',
         message: 'Your post received a like from Jane Smith',
