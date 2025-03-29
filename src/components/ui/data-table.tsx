@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 
 export interface Column<T> {
   header: string;
-  accessorKey: keyof T;
+  accessorKey: keyof T | string;
   cell?: (item: T) => React.ReactNode;
   sortable?: boolean;
 }
@@ -31,11 +31,18 @@ interface DataTableProps<T> {
   data: T[];
   columns: Column<T>[];
   searchable?: boolean;
-  searchField?: keyof T;
+  searchField?: keyof T | string;
   pagination?: boolean;
   pageSize?: number;
   className?: string;
 }
+
+// Helper function to get nested property from an object using dot notation
+const getNestedProperty = (obj: any, path: string) => {
+  return path.split('.').reduce((prev, curr) => {
+    return prev ? prev[curr] : null;
+  }, obj);
+};
 
 export function DataTable<T>({
   data,
@@ -59,17 +66,25 @@ export function DataTable<T>({
     if (sortBy === key) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
     } else {
-      setSortBy(key);
+      setSortBy(key as keyof T);
       setSortOrder("asc");
     }
   };
 
-  // Filter data based on search query
+  // Filter data based on search query with support for nested properties
   const filteredData = React.useMemo(() => {
     if (!searchable || !searchQuery || !searchField) return data;
     
     return data.filter((item) => {
-      const value = item[searchField];
+      // Handle nested property search using dot notation
+      let value: any;
+      
+      if (typeof searchField === 'string' && searchField.includes('.')) {
+        value = getNestedProperty(item, searchField);
+      } else {
+        value = item[searchField as keyof T];
+      }
+      
       if (typeof value === 'string') {
         return value.toLowerCase().includes(searchQuery.toLowerCase());
       }
@@ -82,8 +97,17 @@ export function DataTable<T>({
     if (!sortBy) return filteredData;
     
     return [...filteredData].sort((a, b) => {
-      const aValue = a[sortBy];
-      const bValue = b[sortBy];
+      // Handle sorting for potentially nested properties
+      let aValue: any;
+      let bValue: any;
+      
+      if (typeof sortBy === 'string' && sortBy.toString().includes('.')) {
+        aValue = getNestedProperty(a, sortBy.toString());
+        bValue = getNestedProperty(b, sortBy.toString());
+      } else {
+        aValue = a[sortBy as keyof T];
+        bValue = b[sortBy as keyof T];
+      }
       
       if (aValue === bValue) return 0;
       
@@ -193,7 +217,9 @@ export function DataTable<T>({
                     <TableCell key={columnIndex}>
                       {column.cell
                         ? column.cell(row)
-                        : String(row[column.accessorKey] ?? '')}
+                        : typeof column.accessorKey === 'string' && column.accessorKey.includes('.')
+                          ? getNestedProperty(row, column.accessorKey as string) || ''
+                          : String(row[column.accessorKey as keyof T] ?? '')}
                     </TableCell>
                   ))}
                 </TableRow>

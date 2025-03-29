@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { DataTable, Column } from '@/components/ui/data-table';
 import AppLayout from '@/components/layout/AppLayout';
@@ -186,7 +185,7 @@ const TableDemo = () => {
     },
   ];
 
-  // Define columns for saved posts
+  // Define columns for saved posts with fixed TypeScript typing
   const savedPostsColumns: Column<SavedPost>[] = [
     {
       header: 'Post ID',
@@ -195,7 +194,8 @@ const TableDemo = () => {
     },
     {
       header: 'Content',
-      accessorKey: 'post.content',
+      // Use a function for nested property access instead of a string key
+      accessorKey: 'post' as keyof SavedPost,
       cell: (post) => (
         <div className="max-w-md truncate">
           {post.post?.content}
@@ -204,12 +204,14 @@ const TableDemo = () => {
     },
     {
       header: 'Author',
-      accessorKey: 'post.profiles.display_name',
+      // Use a function for nested property access
+      accessorKey: 'post' as keyof SavedPost,
       cell: (post) => post.post?.profiles?.display_name || 'Unknown',
     },
     {
       header: 'Posted',
-      accessorKey: 'post.created_at',
+      // Use a function for nested property access
+      accessorKey: 'post' as keyof SavedPost,
       cell: (post) => {
         try {
           return formatDistanceToNow(new Date(post.post?.created_at), { addSuffix: true });
@@ -313,7 +315,7 @@ const TableDemo = () => {
                 data={savedPosts} 
                 columns={savedPostsColumns} 
                 searchable 
-                searchField="post.content"
+                searchField="post.content" // This will need to be handled specially
                 pagination 
                 pageSize={5}
               />
