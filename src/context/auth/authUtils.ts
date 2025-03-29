@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -22,6 +23,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return null;
     }
     
+    // Get user status data (online status, last active)
+    const { data: statusData } = await supabase
+      .from('user_status')
+      .select('*')
+      .eq('user_id', session.user.id)
+      .single();
+    
     // Map database fields to our User interface
     return {
       id: profileData.id,
@@ -31,10 +39,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
       avatar: profileData.avatar_url,
       bio: profileData.bio,
       school: profileData.school,
-      location: profileData.location || null, // Handle possibly missing field
+      location: null, // We'll handle location in user_settings later
       createdAt: profileData.created_at,
-      lastActive: profileData.last_active || null, // Handle possibly missing field
-      isOnline: profileData.is_online || false, // Handle possibly missing field
+      lastActive: statusData?.last_active || null,
+      isOnline: statusData?.is_online || false,
       coins: profileData.coins || 0
     };
   } catch (error) {
@@ -219,16 +227,38 @@ export const validateCurrentPassword = async (userId: string, password: string):
 
 export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
   try {
+    // Check if user_status entry exists
+    const { data: existingStatus } = await supabase
+      .from('user_status')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+    
     const updateData = {
       is_online: isOnline,
-      last_active: new Date().toISOString()
+      last_active: new Date().toISOString(),
+      user_id: userId
     };
     
-    const { error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', userId);
+    let error;
+    
+    if (existingStatus?.id) {
+      // Update existing status
+      const result = await supabase
+        .from('user_status')
+        .update({ is_online: isOnline, last_active: new Date().toISOString() })
+        .eq('user_id', userId);
       
+      error = result.error;
+    } else {
+      // Insert new status
+      const result = await supabase
+        .from('user_status')
+        .insert(updateData);
+      
+      error = result.error;
+    }
+    
     if (error) {
       console.error("Error updating online status:", error);
       return false;

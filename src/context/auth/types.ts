@@ -8,9 +8,9 @@ export interface User {
   avatar?: string;
   bio?: string;
   school?: string;
-  location?: string;
+  location?: string | null;
   createdAt?: string;
-  lastActive?: string;
+  lastActive?: string | null;
   isOnline?: boolean;
   coins: number;
   // Remove the reference to "friends" property as it's not supported in our schema
