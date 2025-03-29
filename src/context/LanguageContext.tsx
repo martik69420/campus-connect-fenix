@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -1005,4 +1006,112 @@ const LanguageContext = createContext<LanguageContextProps>({
   ]
 });
 
-export function LanguageProvider({ children }: { children: React.React
+export function LanguageProvider({ children }: { children: React.ReactNode }) {
+  const [language, setLanguageState] = useState<LanguageCode>(defaultLanguage);
+  const auth = useAuth();
+  const { user, isAuthenticated } = auth;
+  
+  // Fetch the user's language preference when they authenticate
+  useEffect(() => {
+    const fetchLanguagePreference = async () => {
+      try {
+        // First check localStorage for a language preference
+        const storedLang = localStorage.getItem('preferredLanguage');
+        if (storedLang && ['en', 'nl', 'fr'].includes(storedLang)) {
+          setLanguageState(storedLang as LanguageCode);
+        }
+        
+        // If authenticated, fetch from database
+        if (isAuthenticated && user?.id) {
+          try {
+            const { data, error } = await supabase
+              .from('user_settings')
+              .select('language')
+              .eq('user_id', user.id)
+              .single();
+              
+            if (error) {
+              console.error('Error fetching language preference:', error);
+              return;
+            }
+            
+            if (data && data.language) {
+              setLanguageState(data.language as LanguageCode);
+              localStorage.setItem('preferredLanguage', data.language);
+            }
+          } catch (err) {
+            console.error('Error in database query:', err);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching language preference:', err);
+      }
+    };
+    
+    fetchLanguagePreference();
+  }, [isAuthenticated, user]);
+  
+  // Function to set language and update user preference
+  const setLanguage = async (newLanguage: LanguageCode) => {
+    setLanguageState(newLanguage);
+    localStorage.setItem('preferredLanguage', newLanguage);
+    
+    // If user is authenticated, update their preference in the database
+    if (isAuthenticated && user?.id) {
+      try {
+        const { error } = await supabase
+          .from('user_settings')
+          .upsert({
+            user_id: user.id,
+            language: newLanguage
+          }, {
+            onConflict: 'user_id'
+          });
+        
+        if (error) {
+          console.error('Error updating language preference:', error);
+        }
+      } catch (err) {
+        console.error('Error saving language preference:', err);
+      }
+    }
+  };
+  
+  // Function to translate a key
+  const t = (key: string, params?: Record<string, string | number>): string => {
+    if (!translations[key]) {
+      console.warn(`Translation key not found: ${key}`);
+      return key;
+    }
+    
+    let translatedText = translations[key][language] || translations[key].en || key;
+    
+    // Replace parameters in the translated text
+    if (params) {
+      Object.entries(params).forEach(([paramKey, paramValue]) => {
+        translatedText = translatedText.replace(`{{${paramKey}}}`, String(paramValue));
+      });
+    }
+    
+    return translatedText;
+  };
+  
+  return (
+    <LanguageContext.Provider value={{ 
+      language, 
+      setLanguage, 
+      t, 
+      availableLanguages: [
+        { code: 'nl', name: 'Nederlands' },
+        { code: 'en', name: 'English' },
+        { code: 'fr', name: 'Français' }
+      ] 
+    }}>
+      {children}
+    </LanguageContext.Provider>
+  );
+}
+
+export const useLanguage = () => useContext(LanguageContext);
+
+export default LanguageContext;
