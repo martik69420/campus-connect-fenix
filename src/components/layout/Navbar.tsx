@@ -30,15 +30,17 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useNotification } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
-import NotificationMenu from '../notifications/NotificationMenu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { formatDistanceToNow } from 'date-fns';
 
 const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotification();
+  const { notifications, unreadCount, markAsRead } = useNotification();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
+  const [notificationPopoverOpen, setNotificationPopoverOpen] = useState(false);
   
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Home', path: '/' },
@@ -57,6 +59,38 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     navigate('/auth');
+  };
+  
+  const handleNotificationClick = (notification) => {
+    markAsRead(notification.id);
+    setNotificationPopoverOpen(false);
+    
+    if (notification.url) {
+      navigate(notification.url);
+    } else if (notification.relatedId) {
+      if (notification.type === 'like' || notification.type === 'comment') {
+        navigate(`/posts/${notification.relatedId}`);
+      } else if (notification.type === 'friend') {
+        navigate(`/profile/${notification.relatedId}`);
+      }
+    } else if (notification.type === 'message') {
+      navigate('/messages');
+    }
+  };
+  
+  const getNotificationIcon = (type) => {
+    switch (type) {
+      case 'like':
+        return <div className="rounded-full bg-red-500/10 p-1"><Bell className="h-3 w-3 text-red-500" /></div>;
+      case 'comment':
+        return <div className="rounded-full bg-blue-500/10 p-1"><MessageSquare className="h-3 w-3 text-blue-500" /></div>;
+      case 'friend':
+        return <div className="rounded-full bg-green-500/10 p-1"><User className="h-3 w-3 text-green-500" /></div>;
+      case 'message':
+        return <div className="rounded-full bg-purple-500/10 p-1"><MessageSquare className="h-3 w-3 text-purple-500" /></div>;
+      default:
+        return <div className="rounded-full bg-primary/10 p-1"><Bell className="h-3 w-3 text-primary" /></div>;
+    }
   };
   
   return (
@@ -89,8 +123,8 @@ const Navbar = () => {
         <div className="flex items-center space-x-2">
           {user ? (
             <>
-              <DropdownMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen}>
-                <DropdownMenuTrigger asChild>
+              <Popover open={notificationPopoverOpen} onOpenChange={setNotificationPopoverOpen}>
+                <PopoverTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
@@ -102,9 +136,54 @@ const Navbar = () => {
                       </Badge>
                     )}
                   </Button>
-                </DropdownMenuTrigger>
-                <NotificationMenu />
-              </DropdownMenu>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-0" align="end">
+                  <div className="flex justify-between items-center p-3 border-b">
+                    <span className="font-semibold">Notifications</span>
+                    {unreadCount > 0 && (
+                      <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/notifications')}>
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        View all
+                      </Button>
+                    )}
+                  </div>
+                  <ScrollArea className="h-[300px]">
+                    {notifications.length > 0 ? (
+                      <div className="py-1">
+                        {notifications.slice(0, 5).map((notification) => (
+                          <div 
+                            key={notification.id}
+                            className={`flex items-start p-3 cursor-pointer hover:bg-muted/50 ${!notification.read ? 'bg-muted/30' : ''}`}
+                            onClick={() => handleNotificationClick(notification)}
+                          >
+                            <div className="mr-3">
+                              {getNotificationIcon(notification.type)}
+                            </div>
+                            <div className="flex-1 space-y-1">
+                              <p className="text-sm">{notification.message}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                              </p>
+                            </div>
+                            {!notification.read && (
+                              <div className="w-2 h-2 rounded-full bg-primary ml-2 mt-2" />
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center">
+                        <p className="text-sm text-muted-foreground">No notifications yet</p>
+                      </div>
+                    )}
+                  </ScrollArea>
+                  <div className="p-2 border-t text-center">
+                    <Button variant="link" size="sm" className="text-primary text-xs w-full" onClick={() => navigate('/notifications')}>
+                      See all notifications
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
