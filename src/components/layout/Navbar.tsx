@@ -45,7 +45,6 @@ const Navbar = () => {
     { icon: <MessageSquare className="h-5 w-5" />, label: 'Messages', path: '/messages' },
     { icon: <Gamepad2 className="h-5 w-5" />, label: 'Games', path: '/games' },
     { icon: <Search className="h-5 w-5" />, label: 'Search', path: '/search' },
-    { icon: <Bell className="h-5 w-5" />, label: 'Notifications', path: '/notifications' },
     { icon: <User className="h-5 w-5" />, label: 'Friends', path: '/friends' },
     { icon: <Award className="h-5 w-5" />, label: 'Leaderboard', path: '/leaderboard' },
     { icon: <BarChart3 className="h-5 w-5" />, label: 'Earn', path: '/earn' }
