@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Search, Bell, User, Menu, Home, MessageSquare, Users, Gamepad2, Award, BarChart3, LogOut, Sun, Moon } from "lucide-react";
@@ -163,7 +164,7 @@ const TopBar: React.FC = () => {
             <span className="sr-only">Toggle theme</span>
           </Button>
 
-          {/* Notifications */}
+          {/* Notifications - MODIFIED: Using dropdown instead of navigation */}
           <DropdownMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" className="relative">
