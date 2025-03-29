@@ -160,7 +160,7 @@ export const updateUserProfile = async (userId: string, data: ProfileUpdateData)
       .from('profiles')
       .update({
         display_name: data.displayName,
-        avatar_url: data.avatar,
+        avatar_url: data.avatar, // Make sure we're using the correct field name for the database
         bio: data.bio,
         school: data.school,
         location: data.location

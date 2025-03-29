@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -81,17 +80,19 @@ const ProfileUpdateForm = () => {
     try {
       console.log("Updating profile with data:", data);
       
+      const profileData = {
+        display_name: data.displayName,
+        bio: data.bio || null,
+        school: data.school,
+        avatar_url: data.avatar || null, // Match the field name in the database
+        location: data.location || null,
+      };
+      
       // First update the user profile in Supabase directly
       try {
         const { error } = await supabase
           .from('profiles')
-          .update({
-            display_name: data.displayName,
-            bio: data.bio,
-            school: data.school,
-            avatar_url: data.avatar, // This is the key field for avatar
-            location: data.location,
-          })
+          .update(profileData)
           .eq('id', user?.id);
           
         if (error) {
@@ -100,38 +101,33 @@ const ProfileUpdateForm = () => {
         }
         
         console.log("Profile updated in Supabase successfully");
+        
+        // Then update the local profile state via auth context
+        const success = await updateUserProfile({
+          displayName: data.displayName,
+          avatar: data.avatar || user?.avatar, // Ensure avatar is passed correctly
+          bio: data.bio || null,
+          school: data.school,
+          location: data.location || null
+        });
+        
+        if (success) {
+          toast({
+            title: "Profile updated",
+            description: "Your profile has been updated successfully",
+          });
+        } else {
+          toast({
+            title: "Failed to update profile state",
+            description: "Your profile was saved to the database but there was an error updating your local profile. Try refreshing the page.",
+          });
+        }
       } catch (supabaseError) {
         console.error('Supabase update error:', supabaseError);
         toast({
           title: "Database Error",
           description: "There was an error updating your profile in the database.",
           variant: "destructive",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-      
-      // Then update the local profile state via auth context
-      const success = await updateUserProfile(data);
-      
-      if (success) {
-        // Update local user state with new data to reflect changes immediately
-        if (user) {
-          user.displayName = data.displayName;
-          user.avatar = data.avatar || user.avatar;
-          user.school = data.school;
-          user.bio = data.bio;
-          user.location = data.location;
-        }
-        
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully",
-        });
-      } else {
-        toast({
-          title: "Failed to update profile state",
-          description: "Your profile was saved to the database but there was an error updating your local profile. Try refreshing the page.",
         });
       }
     } catch (error) {
