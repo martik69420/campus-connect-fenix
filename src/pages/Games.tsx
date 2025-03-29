@@ -1,80 +1,84 @@
-
-import React, { useState, useEffect } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
-import { useToast } from '@/hooks/use-toast';
 import AppLayout from '@/components/layout/AppLayout';
-import SnakeGameWrapper from '@/components/game/SnakeGameWrapper';
-import TriviaGame from '@/components/game/TriviaGame';
-import TetrisGameWrapper from '@/components/game/TetrisGameWrapper';
-import { useAuth } from '@/context/AuthContext';
-import { useGame } from '@/context/GameContext';
+import { useToast } from '@/hooks/use-toast';
+import { BarChart, BrainCircuit, Terminal, Puzzle } from 'lucide-react';
 
 const Games = () => {
+  const navigate = useNavigate();
   const { t } = useLanguage();
   const { toast } = useToast();
-  const { addCoins } = useAuth();
-  const { updateTriviaScore } = useGame();
-  const [activeTab, setActiveTab] = useState('snake');
-  
-  // Create an async wrapper function for TriviaGame's onGameEnd
-  const handleTriviaGameEnd = async (score: number) => {
-    // Handle the trivia game end event
-    console.log("Trivia game ended with score:", score);
-    
-    // Update game progress
-    updateTriviaScore(score);
-    
-    // Show toast when game ends
-    if (score > 0) {
-      toast({
-        title: t('games.completed'),
-        description: t('games.scoreEarned', { score: score.toString() })
-      });
-    }
-    
-    // Return a promise to satisfy the type requirement
-    return Promise.resolve();
+
+  const handleGameClick = () => {
+    toast({
+      title: t('games.coming'),
+      description: t('games.comingSoon')
+    });
   };
-  
-  // Use URL hash to remember the active tab
-  useEffect(() => {
-    const hash = window.location.hash.substring(1);
-    if (hash === 'tetris' || hash === 'trivia' || hash === 'snake') {
-      setActiveTab(hash);
-    }
-  }, []);
-  
-  // Update URL hash when tab changes
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    window.location.hash = value;
-  };
-  
+
   return (
     <AppLayout>
-      <div className="container py-6 max-w-4xl">
-        <h1 className="text-3xl font-bold mb-6">{t('games.title')}</h1>
-        
-        <Tabs defaultValue="snake" value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="grid grid-cols-3 mb-8">
-            <TabsTrigger value="snake">{t('games.snakeGame')}</TabsTrigger>
-            <TabsTrigger value="trivia">{t('games.triviaGame')}</TabsTrigger>
-            <TabsTrigger value="tetris">{t('games.tetrisGame')}</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="snake" className="w-full">
-            <SnakeGameWrapper />
-          </TabsContent>
-          
-          <TabsContent value="trivia" className="w-full">
-            <TriviaGame onGameEnd={handleTriviaGameEnd} />
-          </TabsContent>
-          
-          <TabsContent value="tetris" className="w-full">
-            <TetrisGameWrapper />
-          </TabsContent>
-        </Tabs>
+      <div className="container mx-auto py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Trivia Game Card */}
+          <Card className="bg-card dark:bg-card/95 shadow-md hover:shadow-lg transition-shadow duration-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BrainCircuit className="w-6 h-6 text-primary" />
+                {t('games.trivia')}
+              </CardTitle>
+              <CardDescription>{t('games.triviaDescription')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate('/trivia')} className="w-full">{t('games.playNow')}</Button>
+            </CardContent>
+          </Card>
+
+          {/* Snake Game Card */}
+          <Card className="bg-card dark:bg-card/95 shadow-md hover:shadow-lg transition-shadow duration-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Terminal className="w-6 h-6 text-primary" />
+                {t('games.snake')}
+              </CardTitle>
+              <CardDescription>{t('games.snakeDescription')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate('/snake')} className="w-full">{t('games.playNow')}</Button>
+            </CardContent>
+          </Card>
+
+          {/* Tetris Game Card */}
+          <Card className="bg-card dark:bg-card/95 shadow-md hover:shadow-lg transition-shadow duration-200">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Puzzle className="w-6 h-6 text-primary" />
+                {t('games.tetris')}
+              </CardTitle>
+              <CardDescription>{t('games.tetrisDescription')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate('/tetris')} className="w-full">{t('games.playNow')}</Button>
+            </CardContent>
+          </Card>
+
+          {/* Coming Soon Game Card - Example */}
+          <Card className="bg-card dark:bg-card/95 shadow-md hover:shadow-lg transition-shadow duration-200 opacity-70">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart className="w-6 h-6 text-muted-foreground" />
+                {t('games.comingSoon')}
+              </CardTitle>
+              <CardDescription>{t('games.comingSoonDescription')}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={handleGameClick} disabled className="w-full">{t('games.playNow')}</Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </AppLayout>
   );

@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -40,6 +39,7 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 // Provider component
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  
   const { user, addCoins } = useAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -138,6 +138,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return lastRewardClaimed < yesterday;
   };
 
+  // Save daily reward to database
+  const saveDailyReward = async (coinsRewarded: number) => {
+    if (!user) return;
+    
+    try {
+      await supabase
+        .from('daily_rewards')
+        .insert({
+          user_id: user.id,
+          coins_rewarded: coinsRewarded
+        });
+    } catch (error) {
+      console.error('Error saving daily reward:', error);
+    }
+  };
+
   // Save game score to database
   const saveGameScore = async (gameType: 'trivia' | 'snake' | 'tetris', score: number) => {
     if (!user) return;
@@ -151,7 +167,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           score: score
         });
       
-      // Show toast for new high score - Using correct object format
+      // Show toast for new high score - Using single object parameter
       toast({
         title: t('games.newHighScore'),
         description: t('games.scoreUpdated', { score: score.toString() })
@@ -173,7 +189,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Save reward to database
       saveDailyReward(rewardAmount);
       
-      // Show toast for reward - Using correct object format
+      // Show toast for reward - Using single object parameter
       toast({
         title: t('earn.dailyReward'),
         description: t('earn.coinsAdded', { amount: '25' })
@@ -183,22 +199,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     return false;
-  };
-
-  // Save daily reward to database
-  const saveDailyReward = async (coinsRewarded: number) => {
-    if (!user) return;
-    
-    try {
-      await supabase
-        .from('daily_rewards')
-        .insert({
-          user_id: user.id,
-          coins_rewarded: coinsRewarded
-        });
-    } catch (error) {
-      console.error('Error saving daily reward:', error);
-    }
   };
 
   // Update trivia game score
