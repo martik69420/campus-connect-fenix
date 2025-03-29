@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import SavePostButton from './SavePostButton';
 import ReportModal from '@/components/ReportModal';
+import ShareModal from './ShareModal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,6 +58,7 @@ const PostActions: React.FC<PostActionsProps> = ({
   const { t } = useLanguage();
   const [showReportModal, setShowReportModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const handleReport = () => {
     if (!user) {
@@ -99,6 +101,11 @@ const PostActions: React.FC<PostActionsProps> = ({
     }
   };
 
+  const handleShare = () => {
+    setShowShareModal(true);
+    if (onShare) onShare();
+  };
+
   return (
     <>
       <div className={`flex items-center justify-between ${className}`}>
@@ -129,7 +136,7 @@ const PostActions: React.FC<PostActionsProps> = ({
             variant="ghost"
             size="sm"
             className="text-muted-foreground hover:text-foreground"
-            onClick={onShare}
+            onClick={handleShare}
           >
             <Share2 className="h-4 w-4 mr-1" />
           </Button>
@@ -173,6 +180,14 @@ const PostActions: React.FC<PostActionsProps> = ({
           targetName={postTitle}
         />
       )}
+
+      {/* Share Modal */}
+      <ShareModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        postId={postId}
+        postTitle={postTitle}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
