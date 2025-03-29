@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -44,6 +43,7 @@ export interface NotificationContextProps {
   toggleSystemNotifications: () => void;
   requestNotificationPermission: () => Promise<boolean>;
   isNotificationPermissionGranted: boolean;
+  enableAutomaticNotifications: (enable: boolean) => void;
 }
 
 // Create the context with a default value
@@ -67,6 +67,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   
   const pushNotificationService = PushNotificationService.getInstance();
 
+  // By default, we don't want to send automatic notifications
+  useEffect(() => {
+    pushNotificationService.setAutomaticNotifications(false);
+  }, []);
+
   // Calculate the number of unread notifications
   const unreadCount = notifications.filter((notification) => !notification.read).length;
 
@@ -83,6 +88,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     const granted = await pushNotificationService.requestPermission();
     setIsNotificationPermissionGranted(granted);
     return granted;
+  };
+
+  // Function to enable or disable automatic notifications
+  const enableAutomaticNotifications = (enable: boolean) => {
+    pushNotificationService.setAutomaticNotifications(enable);
   };
 
   // Function to fetch notifications (replace with your actual data fetching logic)
@@ -278,7 +288,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     toggleFriendNotifications,
     toggleSystemNotifications,
     requestNotificationPermission,
-    isNotificationPermissionGranted
+    isNotificationPermissionGranted,
+    enableAutomaticNotifications
   };
 
   return (

@@ -1,10 +1,10 @@
 
 import type { Notification as AppNotification } from '@/context/NotificationContext';
-import { useToast } from '@/hooks/use-toast';
 
 class PushNotificationService {
   private static instance: PushNotificationService;
   private isPermissionGranted = false;
+  private sendAutomaticNotifications = false; // Default to not sending automatic notifications
 
   private constructor() {
     this.checkPermission();
@@ -48,6 +48,13 @@ class PushNotificationService {
   }
 
   /**
+   * Enable or disable automatic notifications
+   */
+  public setAutomaticNotifications(enable: boolean): void {
+    this.sendAutomaticNotifications = enable;
+  }
+
+  /**
    * Show a native push notification
    */
   public showNotification(title: string, options?: NotificationOptions): void {
@@ -79,7 +86,7 @@ class PushNotificationService {
    * Process and display an app notification as a push notification
    */
   public processNotification(notification: AppNotification): void {
-    if (!this.isPermissionGranted) {
+    if (!this.isPermissionGranted || !this.sendAutomaticNotifications) {
       return;
     }
 
