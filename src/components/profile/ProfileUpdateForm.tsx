@@ -207,7 +207,7 @@ const ProfileUpdateForm = () => {
         {/* Avatar Preview and Input */}
         <div className="flex flex-col items-center sm:items-start sm:flex-row gap-6 mb-6">
           <div className="relative group">
-            <Avatar className="h-24 w-24 md:h-36 md:h-36 border-2 border-border shadow-md cursor-pointer" onClick={triggerFileSelect}>
+            <Avatar className="h-24 w-24 md:h-36 md:w-36 border-2 border-border shadow-md cursor-pointer" onClick={triggerFileSelect}>
               <AvatarImage src={avatarPreview || ""} alt={user?.displayName || ""} />
               <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
                 {user?.displayName?.charAt(0) || user?.username?.charAt(0) || <UserRound />}
