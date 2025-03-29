@@ -1,12 +1,9 @@
 
 import React from 'react';
 import { useOnlineStatus } from '@/hooks/use-online-status';
-import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
-import { supabase } from '@/integrations/supabase/client';
-import { useState, useEffect } from 'react';
 
 interface OnlineStatusProps {
   userId: string;
@@ -21,73 +18,18 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   className = '',
   showLastActive = true 
 }) => {
-  const { isUserOnline } = useOnlineStatus([userId]);
+  const { isUserOnline, onlineStatuses } = useOnlineStatus([userId]);
   const { t } = useLanguage();
-  const [lastActive, setLastActive] = useState<Date | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  
-  useEffect(() => {
-    if (!userId) return;
-    
-    const fetchLastActive = async () => {
-      setIsLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('user_status')
-          .select('last_active')
-          .eq('user_id', userId)
-          .maybeSingle();
-          
-        if (error) {
-          console.error("Error fetching last active status:", error);
-          return;
-        }
-        
-        if (data && data.last_active) {
-          setLastActive(new Date(data.last_active));
-        }
-      } catch (error) {
-        console.error("Failed to fetch last active time:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchLastActive();
-    
-    // Set up realtime subscription
-    const channel = supabase
-      .channel('online-status-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_status',
-          filter: `user_id=eq.${userId}`,
-        },
-        (payload) => {
-          if (payload.new && 'last_active' in payload.new && payload.new.last_active) {
-            setLastActive(new Date(payload.new.last_active));
-          }
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(channel);
-    };
-    
-  }, [userId]);
   
   if (!userId) return null;
   
+  // Get last active text from the hook
+  const lastActive = onlineStatuses[userId]?.lastActive;
+  
   // Determine what text to show for last active
   const getLastActiveText = () => {
-    if (isLoading) return t('profile.loading');
     if (!lastActive) return t('profile.neverActive');
-    
-    return formatDistanceToNow(lastActive, { addSuffix: true });
+    return formatDistanceToNow(new Date(lastActive), { addSuffix: true });
   };
   
   return (
@@ -96,20 +38,20 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
         <TooltipTrigger asChild>
           <div className={`flex items-center gap-1.5 ${className}`}>
             <span 
-              className={`relative flex h-2.5 w-2.5 ${isUserOnline ? 'bg-green-500' : 'bg-gray-400'} rounded-full`}
+              className={`relative flex h-2.5 w-2.5 ${isUserOnline(userId) ? 'bg-green-500' : 'bg-gray-400'} rounded-full`}
             >
-              {isUserOnline && (
+              {isUserOnline(userId) && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               )}
             </span>
             
             {showLabel && (
               <span className="text-xs text-muted-foreground">
-                {isUserOnline ? t('profile.online') : t('profile.offline')}
+                {isUserOnline(userId) ? t('profile.online') : t('profile.offline')}
               </span>
             )}
             
-            {showLastActive && !isUserOnline && lastActive && (
+            {showLastActive && !isUserOnline(userId) && lastActive && (
               <span className="text-xs text-muted-foreground ml-1">
                 {getLastActiveText()}
               </span>
@@ -118,7 +60,7 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
         </TooltipTrigger>
         <TooltipContent>
           <p>
-            {isUserOnline 
+            {isUserOnline(userId) 
               ? t('profile.userOnline') 
               : lastActive 
                 ? `${t('profile.lastSeen')} ${getLastActiveText()}`

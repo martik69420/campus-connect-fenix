@@ -1,4 +1,3 @@
-
 import { AuthChangeEvent, Session, SupabaseClient } from '@supabase/supabase-js';
 import { comparePassword, hashPassword } from '@/lib/password-utils';
 import { Database } from '@/integrations/supabase/types';
@@ -167,9 +166,51 @@ export async function validateCurrentPassword(userId: string, password: string):
 
 export async function updateOnlineStatus(userId: string, isOnline: boolean): Promise<boolean> {
   try {
-    // Implement online status update logic here
-    console.log('Updating online status for user:', userId, 'to:', isOnline);
-    // In a real implementation, this would update the user's online status in the database
+    if (!userId) return false;
+    
+    const currentTime = new Date().toISOString();
+    
+    // Check if a status record already exists
+    const { data, error: checkError } = await supabase
+      .from('user_status')
+      .select('id')
+      .eq('user_id', userId)
+      .maybeSingle();
+      
+    if (checkError) {
+      console.error("Error checking user status:", checkError);
+      return false;
+    }
+    
+    if (data) {
+      // Update existing status
+      const { error } = await supabase
+        .from('user_status')
+        .update({
+          is_online: isOnline,
+          last_active: currentTime
+        })
+        .eq('user_id', userId);
+        
+      if (error) {
+        console.error("Error updating online status:", error);
+        return false;
+      }
+    } else {
+      // Insert new status
+      const { error } = await supabase
+        .from('user_status')
+        .insert({
+          user_id: userId,
+          is_online: isOnline,
+          last_active: currentTime
+        });
+        
+      if (error) {
+        console.error("Error inserting online status:", error);
+        return false;
+      }
+    }
     
     return true;
   } catch (error) {

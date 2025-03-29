@@ -3,8 +3,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
+type UserStatus = {
+  isOnline: boolean;
+  lastActive: string | null;
+};
+
 export const useOnlineStatus = (userIds: string[] = []) => {
-  const [onlineStatuses, setOnlineStatuses] = useState<Record<string, boolean>>({});
+  const [onlineStatuses, setOnlineStatuses] = useState<Record<string, UserStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
 
@@ -117,16 +122,17 @@ export const useOnlineStatus = (userIds: string[] = []) => {
           return;
         }
 
-        const statusMap: Record<string, boolean> = {};
+        const statusMap: Record<string, UserStatus> = {};
         
         data?.forEach((status) => {
           // Consider someone online if their last active time is within the last 2 minutes
-          // More strict timing for accurate status
           const lastActive = new Date(status.last_active);
           const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
           
-          // Only mark as online if last_active is recent - ignore the is_online flag
-          statusMap[status.user_id] = lastActive > twoMinutesAgo;
+          statusMap[status.user_id] = {
+            isOnline: lastActive > twoMinutesAgo,
+            lastActive: status.last_active
+          };
         });
 
         setOnlineStatuses(statusMap);
@@ -161,7 +167,10 @@ export const useOnlineStatus = (userIds: string[] = []) => {
             
             setOnlineStatuses(prev => ({
               ...prev,
-              [user_id]: isRecentlyActive
+              [user_id]: {
+                isOnline: isRecentlyActive,
+                lastActive: last_active
+              }
             }));
           }
         }
@@ -170,7 +179,7 @@ export const useOnlineStatus = (userIds: string[] = []) => {
 
     // Set up a refresh interval to periodically check if "online" users are still active
     const refreshInterval = setInterval(() => {
-      // Refetch statuses more frequently (every 30 seconds) to ensure status accuracy
+      // Refetch statuses every 30 seconds to ensure status accuracy
       fetchStatuses();
     }, 30000);
 
@@ -181,7 +190,7 @@ export const useOnlineStatus = (userIds: string[] = []) => {
   }, [userIds.join(',')]);
 
   const isUserOnline = (userId: string): boolean => {
-    return !!onlineStatuses[userId];
+    return !!onlineStatuses[userId]?.isOnline;
   };
 
   return { isUserOnline, onlineStatuses, isLoading };
