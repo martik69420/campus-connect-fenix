@@ -37,6 +37,7 @@ const Messages = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
   
   // Use the messages hook
   const { 
@@ -311,6 +312,7 @@ const Messages = () => {
   const handleSendMessage = async (content: string) => {
     if (!user || !activeContactId || !content.trim()) return;
     try {
+      setIsSendingMessage(true);
       await sendMessageHook(content);
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -319,6 +321,8 @@ const Messages = () => {
         description: t('messages.sendError'),
         variant: "destructive",
       });
+    } finally {
+      setIsSendingMessage(false);
     }
   };
   
@@ -341,7 +345,7 @@ const Messages = () => {
   
   return (
     <AppLayout>
-      <div className="container mx-auto p-4 h-[calc(100vh-4rem)]">
+      <div className="container mx-auto p-4 h-[calc(100vh-4rem)] overflow-hidden">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
           {/* Contacts List */}
           <div className="md:col-span-1 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col dark:border-gray-800">
@@ -381,7 +385,7 @@ const Messages = () => {
                 
                 <MessageInput
                   onSendMessage={handleSendMessage}
-                  isSending={false}
+                  isSending={isSendingMessage}
                 />
               </>
             ) : (

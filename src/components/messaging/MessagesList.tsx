@@ -1,9 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+
+import React, { useRef, useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Message {
   id: string;
@@ -29,13 +31,29 @@ const MessagesList: React.FC<MessagesListProps> = ({
 }) => {
   const { t } = useLanguage();
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [initialLoad, setInitialLoad] = useState(true);
 
-  // Scroll to bottom when messages change
+  // Only scroll automatically on new messages or when explicitly triggered
   useEffect(() => {
-    if (endOfMessagesRef.current) {
+    // On initial load, don't auto-scroll
+    if (initialLoad) {
+      setInitialLoad(false);
+      return;
+    }
+
+    // Check if new messages arrived and we should auto-scroll
+    if (shouldAutoScroll && endOfMessagesRef.current) {
       endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, optimisticMessages]);
+  }, [messages, optimisticMessages, shouldAutoScroll]);
+
+  // Enable auto-scroll when user sends a message (optimistic message added)
+  useEffect(() => {
+    if (optimisticMessages.length > 0) {
+      setShouldAutoScroll(true);
+    }
+  }, [optimisticMessages]);
 
   const formatMessageTime = (dateString: string) => {
     try {
@@ -144,73 +162,75 @@ const MessagesList: React.FC<MessagesListProps> = ({
   );
 
   return (
-    <div className="flex-1 p-3 overflow-y-auto chat-scrollbar bg-gradient-to-b from-background to-background/90">
-      <div className="space-y-5">
-        {sortedDates.map(date => (
-          <div key={date} className="space-y-3">
-            {groupedMessages[date].map(msg => {
-              if ('isDateDivider' in msg) {
+    <div className="flex-1 overflow-hidden bg-gradient-to-b from-background to-background/90">
+      <ScrollArea className="h-full p-3 chat-scrollbar">
+        <div className="space-y-5">
+          {sortedDates.map(date => (
+            <div key={date} className="space-y-3">
+              {groupedMessages[date].map(msg => {
+                if ('isDateDivider' in msg) {
+                  return (
+                    <div key={msg.id} className="flex justify-center my-4">
+                      <div className="px-4 py-1.5 text-xs bg-primary/10 rounded-full text-primary font-medium">
+                        {msg.date}
+                      </div>
+                    </div>
+                  );
+                }
+                
+                const isCurrentUser = msg.sender_id === currentUserId;
+                const isOptimistic = msg.id.startsWith('temp-');
+                
                 return (
-                  <div key={msg.id} className="flex justify-center my-4">
-                    <div className="px-4 py-1.5 text-xs bg-primary/10 rounded-full text-primary font-medium">
-                      {msg.date}
+                  <motion.div
+                    key={msg.id}
+                    className={cn(
+                      'flex',
+                      isCurrentUser ? 'justify-end' : 'justify-start'
+                    )}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="flex flex-col max-w-[80%]">
+                      <div
+                        className={cn(
+                          'chat-bubble shadow-sm',
+                          isCurrentUser
+                            ? 'chat-bubble-sender'
+                            : 'chat-bubble-receiver',
+                          isOptimistic && 'opacity-70'
+                        )}
+                      >
+                        {msg.content}
+                      </div>
+                      <div
+                        className={cn(
+                          'message-time',
+                          isCurrentUser ? 'text-right' : 'text-left'
+                        )}
+                      >
+                        {isOptimistic ? (
+                          <span className="flex items-center justify-end text-xs text-muted-foreground">
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            {t('messages.sending')}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            {formatMessageTime(msg.created_at)}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </motion.div>
                 );
-              }
-              
-              const isCurrentUser = msg.sender_id === currentUserId;
-              const isOptimistic = msg.id.startsWith('temp-');
-              
-              return (
-                <motion.div
-                  key={msg.id}
-                  className={cn(
-                    'flex',
-                    isCurrentUser ? 'justify-end' : 'justify-start'
-                  )}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="flex flex-col max-w-[80%]">
-                    <div
-                      className={cn(
-                        'chat-bubble shadow-sm',
-                        isCurrentUser
-                          ? 'chat-bubble-sender'
-                          : 'chat-bubble-receiver',
-                        isOptimistic && 'opacity-70'
-                      )}
-                    >
-                      {msg.content}
-                    </div>
-                    <div
-                      className={cn(
-                        'message-time',
-                        isCurrentUser ? 'text-right' : 'text-left'
-                      )}
-                    >
-                      {isOptimistic ? (
-                        <span className="flex items-center justify-end text-xs text-muted-foreground">
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                          {t('messages.sending')}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          {formatMessageTime(msg.created_at)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        ))}
-        
-        <div ref={endOfMessagesRef} />
-      </div>
+              })}
+            </div>
+          ))}
+          
+          <div ref={endOfMessagesRef} />
+        </div>
+      </ScrollArea>
     </div>
   );
 };
