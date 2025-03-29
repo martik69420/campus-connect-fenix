@@ -6,7 +6,7 @@ import { useGame } from '@/context/GameContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
-import { Coins, Calendar, UserCircle, Users, Gamepad, Award, PieChart, Gift } from 'lucide-react';
+import { Coins, Calendar, UserCircle, Users, Gamepad, Award, PieChart, Gift, Trophy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';

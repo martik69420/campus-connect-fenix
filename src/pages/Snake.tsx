@@ -5,7 +5,7 @@ import SnakeGameWrapper from '@/components/game/SnakeGameWrapper';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useLanguage } from '@/context/LanguageContext';
 import { useGame } from '@/context/GameContext';
-import { GameController, Trophy, History } from 'lucide-react';
+import { Gamepad, Trophy, History } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const Snake: React.FC = () => {
@@ -93,7 +93,7 @@ const Snake: React.FC = () => {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
                   <CardTitle className="flex items-center">
-                    <GameController className="w-5 h-5 text-primary mr-2" />
+                    <Gamepad className="w-5 h-5 text-primary mr-2" />
                     {t('games.snake')}
                   </CardTitle>
                 </div>

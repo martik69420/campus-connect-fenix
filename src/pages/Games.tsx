@@ -7,7 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/context/GameContext';
-import { BrainCircuit, Terminal, GamepadDice, Crown, Trophy, Rocket } from 'lucide-react';
+import { BrainCircuit, Terminal, Gamepad, Crown, Trophy, Rocket } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 
@@ -109,7 +109,7 @@ const Games = () => {
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2">
-                    <GamepadDice className="w-5 h-5 text-gray-500" />
+                    <Gamepad className="w-5 h-5 text-gray-500" />
                     {t('games.comingSoon')}
                   </CardTitle>
                   <CardDescription>{t('games.comingSoonDescription')}</CardDescription>
