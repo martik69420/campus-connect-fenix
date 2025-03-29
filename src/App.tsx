@@ -1,8 +1,8 @@
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Route, Routes } from 'react-router-dom';
-import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/auth';
+import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { PostProvider } from './context/PostContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -26,22 +26,9 @@ import Search from './pages/Search';
 import NotFound from './pages/NotFound';
 
 function App() {
-  useEffect(() => {
-    // Register service worker for PWA support on load
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').then(registration => {
-          console.log('ServiceWorker registration successful with scope: ', registration.scope);
-        }).catch(error => {
-          console.log('ServiceWorker registration failed: ', error);
-        });
-      });
-    }
-  }, []);
-
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    <AuthProvider>
+      <ThemeProvider>
         <LanguageProvider>
           <NotificationProvider>
             <PostProvider>
@@ -70,8 +57,8 @@ function App() {
             </PostProvider>
           </NotificationProvider>
         </LanguageProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
