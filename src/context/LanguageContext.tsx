@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -206,7 +207,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const loadLanguagePreference = async () => {
       // First check localStorage for cached preference
       const cachedLanguage = localStorage.getItem('languagePreference');
-      if (cachedLanguage) {
+      if (cachedLanguage && (cachedLanguage === 'en' || cachedLanguage === 'nl' || cachedLanguage === 'fr')) {
         setLanguageState(cachedLanguage as LanguageCode);
       }
 
@@ -232,15 +233,23 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (profileError) {
               console.error('Error loading profile:', profileError);
             } else if (profileData) {
-              // If there's a language field in the profiles table
-              if ('language' in profileData) {
-                setLanguageState(profileData.language as LanguageCode);
-                localStorage.setItem('languagePreference', profileData.language);
+              // Check if profileData has a language field and it's one of our supported languages
+              if ('language' in profileData && 
+                  (profileData.language === 'en' || 
+                   profileData.language === 'nl' || 
+                   profileData.language === 'fr')) {
+                const userLanguage = profileData.language as LanguageCode;
+                setLanguageState(userLanguage);
+                localStorage.setItem('languagePreference', userLanguage);
               }
             }
           } else if (data && data.language) {
-            setLanguageState(data.language as LanguageCode);
-            localStorage.setItem('languagePreference', data.language);
+            // Validate that it's one of our supported languages
+            if (data.language === 'en' || data.language === 'nl' || data.language === 'fr') {
+              const userLanguage = data.language as LanguageCode;
+              setLanguageState(userLanguage);
+              localStorage.setItem('languagePreference', userLanguage);
+            }
           }
         } catch (error) {
           console.error('Failed to load language preference:', error);
@@ -267,15 +276,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         if (error) {
           console.error('Error updating language in user_settings:', error);
           
-          // Check if 'language' column exists in profiles
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .update({ language: newLanguage })
-            .eq('id', user.id);
-            
-          if (profileError) {
-            console.error('Error updating language in profiles:', profileError);
-          }
+          // Check if profiles table has a language column already (added in SQL migrations)
+          // For now, log the error but don't attempt to update profiles
+          console.error('Could not update language preference in database');
         }
       } catch (error) {
         console.error('Failed to update language preference:', error);
