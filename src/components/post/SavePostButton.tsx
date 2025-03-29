@@ -87,7 +87,7 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
           description: t('post.removedFromSaved'),
         });
       } else {
-        // Save the post
+        // Save the post - make sure we reference the profiles table, not auth.users
         const { error } = await supabase
           .from('saved_posts')
           .insert({

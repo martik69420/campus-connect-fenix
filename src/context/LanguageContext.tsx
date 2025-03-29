@@ -41,6 +41,56 @@ export const translations: Translations = {
     nl: 'Inloggen/Registreren',
     fr: 'Se connecter/S\'inscrire',
   },
+  'nav.search': {
+    en: 'Search',
+    nl: 'Zoeken',
+    fr: 'Rechercher',
+  },
+  'nav.settings': {
+    en: 'Settings',
+    nl: 'Instellingen',
+    fr: 'Paramètres',
+  },
+  'nav.messages': {
+    en: 'Messages',
+    nl: 'Berichten',
+    fr: 'Messages',
+  },
+  'settings.notifications': {
+    en: 'Notifications',
+    nl: 'Meldingen',
+    fr: 'Notifications',
+  },
+  'settings.friends': {
+    en: 'Friends',
+    nl: 'Vrienden',
+    fr: 'Amis',
+  },
+  'games.title': {
+    en: 'Games',
+    nl: 'Spellen',
+    fr: 'Jeux',
+  },
+  'leaderboard.title': {
+    en: 'Leaderboard',
+    nl: 'Ranglijst',
+    fr: 'Classement',
+  },
+  'coins.earn': {
+    en: 'Earn Coins',
+    nl: 'Verdien Munten',
+    fr: 'Gagner des Pièces',
+  },
+  'auth.logout': {
+    en: 'Logout',
+    nl: 'Uitloggen',
+    fr: 'Déconnexion',
+  },
+  'profile.userOffline': {
+    en: 'Offline',
+    nl: 'Offline',
+    fr: 'Hors ligne',
+  },
   'auth.requiresLogin': {
     en: 'Requires Login',
     nl: 'Vereist Inloggen',

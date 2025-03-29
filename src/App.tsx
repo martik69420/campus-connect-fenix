@@ -7,6 +7,7 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import Games from './pages/Games';
+import Snake from './pages/Snake';
 import Search from './pages/Search';
 import NotFound from './pages/NotFound';
 import { Toaster } from './components/ui/toaster';
@@ -37,6 +38,7 @@ function App() {
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/games" element={<Games />} />
+                  <Route path="/snake" element={<Snake />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/friends" element={<Friends />} />
