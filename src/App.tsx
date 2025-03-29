@@ -21,7 +21,6 @@ import Friends from './pages/Friends';
 import AddFriends from './pages/AddFriends';
 import Earn from './pages/Earn';
 import Leaderboard from './pages/Leaderboard';
-import TetrisGameWrapper from './components/game/TetrisGameWrapper';
 
 function App() {
   return (
@@ -38,7 +37,6 @@ function App() {
                   <Route path="/messages" element={<Messages />} />
                   <Route path="/settings" element={<Settings />} />
                   <Route path="/games" element={<Games />} />
-                  <Route path="/tetris" element={<TetrisGameWrapper />} />
                   <Route path="/search" element={<Search />} />
                   <Route path="/notifications" element={<Notifications />} />
                   <Route path="/friends" element={<Friends />} />

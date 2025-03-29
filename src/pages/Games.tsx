@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useLanguage } from '@/context/LanguageContext';
 import AppLayout from '@/components/layout/AppLayout';
 import { useToast } from '@/hooks/use-toast';
-import { BarChart, BrainCircuit, Terminal, Puzzle } from 'lucide-react';
+import { BrainCircuit, Terminal, BarChart } from 'lucide-react';
 
 const Games = () => {
   const navigate = useNavigate();
@@ -48,20 +49,6 @@ const Games = () => {
             </CardHeader>
             <CardContent>
               <Button onClick={() => navigate('/snake')} className="w-full">{t('games.playNow')}</Button>
-            </CardContent>
-          </Card>
-
-          {/* Tetris Game Card */}
-          <Card className="bg-card dark:bg-card/95 shadow-md hover:shadow-lg transition-shadow duration-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Puzzle className="w-6 h-6 text-primary" />
-                {t('games.tetris')}
-              </CardTitle>
-              <CardDescription>{t('games.tetrisDescription')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button onClick={() => navigate('/tetris')} className="w-full">{t('games.playNow')}</Button>
             </CardContent>
           </Card>
 
