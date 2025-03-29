@@ -6,4 +6,3 @@ import type { User, AuthContextType } from './auth/types';
 
 export { AuthContext, AuthProvider, useAuth };
 export type { User, AuthContextType };
-
