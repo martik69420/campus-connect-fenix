@@ -90,8 +90,8 @@ const Profile = () => {
         username: profileData.username,
         displayName: profileData.display_name || profileData.username,
         avatar: profileData.avatar_url,
-        bio: profileData.bio,
-        location: profileData.location || null, // Ensure location is defined even if null
+        bio: profileData.bio || null,
+        location: null, // Set a default null value for location
         school: profileData.school,
         createdAt: profileData.created_at,
         email: profileData.email

@@ -36,7 +36,11 @@ const Earn = () => {
                   25
                 </Badge>
               </div>
-              <Button onClick={handleClaimDailyReward} disabled={!hasDailyRewardAvailable} className="w-full">
+              <Button 
+                onClick={handleClaimDailyReward} 
+                disabled={!hasDailyRewardAvailable} 
+                className="w-full"
+              >
                 {hasDailyRewardAvailable ? t('earn.claimReward') : t('earn.claimed')}
               </Button>
             </CardContent>
