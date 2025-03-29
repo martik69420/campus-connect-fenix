@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,6 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
-  DropdownMenuItem, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
@@ -32,6 +30,7 @@ import { useNotification } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
+import NotificationMenu from '@/components/notifications/NotificationMenu';
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -134,52 +133,7 @@ const Navbar = () => {
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-80 p-0">
-                  <div className="flex justify-between items-center p-3 border-b">
-                    <span className="font-semibold">Notifications</span>
-                    {unreadCount > 0 && (
-                      <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/notifications')}>
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Mark all as read
-                      </Button>
-                    )}
-                  </div>
-                  <ScrollArea className="h-[300px]">
-                    {notifications.length > 0 ? (
-                      <div className="py-1">
-                        {notifications.slice(0, 5).map((notification) => (
-                          <div 
-                            key={notification.id}
-                            className={`flex items-start p-3 cursor-pointer hover:bg-muted/50 ${!notification.read ? 'bg-muted/30' : ''}`}
-                            onClick={() => handleNotificationClick(notification)}
-                          >
-                            <div className="mr-3">
-                              {getNotificationIcon(notification.type)}
-                            </div>
-                            <div className="flex-1 space-y-1">
-                              <p className="text-sm">{notification.message}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
-                              </p>
-                            </div>
-                            {!notification.read && (
-                              <div className="w-2 h-2 rounded-full bg-primary ml-2 mt-2" />
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="p-4 text-center">
-                        <p className="text-sm text-muted-foreground">No notifications yet</p>
-                      </div>
-                    )}
-                  </ScrollArea>
-                  <div className="p-2 border-t text-center">
-                    <Button variant="link" size="sm" className="text-primary text-xs w-full" onClick={() => navigate('/notifications')}>
-                      See all notifications
-                    </Button>
-                  </div>
-                </DropdownMenuContent>
+                <NotificationMenu />
               </DropdownMenu>
               
               <DropdownMenu>
