@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
@@ -100,7 +101,6 @@ const CommentSection: React.FC<CommentSectionProps> = ({
     setReplyText("");
   };
   
-  // Fixed: Removed the commentId parameter since handleComment doesn't take it
   const handleSubmitReply = (e: React.FormEvent) => {
     e.preventDefault();
     if (replyText.trim()) {
