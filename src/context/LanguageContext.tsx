@@ -1014,4 +1014,4 @@ export const translations: Translations = {
   
   'earn.alreadyClaimed': {
     en: 'Already Claimed',
-    nl: 'Al Geclaim
+    nl: '
