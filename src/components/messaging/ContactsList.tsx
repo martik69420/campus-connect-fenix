@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useLanguage } from '@/context/LanguageContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -139,7 +140,10 @@ const ContactsList: React.FC<ContactsListProps> = ({
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
                   <h3 className="font-medium truncate">
-                    {contact.displayName || contact.username}
+                    {contact.displayName}
+                    <span className="font-normal text-muted-foreground text-sm ml-1">
+                      @{contact.username}
+                    </span>
                   </h3>
                   {contact.lastMessageTime && (
                     <span className="text-xs text-muted-foreground">

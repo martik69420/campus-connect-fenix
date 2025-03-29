@@ -54,10 +54,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ contact, onOpenUserActions }) =
         </div>
         <div>
           <h3 className="font-medium line-clamp-1">
-            {contact.displayName || contact.username}
+            {contact.displayName} 
+            <span className="font-normal text-muted-foreground text-sm ml-1">
+              @{contact.username}
+            </span>
           </h3>
           <div className="flex items-center text-xs text-muted-foreground">
-            <OnlineStatus userId={contact.id} showLabel />
+            <OnlineStatus userId={contact.id} showLabel showLastActive />
           </div>
         </div>
       </div>
