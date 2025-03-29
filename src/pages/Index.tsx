@@ -19,15 +19,16 @@ const safeParseDate = (dateString: string | null | undefined): Date => {
   if (!dateString) return new Date();
   
   try {
+    // Fixed: use dateString instead of date
     // If it's a string, try to convert it to a Date object
-    const dateObj = typeof date === 'string' ? new Date(dateString) : dateString;
+    const dateObj = typeof dateString === 'string' ? new Date(dateString) : dateString;
     
-    // Check if date is valid
-    if (isNaN(dateObj.getTime())) {
+    // Check if date is valid (fixed by safely checking dateObj is a Date)
+    if (dateObj instanceof Date && isNaN(dateObj.getTime())) {
       return new Date(); // Return current date as fallback
     }
     
-    return dateObj;
+    return dateObj instanceof Date ? dateObj : new Date();
   } catch (error) {
     console.error("Error formatting date:", error, dateString);
     return new Date(); // Return current date as fallback
