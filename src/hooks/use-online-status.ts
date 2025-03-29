@@ -3,6 +3,13 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
+// Define types for presence data
+type PresenceUserStatus = {
+  user_id: string;
+  status: 'online' | 'offline';
+  online_at: string;
+};
+
 type UserStatus = {
   isOnline: boolean;
   lastActive: string | null;
@@ -114,13 +121,27 @@ export const useOnlineStatus = (userIds: string[] = []) => {
           // Process the presence data
           const statusMap: Record<string, UserStatus> = {};
           
+          // Initialize all requested userIds with offline status
+          userIds.forEach(id => {
+            statusMap[id] = {
+              isOnline: false,
+              lastActive: null
+            };
+          });
+          
+          // Process presence data for each channel
           Object.keys(presenceState).forEach(key => {
             const presences = presenceState[key];
+            
             presences.forEach(presence => {
-              if (userIds.includes(presence.user_id)) {
-                statusMap[presence.user_id] = {
-                  isOnline: presence.status === 'online',
-                  lastActive: presence.online_at
+              // We need to access the user data that was tracked
+              // Extract the custom data from the presence object
+              const userData = presence as unknown as PresenceUserStatus;
+              
+              if (userData && userData.user_id && userIds.includes(userData.user_id)) {
+                statusMap[userData.user_id] = {
+                  isOnline: userData.status === 'online',
+                  lastActive: userData.online_at
                 };
               }
             });
@@ -136,13 +157,24 @@ export const useOnlineStatus = (userIds: string[] = []) => {
             const state = channel.presenceState();
             const newStatusMap: Record<string, UserStatus> = {};
             
+            // Initialize all requested userIds with offline status
+            userIds.forEach(id => {
+              newStatusMap[id] = {
+                isOnline: false,
+                lastActive: null
+              };
+            });
+            
             Object.keys(state).forEach(key => {
               const presences = state[key];
               presences.forEach(presence => {
-                if (userIds.includes(presence.user_id)) {
-                  newStatusMap[presence.user_id] = {
-                    isOnline: presence.status === 'online',
-                    lastActive: presence.online_at
+                // Extract the custom data from the presence object
+                const userData = presence as unknown as PresenceUserStatus;
+                
+                if (userData && userData.user_id && userIds.includes(userData.user_id)) {
+                  newStatusMap[userData.user_id] = {
+                    isOnline: userData.status === 'online',
+                    lastActive: userData.online_at
                   };
                 }
               });
@@ -153,28 +185,38 @@ export const useOnlineStatus = (userIds: string[] = []) => {
           .on('presence', { event: 'join' }, ({ key, newPresences }) => {
             setOnlineStatuses(prev => {
               const updated = { ...prev };
+              
               newPresences.forEach(presence => {
-                if (userIds.includes(presence.user_id)) {
-                  updated[presence.user_id] = {
-                    isOnline: presence.status === 'online',
-                    lastActive: presence.online_at
+                // Extract the custom data from the presence object
+                const userData = presence as unknown as PresenceUserStatus;
+                
+                if (userData && userData.user_id && userIds.includes(userData.user_id)) {
+                  updated[userData.user_id] = {
+                    isOnline: userData.status === 'online',
+                    lastActive: userData.online_at
                   };
                 }
               });
+              
               return updated;
             });
           })
           .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
             setOnlineStatuses(prev => {
               const updated = { ...prev };
+              
               leftPresences.forEach(presence => {
-                if (userIds.includes(presence.user_id)) {
-                  updated[presence.user_id] = {
+                // Extract the custom data from the presence object
+                const userData = presence as unknown as PresenceUserStatus;
+                
+                if (userData && userData.user_id && userIds.includes(userData.user_id)) {
+                  updated[userData.user_id] = {
                     isOnline: false,
-                    lastActive: presence.online_at
+                    lastActive: userData.online_at
                   };
                 }
               });
+              
               return updated;
             });
           });
