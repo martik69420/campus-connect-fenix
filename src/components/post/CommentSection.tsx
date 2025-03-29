@@ -104,8 +104,8 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   const handleSubmitReply = (e: React.FormEvent, commentId: string) => {
     e.preventDefault();
     if (replyText.trim()) {
-      handleComment(e);
       setNewComment(replyText);
+      handleComment(e);
       setReplyingTo(null);
       setReplyText("");
     }
