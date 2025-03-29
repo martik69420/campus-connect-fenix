@@ -1,7 +1,9 @@
+
 import { AuthChangeEvent, Session, SupabaseClient } from '@supabase/supabase-js';
 import { comparePassword, hashPassword } from '@/lib/password-utils';
 import { Database } from '@/integrations/supabase/types';
 import { ProfileUpdateData } from './types';
+import { supabase } from '@/integrations/supabase/client';
 
 type User = Database['public']['Tables']['profiles']['Row'];
 type UserAttributes = Omit<User, 'id' | 'created_at' | 'updated_at'>;
