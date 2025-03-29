@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from './auth';
+import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 type Theme = 'light' | 'dark';
