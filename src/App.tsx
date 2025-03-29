@@ -1,5 +1,5 @@
 
-import React from 'react';
+import * as React from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './context/auth';
 import { ThemeProvider } from './context/ThemeContext';
