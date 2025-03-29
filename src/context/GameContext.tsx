@@ -84,7 +84,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           score: score
         });
       
-      // Show toast for new high score - Fixed to use only one parameter
+      // Show toast for new high score
       toast({
         title: t('games.newHighScore'),
         description: t('games.scoreUpdated', { score: score.toString() }),
@@ -102,7 +102,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       addCoins(25);
       setLastRewardClaimed(new Date());
       
-      // Show toast for reward - Fixed to use only one parameter
+      // Show toast for reward
       toast({
         title: t('earn.dailyReward'),
         description: t('earn.coinsAdded', { amount: '25' }),

@@ -25,7 +25,7 @@ const Games = () => {
       addCoins(score);
     }
     
-    // Show toast when game ends - Fixed to use single parameter
+    // Show toast when game ends
     if (score > 0) {
       toast({
         title: t('games.completed'),

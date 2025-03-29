@@ -148,7 +148,6 @@ const Earn = () => {
           if (newStreak > 1 && streakBonus > 0) {
             addCoins(streakBonus);
             
-            // Fixed toast call to use single parameter
             toast({
               title: t('earn.streakBonus'),
               description: t('earn.streakBonusDesc', { days: newStreak.toString(), bonus: streakBonus.toString() }),
@@ -175,7 +174,6 @@ const Earn = () => {
           }
         }
       } else {
-        // Fixed toast call to use single parameter
         toast({
           title: t('earn.alreadyClaimed'),
           description: t('earn.comeBackTomorrow'),
