@@ -3,12 +3,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
-interface OnlineStatus {
-  userId: string;
-  isOnline: boolean;
-  lastActive: string;
-}
-
 export const useOnlineStatus = (userIds: string[] = []) => {
   const [onlineStatuses, setOnlineStatuses] = useState<Record<string, boolean>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -79,7 +73,7 @@ export const useOnlineStatus = (userIds: string[] = []) => {
             .from('user_status')
             .update({ last_active: new Date().toISOString() })
             .eq('user_id', user.id);
-        }, 60000); // Update every minute
+        }, 30000); // Update every 30 seconds to maintain "online" status
 
         return () => {
           window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -126,12 +120,13 @@ export const useOnlineStatus = (userIds: string[] = []) => {
         const statusMap: Record<string, boolean> = {};
         
         data?.forEach((status) => {
-          // Consider someone online if their last active time is within the last 3 minutes
+          // Consider someone online if their last active time is within the last 2 minutes
+          // More strict timing for accurate status
           const lastActive = new Date(status.last_active);
-          const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
+          const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
           
-          // Only mark as online if both is_online flag is true AND last_active is recent
-          statusMap[status.user_id] = status.is_online && lastActive > threeMinutesAgo;
+          // Only mark as online if last_active is recent - ignore the is_online flag
+          statusMap[status.user_id] = lastActive > twoMinutesAgo;
         });
 
         setOnlineStatuses(statusMap);
@@ -157,16 +152,16 @@ export const useOnlineStatus = (userIds: string[] = []) => {
         },
         (payload) => {
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            const { user_id, is_online, last_active } = payload.new as { user_id: string, is_online: boolean, last_active: string };
+            const { user_id, last_active } = payload.new as { user_id: string, last_active: string };
             
-            // Check if the last_active timestamp is recent enough (within 3 minutes)
+            // Check if the last_active timestamp is recent enough (within 2 minutes)
             const lastActive = new Date(last_active);
-            const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
-            const isRecentlyActive = lastActive > threeMinutesAgo;
+            const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
+            const isRecentlyActive = lastActive > twoMinutesAgo;
             
             setOnlineStatuses(prev => ({
               ...prev,
-              [user_id]: is_online && isRecentlyActive
+              [user_id]: isRecentlyActive
             }));
           }
         }
@@ -175,9 +170,9 @@ export const useOnlineStatus = (userIds: string[] = []) => {
 
     // Set up a refresh interval to periodically check if "online" users are still active
     const refreshInterval = setInterval(() => {
-      // Refetch statuses every minute to make sure we have the latest data
+      // Refetch statuses more frequently (every 30 seconds) to ensure status accuracy
       fetchStatuses();
-    }, 60000); // Check every minute
+    }, 30000);
 
     return () => {
       supabase.removeChannel(channel);

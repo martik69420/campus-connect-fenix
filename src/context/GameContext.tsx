@@ -1,275 +1,250 @@
 
-import React, { createContext, useState, useContext, useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from "@/context/AuthContext";
-import { useLanguage } from "@/context/LanguageContext";
-import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from './AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 
-interface GameProgressType {
-  gamesPlayed: number;
-  highScore: number;
-}
-
-interface GameState {
-  lastDailyReward: string | null;
-  triviaQuestions: any[];
-  currentTriviaQuestion: number;
-  score: number;
-  progress: {
-    snake: GameProgressType;
-    tetris: GameProgressType;
-    trivia: GameProgressType;
-  };
-}
+// Game types
+type GameType = 'snake' | 'tetris' | 'trivia';
 
 interface GameContextType {
-  gameState: GameState;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
-  loading: boolean;
-  claimDailyReward: () => Promise<void>;
-  fetchTriviaQuestions: () => Promise<void>;
+  gameScores: Record<GameType, number>;
+  updateGameScore: (game: GameType, score: number) => void;
+  bestScores: Record<GameType, number>;
+  isLoading: boolean;
   hasDailyRewardAvailable: boolean;
-  updateSnakeScore: (score: number) => Promise<void>;
-  updateTetrisScore: (score: number) => Promise<void>;
-  updateTriviaScore: (score: number) => Promise<void>;
+  claimDailyReward: () => void;
 }
 
-const defaultGameState: GameState = {
-  lastDailyReward: null,
-  triviaQuestions: [],
-  currentTriviaQuestion: 0,
-  score: 0,
-  progress: {
-    snake: { gamesPlayed: 0, highScore: 0 },
-    tetris: { gamesPlayed: 0, highScore: 0 },
-    trivia: { gamesPlayed: 0, highScore: 0 }
+const GameContext = createContext<GameContextType | undefined>(undefined);
+
+export const useGame = () => {
+  const context = useContext(GameContext);
+  if (context === undefined) {
+    throw new Error('useGame must be used within a GameProvider');
   }
+  return context;
 };
 
-const GameContext = createContext<GameContextType>({
-  gameState: defaultGameState,
-  setGameState: () => {},
-  loading: false,
-  claimDailyReward: async () => {},
-  fetchTriviaQuestions: async () => {},
-  hasDailyRewardAvailable: false,
-  updateSnakeScore: async () => {},
-  updateTetrisScore: async () => {},
-  updateTriviaScore: async () => {}
-});
-
-export const useGame = () => useContext(GameContext);
-
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [gameState, setGameState] = useState<GameState>(defaultGameState);
-  const [loading, setLoading] = useState(false);
-  const [hasDailyRewardAvailable, setHasDailyRewardAvailable] = useState(false);
-  const { user, addCoins } = useAuth();
-  const { t } = useLanguage();
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [gameScores, setGameScores] = useState<Record<GameType, number>>({
+    snake: 0,
+    tetris: 0,
+    trivia: 0
+  });
   
-  const claimDailyReward = async () => {
-    if (!user) {
-      navigate('/auth');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Check if user has already claimed today
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      const { data: existingRewards, error: checkError } = await supabase
-        .from('daily_rewards')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', today.toISOString())
-        .maybeSingle();
-      
-      if (checkError) {
-        throw checkError;
-      }
-      
-      if (existingRewards) {
-        toast({
-          title: t('earn.alreadyClaimed'),
-          description: t('earn.comeBackTomorrow')
-        });
+  const [bestScores, setBestScores] = useState<Record<GameType, number>>({
+    snake: 0,
+    tetris: 0,
+    trivia: 0
+  });
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasDailyRewardAvailable, setHasDailyRewardAvailable] = useState(false);
+  
+  const { toast } = useToast();
+  const { user, addCoins } = useAuth();
+  
+  // Fetch best scores from the database
+  useEffect(() => {
+    const fetchBestScores = async () => {
+      if (!user) {
+        setIsLoading(false);
         return;
       }
       
-      // Award coins
-      const coinsToAward = 50;
-      
-      // Record the reward in database
-      const { error: rewardError } = await supabase
-        .from('daily_rewards')
-        .insert({
-          user_id: user.id,
-          coins_rewarded: coinsToAward
+      try {
+        setIsLoading(true);
+        
+        const { data, error } = await supabase
+          .from('game_history')
+          .select('game_type, score')
+          .eq('user_id', user.id)
+          .order('score', { ascending: false });
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Process the data to get best scores for each game
+        const scores: Record<GameType, number> = {
+          snake: 0,
+          tetris: 0,
+          trivia: 0
+        };
+        
+        if (data) {
+          data.forEach(record => {
+            const gameType = record.game_type as GameType;
+            if (gameType && scores[gameType] < record.score) {
+              scores[gameType] = record.score;
+            }
+          });
+        }
+        
+        setBestScores(scores);
+      } catch (error) {
+        console.error('Error fetching game scores:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load your game scores'
         });
-      
-      if (rewardError) {
-        throw rewardError;
+      } finally {
+        setIsLoading(false);
       }
+    };
+    
+    fetchBestScores();
+  }, [user, toast]);
+  
+  // Check if daily reward is available
+  useEffect(() => {
+    const checkDailyReward = async () => {
+      if (!user) return;
       
-      // Update user coins
-      addCoins(coinsToAward, t('earn.dailyRewardClaimed'));
-      
-      // Update state
-      setGameState(prev => ({
-        ...prev,
-        lastDailyReward: new Date().toISOString()
-      }));
-      
-      toast({
-        title: t('earn.dailyRewardClaimed'),
-        description: t('earn.youEarned', { coins: coinsToAward })
-      });
-      
-    } catch (error) {
-      console.error("Error claiming daily reward:", error);
-      toast({
-        title: t('error.title'),
-        description: t('error.tryAgain')
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTriviaQuestions = async () => {
-    try {
-      setLoading(true);
-      
-      // Mock trivia questions since the table doesn't exist
-      const mockTriviaQuestions = [
-        {
-          id: '1',
-          question: 'What is the capital of France?',
-          options: ['Berlin', 'Madrid', 'Paris', 'Rome'],
-          correct_answer: 'Paris',
-          category: 'Geography',
-          difficulty: 'easy'
-        },
-        {
-          id: '2',
-          question: 'Which planet is known as the Red Planet?',
-          options: ['Venus', 'Mars', 'Jupiter', 'Saturn'],
-          correct_answer: 'Mars',
-          category: 'Science',
-          difficulty: 'easy'
-        },
-        {
-          id: '3',
-          question: 'Who painted the Mona Lisa?',
-          options: ['Vincent van Gogh', 'Pablo Picasso', 'Leonardo da Vinci', 'Michelangelo'],
-          correct_answer: 'Leonardo da Vinci',
-          category: 'Art',
-          difficulty: 'medium'
+      try {
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        
+        const { data, error } = await supabase
+          .from('daily_rewards')
+          .select('created_at')
+          .eq('user_id', user.id)
+          .gte('created_at', today)
+          .maybeSingle();
+          
+        if (error) {
+          throw error;
         }
-      ];
-      
-      setGameState(prev => ({
-        ...prev,
-        triviaQuestions: mockTriviaQuestions,
-        currentTriviaQuestion: 0,
-        progress: {
-          ...prev.progress,
-          trivia: prev.progress.trivia
-        }
-      }));
-      
-      toast({
-        title: t('trivia.questionsLoaded'),
-        description: t('trivia.getReady')
-      });
-      
-    } catch (error) {
-      console.error("Error fetching trivia questions:", error);
-      toast({
-        title: t('error.title'),
-        description: t('error.tryAgain')
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Add game score update functions
-  const updateGameScore = async (gameType: string, score: number) => {
+        
+        // If no record found for today, then reward is available
+        setHasDailyRewardAvailable(!data);
+      } catch (error) {
+        console.error('Error checking daily reward:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to check daily reward status'
+        });
+      }
+    };
+    
+    checkDailyReward();
+    
+    // Check every minute if the day has changed
+    const interval = setInterval(() => {
+      checkDailyReward();
+    }, 60000);
+    
+    return () => clearInterval(interval);
+  }, [user, toast]);
+  
+  const updateGameScore = async (game: GameType, score: number) => {
     if (!user) return;
     
     try {
-      // Record score in database
-      const { error } = await supabase
-        .from('game_history')
-        .insert({
-          user_id: user.id,
-          game_type: gameType,
-          score: score
+      // Update local state
+      setGameScores(prev => ({
+        ...prev,
+        [game]: score
+      }));
+      
+      // If this is a new best score, update that too
+      if (score > bestScores[game]) {
+        setBestScores(prev => ({
+          ...prev,
+          [game]: score
+        }));
+        
+        // Add to database
+        const { error } = await supabase
+          .from('game_history')
+          .insert({
+            user_id: user.id,
+            game_type: game,
+            score: score
+          });
+          
+        if (error) {
+          throw error;
+        }
+        
+        // Show toast message
+        toast({
+          title: 'New High Score!',
+          description: `You've set a new record for ${game}: ${score} points`
         });
         
-      if (error) throw error;
-      
-      // Award coins based on the score
-      const coinsToAward = Math.floor(score / 10);
-      if (coinsToAward > 0) {
-        addCoins(coinsToAward, `${t('games.earnedFrom')} ${gameType}`);
+        // Reward coins for high scores
+        if (game === 'snake' && score > 10) {
+          addCoins(Math.floor(score / 10), 'Snake game score');
+        } else if (game === 'tetris' && score > 100) {
+          addCoins(Math.floor(score / 100), 'Tetris game score');
+        } else if (game === 'trivia' && score > 5) {
+          addCoins(score, 'Trivia game score');
+        }
       }
-      
-      toast({
-        title: t('games.scoreRecorded'),
-        description: t('games.scoreValue', { score })
-      });
-      
     } catch (error) {
-      console.error(`Error recording ${gameType} score:`, error);
+      console.error('Error updating game score:', error);
       toast({
-        title: t('error.title'),
-        description: t('error.tryAgain')
+        title: 'Error',
+        description: 'Failed to save your game score'
+        
       });
     }
   };
   
-  const updateSnakeScore = async (score: number) => {
-    await updateGameScore('Snake', score);
-  };
-  
-  const updateTetrisScore = async (score: number) => {
-    await updateGameScore('Tetris', score);
-  };
-  
-  const updateTriviaScore = async (score: number) => {
-    await updateGameScore('Trivia', score);
+  const claimDailyReward = async () => {
+    if (!user || !hasDailyRewardAvailable) return;
     
-    setGameState(prev => ({
-      ...prev,
-      score
-    }));
+    try {
+      const coinsRewarded = 25; // Standard daily reward
+      
+      // Record the reward
+      const { error } = await supabase
+        .from('daily_rewards')
+        .insert({
+          user_id: user.id,
+          coins_rewarded: coinsRewarded
+        });
+        
+      if (error) {
+        throw error;
+      }
+      
+      // Update user's coin balance
+      addCoins(coinsRewarded, 'Daily login reward');
+      
+      // Update state to show reward has been claimed
+      setHasDailyRewardAvailable(false);
+      
+      // Show success toast
+      toast({
+        title: 'Daily Reward Claimed!',
+        description: `You've received ${coinsRewarded} coins. Come back tomorrow for more!`
+      });
+    } catch (error) {
+      console.error('Error claiming daily reward:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to claim your daily reward'
+      });
+    }
   };
-
-  const value: GameContextType = {
-    gameState,
-    setGameState,
-    loading,
-    claimDailyReward,
-    fetchTriviaQuestions,
-    hasDailyRewardAvailable,
-    updateSnakeScore,
-    updateTetrisScore,
-    updateTriviaScore
-  };
-
+  
   return (
-    <GameContext.Provider value={value}>
+    <GameContext.Provider
+      value={{
+        gameScores,
+        updateGameScore,
+        bestScores,
+        isLoading,
+        hasDailyRewardAvailable,
+        claimDailyReward
+      }}
+    >
       {children}
     </GameContext.Provider>
   );
 };
 
-export { GameContext };
+export default GameContext;
