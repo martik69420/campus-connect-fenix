@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 // Define the shape of the translation object for each language
@@ -355,6 +354,11 @@ const translations: Translations = {
     en: 'User is offline',
     nl: 'Gebruiker is offline',
     fr: 'L\'utilisateur est hors ligne',
+  },
+  'post.save': {
+    en: 'Save',
+    nl: 'Opslaan',
+    fr: 'Enregistrer',
   },
 };
 

@@ -87,18 +87,24 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
           description: t('post.removedFromSaved'),
         });
       } else {
-        // Add SQL for checking if user_id exists in profiles table first
-        const { data: userExists, error: userCheckError } = await supabase
+        // The critical fix: We need to ensure the user_id is referencing profiles, not auth.users
+        // First check if the user profile exists
+        const { data: userProfile, error: profileError } = await supabase
           .from('profiles')
           .select('id')
           .eq('id', user.id)
           .single();
           
-        if (userCheckError) {
-          throw new Error(`User profile not found: ${userCheckError.message}`);
+        if (profileError) {
+          console.error('User profile check error:', profileError);
+          throw new Error(t('common.error'));
         }
         
-        // Now save the post after confirming user exists in profiles
+        if (!userProfile) {
+          throw new Error('User profile not found');
+        }
+        
+        // Now save the post with the verified user_id
         const { error } = await supabase
           .from('saved_posts')
           .insert({
@@ -118,7 +124,7 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
       console.error('Error toggling saved status:', error);
       toast({
         title: t('common.error'),
-        description: error.message,
+        description: error.message || 'An error occurred',
         variant: "destructive",
       });
     } finally {
@@ -146,9 +152,9 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
           isSaved && "fill-yellow-500 text-yellow-500"
         )} 
       />
-      {showText && isSaved && (
+      {showText && (
         <span className={isSaved ? "text-yellow-500" : ""}>
-          {t('post.saved')}
+          {isSaved ? t('post.saved') : t('post.save')}
         </span>
       )}
     </Button>
