@@ -88,10 +88,10 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
           
           <div className="flex flex-col md:flex-row w-full justify-between md:items-end gap-4 pt-2">
             <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{user?.displayName}</h1>
-              <p className="text-muted-foreground flex items-center">
-                <span className="mr-2">@{user?.username}</span>
-                <OnlineStatus userId={user.id} className="ml-2" />
+              <h1 className="text-2xl md:text-3xl font-bold">{user?.displayName || user?.username}</h1>
+              <p className="text-muted-foreground flex items-center gap-2">
+                <span>@{user?.username}</span>
+                {user?.id && <OnlineStatus userId={user.id} className="ml-2" />}
               </p>
             </div>
             

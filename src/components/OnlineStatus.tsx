@@ -19,7 +19,7 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   userId, 
   showLabel = false, 
   className = '',
-  showLastActive = true // Default to true so it always shows last active when offline
+  showLastActive = true 
 }) => {
   const { isUserOnline } = useOnlineStatus([userId]);
   const { t } = useLanguage();
@@ -36,7 +36,7 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
           .from('user_status')
           .select('last_active')
           .eq('user_id', userId)
-          .single();
+          .maybeSingle();
           
         if (error) {
           console.error("Error fetching last active status:", error);
@@ -57,17 +57,17 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
     
     // Set up realtime subscription
     const channel = supabase
-      .channel('user-last-active')
+      .channel('online-status-changes')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
           table: 'user_status',
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          if (payload.new.last_active) {
+          if (payload.new && payload.new.last_active) {
             setLastActive(new Date(payload.new.last_active));
           }
         }

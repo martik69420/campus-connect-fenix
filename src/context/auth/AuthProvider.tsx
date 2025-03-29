@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useEffect, useCallback } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { User, AuthContextType, ProfileUpdateData } from "./types";
@@ -101,23 +100,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (user) {
-        // Use a synchronous version for better reliability on page unload
-        const navigatorOnLine = typeof navigator !== 'undefined' && navigator.onLine === false ? false : true;
-        if (navigatorOnLine && user.id) {
-          try {
-            // Create a sync request to update status
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'https://nqbklvemcxemhgxlnyyq.supabase.co/rest/v1/user_status', false);
-            xhr.setRequestHeader('apikey', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xYmtsdmVtY3hlbWhneGxueXlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1MTIyMTYsImV4cCI6MjA1NzA4ODIxNn0.4z96U7aHqFkOvK8GbdFSh9s8hYDDhUyo9ypstoKpBgo');
-            xhr.setRequestHeader('Content-Type', 'application/json');
-            xhr.send(JSON.stringify({ 
-              user_id: user.id,
+        // Use navigator.sendBeacon for better reliability
+        try {
+          navigator.sendBeacon(
+            `${supabase.supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
+            JSON.stringify({ 
               is_online: false,
               last_active: new Date().toISOString()
-            }));
-          } catch (error) {
-            console.error("Error in sync offline status update:", error);
-          }
+            })
+          );
+        } catch (error) {
+          console.error("Error in beacon send:", error);
         }
       }
     };

@@ -82,14 +82,28 @@ const Profile = () => {
         throw error;
       }
       
-      setProfile(profileData);
+      // Make sure profile data includes the required fields
+      const processedProfile = {
+        ...profileData,
+        id: profileData.id,
+        username: profileData.username,
+        displayName: profileData.display_name || profileData.username,
+        avatar: profileData.avatar_url,
+        bio: profileData.bio,
+        location: profileData.location,
+        school: profileData.school,
+        createdAt: profileData.created_at,
+        email: profileData.email
+      };
+      
+      setProfile(processedProfile);
       
       // Check if this user is a friend
-      if (profileData && user.id !== profileData.id) {
+      if (processedProfile && user.id !== processedProfile.id) {
         const { data: friendData } = await supabase
           .from('friends')
           .select('status, user_id')
-          .or(`and(user_id.eq.${user.id},friend_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},friend_id.eq.${user.id})`)
+          .or(`and(user_id.eq.${user.id},friend_id.eq.${processedProfile.id}),and(user_id.eq.${processedProfile.id},friend_id.eq.${user.id})`)
           .maybeSingle();
           
         if (friendData) {
@@ -106,8 +120,8 @@ const Profile = () => {
       }
       
       // Fetch posts for this profile
-      if (profileData) {
-        fetchProfilePosts(profileData.id);
+      if (processedProfile) {
+        fetchProfilePosts(processedProfile.id);
       }
       
     } catch (error: any) {

@@ -56,24 +56,10 @@ export const useOnlineStatus = (userIds: string[] = []) => {
 
         // Set offline when the component unmounts
         const handleBeforeUnload = () => {
-          // Use synchronous fetch to make sure it runs before page unload
-          const supabaseUrl = "https://nqbklvemcxemhgxlnyyq.supabase.co";
-          const options = {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xYmtsdmVtY3hlbWhneGxueXlxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDE1MTIyMTYsImV4cCI6MjA1NzA4ODIxNn0.4z96U7aHqFkOvK8GbdFSh9s8hYDDhUyo9ypstoKpBgo',
-            },
-            body: JSON.stringify({
-              is_online: false,
-              last_active: new Date().toISOString()
-            }),
-            keepalive: true
-          };
-          
           try {
+            // Use navigator.sendBeacon for better reliability during page unload
             navigator.sendBeacon(
-              `${supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
+              `${supabase.supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`,
               JSON.stringify({
                 is_online: false,
                 last_active: new Date().toISOString()
@@ -81,9 +67,6 @@ export const useOnlineStatus = (userIds: string[] = []) => {
             );
           } catch (error) {
             console.error("Error in beacon send:", error);
-            // Fallback to fetch if sendBeacon fails
-            fetch(`${supabaseUrl}/rest/v1/user_status?user_id=eq.${user.id}`, options)
-              .catch(e => console.error("Failed to update offline status:", e));
           }
         };
 
@@ -191,15 +174,8 @@ export const useOnlineStatus = (userIds: string[] = []) => {
 
     // Set up a refresh interval to periodically check if "online" users are still active
     const refreshInterval = setInterval(() => {
-      setOnlineStatuses(prev => {
-        const updatedStatuses = { ...prev };
-        const threeMinutesAgo = new Date(Date.now() - 3 * 60 * 1000);
-        
-        // Refetch statuses every minute to make sure we have the latest data
-        fetchStatuses();
-        
-        return updatedStatuses;
-      });
+      // Refetch statuses every minute to make sure we have the latest data
+      fetchStatuses();
     }, 60000); // Check every minute
 
     return () => {
