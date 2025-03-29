@@ -15,9 +15,15 @@ interface Message {
 
 export const useMessages = (chatPartnerId: string | null, userId: string | null) => {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+
+  // Clear optimistic messages when chat partner changes
+  useEffect(() => {
+    setOptimisticMessages([]);
+  }, [chatPartnerId]);
 
   useEffect(() => {
     if (!chatPartnerId || !userId || !isAuthenticated) {
@@ -80,7 +86,7 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
 
     // Set up Realtime subscription for messages with improved filter
     const channel = supabase
-      .channel('messages-channel-' + chatPartnerId + '-' + userId)
+      .channel(`messages-channel-${chatPartnerId}-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -93,7 +99,18 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
           console.log('Realtime message update:', payload);
           if (payload.eventType === 'INSERT') {
             // Add new message to the list
-            setMessages((current) => [...current, payload.new as Message]);
+            setMessages((current) => {
+              // Check if message already exists
+              if (current.some(msg => msg.id === payload.new.id)) {
+                return current;
+              }
+              return [...current, payload.new as Message];
+            });
+            
+            // Remove any optimistic message that might match this one
+            setOptimisticMessages(current => 
+              current.filter(msg => !msg.id.startsWith('temp-'))
+            );
             
             // Mark as read if we're the receiver
             if (payload.new.receiver_id === userId) {
@@ -124,61 +141,52 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
   const sendMessage = async (content: string) => {
     if (!chatPartnerId || !userId || !content.trim() || !isAuthenticated) {
       console.error('Cannot send message: missing required data or not authenticated');
-      toast({
-        title: 'Error sending message',
-        description: 'Missing required data or not authenticated',
-        variant: 'destructive'
-      });
       return null;
     }
 
     try {
-      console.log('Sending message from', userId, 'to', chatPartnerId, ':', content);
+      const trimmedContent = content.trim();
       
-      const messageData = {
+      // Create optimistic message with unique ID
+      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const optimisticMessage: Message = {
+        id: tempId,
         sender_id: userId,
         receiver_id: chatPartnerId,
-        content: content.trim(),
+        content: trimmedContent,
+        created_at: new Date().toISOString(),
         is_read: false
       };
       
-      console.log('Message data being sent:', messageData);
+      // Add optimistic message immediately
+      setOptimisticMessages(prev => [...prev, optimisticMessage]);
       
-      // Optimistically add message to state immediately
-      const tempId = `temp-${Date.now()}`;
-      const optimisticMessage = {
-        id: tempId,
-        ...messageData,
-        created_at: new Date().toISOString()
-      };
-      
-      setMessages(prev => [...prev, optimisticMessage]);
-      
+      // Send actual message
       const { data, error } = await supabase
         .from('messages')
-        .insert(messageData)
+        .insert({
+          sender_id: userId,
+          receiver_id: chatPartnerId,
+          content: trimmedContent
+        })
         .select();
 
       if (error) {
         console.error('Error sending message:', error);
         // Remove optimistic message on error
-        setMessages(prev => prev.filter(msg => msg.id !== tempId));
+        setOptimisticMessages(prev => prev.filter(msg => msg.id !== tempId));
         toast({
           title: 'Error sending message',
           description: error.message,
           variant: 'destructive'
         });
         return null;
-      } else {
-        console.log('Message sent successfully:', data);
-        // Replace optimistic message with real one from server
-        if (data && data.length > 0) {
-          setMessages(prev => 
-            prev.map(msg => msg.id === tempId ? data[0] : msg)
-          );
-        }
-        return data[0];
       }
+      
+      // Remove the optimistic message once real message is confirmed
+      setOptimisticMessages(prev => prev.filter(msg => msg.id !== tempId));
+      
+      return data?.[0] || null;
     } catch (error: any) {
       console.error('Error in sendMessage:', error);
       toast({
@@ -243,5 +251,5 @@ export const useMessages = (chatPartnerId: string | null, userId: string | null)
     }
   };
 
-  return { messages, isLoading, sendMessage, markMessagesAsRead };
+  return { messages, optimisticMessages, isLoading, sendMessage, markMessagesAsRead };
 };

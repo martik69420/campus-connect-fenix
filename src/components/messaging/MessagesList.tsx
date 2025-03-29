@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
@@ -69,7 +68,22 @@ const MessagesList: React.FC<MessagesListProps> = ({
     );
   }
 
-  if (messages.length === 0 && optimisticMessages.length === 0) {
+  // Combine real and optimistic messages, ensuring no duplicates
+  const allMessages = [...messages];
+  
+  // Only add optimistic messages that don't have real counterparts
+  optimisticMessages.forEach(optMsg => {
+    if (!allMessages.some(msg => msg.id === optMsg.id)) {
+      allMessages.push(optMsg);
+    }
+  });
+  
+  // Sort by creation date
+  allMessages.sort((a, b) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+  if (allMessages.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-full p-6 text-center">
         <div className="glass-panel p-6 rounded-full mb-4">
@@ -115,17 +129,8 @@ const MessagesList: React.FC<MessagesListProps> = ({
     }
   };
   
-  // Group real messages
-  messages.forEach(message => {
-    const messageDate = new Date(message.created_at);
-    const dateKey = messageDate.toDateString();
-    
-    addDateDivider(dateKey, messageDate);
-    groupedMessages[dateKey].push(message);
-  });
-  
-  // Add optimistic messages
-  optimisticMessages.forEach(message => {
+  // Group all messages
+  allMessages.forEach(message => {
     const messageDate = new Date(message.created_at);
     const dateKey = messageDate.toDateString();
     
@@ -141,75 +146,68 @@ const MessagesList: React.FC<MessagesListProps> = ({
   return (
     <div className="flex-1 p-3 overflow-y-auto chat-scrollbar bg-gradient-to-b from-background to-background/90">
       <div className="space-y-5">
-        <AnimatePresence>
-          {sortedDates.map(date => (
-            <motion.div 
-              key={date} 
-              className="space-y-3"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {groupedMessages[date].map(msg => {
-                if ('isDateDivider' in msg) {
-                  return (
-                    <div key={msg.id} className="flex justify-center my-4">
-                      <div className="px-4 py-1.5 text-xs bg-primary/10 rounded-full text-primary font-medium">
-                        {msg.date}
-                      </div>
-                    </div>
-                  );
-                }
-                
-                const isCurrentUser = msg.sender_id === currentUserId;
-                const isOptimistic = optimisticMessages.some(m => m.id === msg.id);
-                
+        {sortedDates.map(date => (
+          <div key={date} className="space-y-3">
+            {groupedMessages[date].map(msg => {
+              if ('isDateDivider' in msg) {
                 return (
-                  <motion.div
-                    key={msg.id}
-                    className={cn(
-                      'flex',
-                      isCurrentUser ? 'justify-end' : 'justify-start'
-                    )}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    <div className="flex flex-col max-w-[80%]">
-                      <div
-                        className={cn(
-                          'chat-bubble shadow-sm',
-                          isCurrentUser
-                            ? 'chat-bubble-sender'
-                            : 'chat-bubble-receiver',
-                          isOptimistic && 'opacity-70'
-                        )}
-                      >
-                        {msg.content}
-                      </div>
-                      <div
-                        className={cn(
-                          'message-time',
-                          isCurrentUser ? 'text-right' : 'text-left'
-                        )}
-                      >
-                        {isOptimistic ? (
-                          <span className="flex items-center justify-end">
-                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            {t('messages.sending')}
-                          </span>
-                        ) : (
-                          formatMessageTime(msg.created_at)
-                        )}
-                      </div>
+                  <div key={msg.id} className="flex justify-center my-4">
+                    <div className="px-4 py-1.5 text-xs bg-primary/10 rounded-full text-primary font-medium">
+                      {msg.date}
                     </div>
-                  </motion.div>
+                  </div>
                 );
-              })}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+              }
+              
+              const isCurrentUser = msg.sender_id === currentUserId;
+              const isOptimistic = msg.id.startsWith('temp-');
+              
+              return (
+                <motion.div
+                  key={msg.id}
+                  className={cn(
+                    'flex',
+                    isCurrentUser ? 'justify-end' : 'justify-start'
+                  )}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="flex flex-col max-w-[80%]">
+                    <div
+                      className={cn(
+                        'chat-bubble shadow-sm',
+                        isCurrentUser
+                          ? 'chat-bubble-sender'
+                          : 'chat-bubble-receiver',
+                        isOptimistic && 'opacity-70'
+                      )}
+                    >
+                      {msg.content}
+                    </div>
+                    <div
+                      className={cn(
+                        'message-time',
+                        isCurrentUser ? 'text-right' : 'text-left'
+                      )}
+                    >
+                      {isOptimistic ? (
+                        <span className="flex items-center justify-end text-xs text-muted-foreground">
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                          {t('messages.sending')}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">
+                          {formatMessageTime(msg.created_at)}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        ))}
         
         <div ref={endOfMessagesRef} />
       </div>

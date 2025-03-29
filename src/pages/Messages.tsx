@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -6,20 +7,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/context/LanguageContext';
 import AppLayout from '@/components/layout/AppLayout';
 import ReportModal from '@/components/ReportModal';
+import { useMessages } from '@/hooks/use-messages';  // Import the useMessages hook
 import MessageInput from '@/components/messaging/MessageInput';
 import MessagesList from '@/components/messaging/MessagesList';
 import ChatHeader from '@/components/messaging/ChatHeader';
 import ContactsList from '@/components/messaging/ContactsList';
 import { Send, MessageSquare } from 'lucide-react';
-
-interface Message {
-  id: string;
-  content: string;
-  created_at: string;
-  sender_id: string;
-  receiver_id: string;
-  is_read: boolean;
-}
 
 interface Contact {
   id: string;
@@ -41,13 +34,18 @@ const Messages = () => {
   const [activeContactId, setActiveContactId] = useState<string>('');
   const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingContacts, setLoadingContacts] = useState(true);
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [sendingMessage, setSendingMessage] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  
+  // Use the messages hook
+  const { 
+    messages, 
+    optimisticMessages, 
+    isLoading: loadingMessages, 
+    sendMessage: sendMessageHook, 
+    markMessagesAsRead 
+  } = useMessages(activeContactId, user?.id || null);
   
   // Check for user ID in URL params and set active contact
   useEffect(() => {
@@ -191,10 +189,10 @@ const Messages = () => {
     
     fetchContacts();
     
-    // Subscribe to new messages for real-time updates
+    // Subscribe to new messages for real-time updates to the contacts list
     if (user) {
       const channel = supabase
-        .channel('messages-channel')
+        .channel('new-messages-channel')
         .on(
           'postgres_changes',
           {
@@ -205,18 +203,7 @@ const Messages = () => {
           },
           async (payload) => {
             console.log('New message received:', payload);
-            const newMessage = payload.new as Message;
-            
-            // Add the new message if it's from the active contact
-            if (newMessage.sender_id === activeContactId) {
-              setMessages(prev => [...prev, newMessage]);
-              
-              // Mark as read
-              await supabase
-                .from('messages')
-                .update({ is_read: true })
-                .eq('id', newMessage.id);
-            }
+            const newMessage = payload.new as { id: string; sender_id: string; content: string; created_at: string };
             
             // Update contacts list
             setContacts(prev => {
@@ -281,6 +268,11 @@ const Messages = () => {
                       onClick={() => {
                         setActiveContactId(sender.id);
                         setActiveContact(sender);
+                        
+                        // Update URL without reloading
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('user', sender.id);
+                        window.history.pushState({}, '', url);
                       }}
                     >
                       {t('messages.view')}
@@ -299,138 +291,27 @@ const Messages = () => {
     }
   }, [user, activeContactId, contacts, toast, t, location]);
   
-  // Fetch messages when active contact changes
+  // Mark messages as read when active contact changes or when messages are loaded
   useEffect(() => {
-    const fetchMessages = async () => {
-      if (!user || !activeContactId) return;
-      
-      try {
-        setLoadingMessages(true);
-        setMessages([]);
-        setOptimisticMessages([]);
-        
-        // Get messages between current user and the active contact
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .or(
-            `and(sender_id.eq.${user.id},receiver_id.eq.${activeContactId}),and(sender_id.eq.${activeContactId},receiver_id.eq.${user.id})`
-          )
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          console.error('Error fetching messages:', error);
-          return;
-        }
-        
-        setMessages(data || []);
-        
-        // Mark unread messages as read
-        const unreadMessages = data?.filter(
-          message => message.sender_id === activeContactId && !message.is_read
-        );
-        
-        if (unreadMessages && unreadMessages.length > 0) {
-          await Promise.all(
-            unreadMessages.map(message =>
-              supabase
-                .from('messages')
-                .update({ is_read: true })
-                .eq('id', message.id)
-            )
-          );
-          
-          // Update unread count in contacts
-          setContacts(prev => {
-            return prev.map(contact => {
-              if (contact.id === activeContactId) {
-                return { ...contact, unreadCount: 0 };
-              }
-              return contact;
-            });
-          });
-        }
-        
-        // Find and set the active contact
-        const activeContact = contacts.find(contact => contact.id === activeContactId) || null;
-        setActiveContact(activeContact);
-      } catch (error) {
-        console.error('Failed to fetch messages:', error);
-      } finally {
-        setLoadingMessages(false);
-      }
-    };
-    
-    fetchMessages();
-  }, [user, activeContactId, contacts]);
+    if (activeContactId && messages.length > 0) {
+      markMessagesAsRead();
+    }
+  }, [activeContactId, messages, markMessagesAsRead]);
   
+  // Update active contact when changing contacts
+  useEffect(() => {
+    if (activeContactId) {
+      const contact = contacts.find(c => c.id === activeContactId);
+      if (contact) {
+        setActiveContact(contact);
+      }
+    }
+  }, [activeContactId, contacts]);
+
   const handleSendMessage = async (content: string) => {
     if (!user || !activeContactId || !content.trim()) return;
-    
     try {
-      setSendingMessage(true);
-      
-      // Create an optimistic message
-      const optimisticId = `optimistic-${Date.now()}`;
-      const optimisticMessage: Message = {
-        id: optimisticId,
-        content: content,
-        created_at: new Date().toISOString(),
-        sender_id: user.id,
-        receiver_id: activeContactId,
-        is_read: false,
-      };
-      
-      // Add to optimistic messages
-      setOptimisticMessages(prev => [...prev, optimisticMessage]);
-      
-      // Actually send the message
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          content: content.trim(),
-          sender_id: user.id,
-          receiver_id: activeContactId,
-        })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error sending message:', error);
-        toast({
-          title: t('common.error'),
-          description: t('messages.sendError'),
-          variant: "destructive",
-        });
-        
-        // Remove the optimistic message
-        setOptimisticMessages(prev => prev.filter(msg => msg.id !== optimisticId));
-        return;
-      }
-      
-      // Remove the optimistic message and add the real one
-      setOptimisticMessages(prev => prev.filter(msg => msg.id !== optimisticId));
-      
-      // Add to messages
-      setMessages(prev => [...prev, data]);
-      
-      // Update the contact's last message
-      setContacts(prev => {
-        const updated = [...prev];
-        const contactIndex = updated.findIndex(c => c.id === activeContactId);
-        
-        if (contactIndex >= 0) {
-          const contact = { ...updated[contactIndex] };
-          contact.lastMessage = content.trim();
-          contact.lastMessageTime = new Date().toISOString();
-          
-          // Move this contact to the top
-          updated.splice(contactIndex, 1);
-          updated.unshift(contact);
-        }
-        
-        return updated;
-      });
+      await sendMessageHook(content);
     } catch (error) {
       console.error('Failed to send message:', error);
       toast({
@@ -438,8 +319,6 @@ const Messages = () => {
         description: t('messages.sendError'),
         variant: "destructive",
       });
-    } finally {
-      setSendingMessage(false);
     }
   };
   
@@ -502,7 +381,7 @@ const Messages = () => {
                 
                 <MessageInput
                   onSendMessage={handleSendMessage}
-                  isSending={sendingMessage}
+                  isSending={false}
                 />
               </>
             ) : (
