@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AuthContext } from "./context";
 
 // Provider component
-export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
