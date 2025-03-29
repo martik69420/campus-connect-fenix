@@ -15,10 +15,12 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { useNotification } from '@/context/NotificationContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 const NotificationMenu = () => {
   const navigate = useNavigate();
   const { notifications, unreadCount, markAsRead, markAllAsRead, fetchNotifications } = useNotification();
+  const { t } = useLanguage();
   
   // Refresh notifications when menu opens
   useEffect(() => {
@@ -66,11 +68,11 @@ const NotificationMenu = () => {
   return (
     <DropdownMenuContent align="end" className="w-80">
       <DropdownMenuLabel className="flex justify-between items-center">
-        <span>Notifications</span>
+        <span>{t('notifications.all')}</span>
         {unreadCount > 0 && (
           <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
             <Check className="h-3 w-3 mr-1" />
-            Mark all as read
+            {t('notifications.markAllRead')}
           </Button>
         )}
       </DropdownMenuLabel>
@@ -96,7 +98,7 @@ const NotificationMenu = () => {
                     </p>
                   </div>
                   {!notification.read && (
-                    <Badge variant="secondary" className="ml-auto">New</Badge>
+                    <Badge variant="secondary" className="ml-auto">{t('notifications.unread')}</Badge>
                   )}
                 </div>
               </DropdownMenuItem>
@@ -104,7 +106,7 @@ const NotificationMenu = () => {
           </DropdownMenuGroup>
         ) : (
           <div className="px-2 py-6 text-center">
-            <p className="text-sm text-muted-foreground">No notifications yet</p>
+            <p className="text-sm text-muted-foreground">{t('notifications.empty')}</p>
           </div>
         )}
       </ScrollArea>

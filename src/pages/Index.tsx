@@ -12,20 +12,24 @@ import PostCard from '@/components/post/PostCard';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePost } from '@/context/PostContext';
+import { useLanguage } from '@/context/LanguageContext';
 
 // Helper function to safely parse dates
-const safeParseDate = (dateString: string | null): Date => {
+const safeParseDate = (dateString: string | null | undefined): Date => {
   if (!dateString) return new Date();
+  
   try {
-    const date = new Date(dateString);
+    // If it's a string, try to convert it to a Date object
+    const dateObj = typeof date === 'string' ? new Date(dateString) : dateString;
+    
     // Check if date is valid
-    if (isNaN(date.getTime())) {
-      console.warn("Invalid date encountered:", dateString);
+    if (isNaN(dateObj.getTime())) {
       return new Date(); // Return current date as fallback
     }
-    return date;
+    
+    return dateObj;
   } catch (error) {
-    console.warn("Error parsing date:", dateString, error);
+    console.error("Error formatting date:", error, dateString);
     return new Date(); // Return current date as fallback
   }
 };
@@ -35,6 +39,7 @@ const Index = () => {
   const { toast } = useToast();
   const { user, isAuthenticated, isLoading } = useAuth();
   const { posts, fetchPosts } = usePost();
+  const { t } = useLanguage();
   
   const [loadingPosts, setLoadingPosts] = useState(false);
 
@@ -58,8 +63,8 @@ const Index = () => {
     } catch (error) {
       console.error("Error fetching posts:", error);
       toast({
-        title: "Error loading posts",
-        description: "Please try refreshing the page",
+        title: t('common.error'),
+        description: t('post.loadError'),
         variant: "destructive"
       });
     } finally {
@@ -78,7 +83,7 @@ const Index = () => {
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="flex flex-col items-center space-y-4">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <p>Loading your feed...</p>
+            <p>{t('common.loading')}</p>
           </div>
         </div>
       </AppLayout>
@@ -89,7 +94,7 @@ const Index = () => {
     <AppLayout>
       <div className="max-w-3xl mx-auto p-4">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">Feed</h2>
+          <h2 className="text-xl font-bold">{t('nav.home')}</h2>
           <Button variant="ghost" size="icon" onClick={refreshFeed} disabled={loadingPosts}>
             <RefreshCw className={`h-5 w-5 ${loadingPosts ? 'animate-spin' : ''}`} />
           </Button>
@@ -126,8 +131,8 @@ const Index = () => {
             ))
           ) : (
             <div className="text-center py-10">
-              <h3 className="text-lg font-medium">No posts yet</h3>
-              <p className="text-muted-foreground mt-1">Be the first to post something!</p>
+              <h3 className="text-lg font-medium">{t('post.noPosts')}</h3>
+              <p className="text-muted-foreground mt-1">{t('post.beFirst')}</p>
             </div>
           )}
         </div>

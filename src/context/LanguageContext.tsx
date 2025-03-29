@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useAuth } from './auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -74,6 +73,11 @@ export const translations: Translations = {
     en: 'Update',
     nl: 'Bijwerken',
     fr: 'Mettre à jour',
+  },
+  'common.coins': {
+    en: 'coins',
+    nl: 'munten',
+    fr: 'pièces',
   },
 
   // Auth
@@ -520,6 +524,21 @@ export const translations: Translations = {
     nl: 'Verwijderen',
     fr: 'Retirer',
   },
+  'post.noPosts': {
+    en: 'No posts yet',
+    nl: 'Nog geen berichten',
+    fr: 'Pas encore de publications',
+  },
+  'post.beFirst': {
+    en: 'Be the first to post something!',
+    nl: 'Wees de eerste om iets te plaatsen!',
+    fr: 'Soyez le premier à publier quelque chose!',
+  },
+  'post.loadError': {
+    en: 'Please try refreshing the page',
+    nl: 'Probeer de pagina te vernieuwen',
+    fr: 'Veuillez essayer de rafraîchir la page',
+  },
   
   // Games
   'games.title': {
@@ -571,6 +590,41 @@ export const translations: Translations = {
     en: 'Pause',
     nl: 'Pauze',
     fr: 'Pause',
+  },
+  'games.completed': {
+    en: 'Game Completed',
+    nl: 'Spel Voltooid',
+    fr: 'Jeu Terminé',
+  },
+  'games.scoreEarned': {
+    en: 'You earned {{score}} points',
+    nl: 'Je hebt {{score}} punten verdiend',
+    fr: 'Vous avez gagné {{score}} points',
+  },
+  'games.newHighScore': {
+    en: 'New High Score!',
+    nl: 'Nieuwe Topscore!',
+    fr: 'Nouveau Record!',
+  },
+  'games.scoreUpdated': {
+    en: 'Your score of {{score}} has been saved',
+    nl: 'Je score van {{score}} is opgeslagen',
+    fr: 'Votre score de {{score}} a été enregistré',
+  },
+  'games.snakeGame': {
+    en: 'Snake',
+    nl: 'Slang',
+    fr: 'Serpent',
+  },
+  'games.triviaGame': {
+    en: 'Trivia',
+    nl: 'Quiz',
+    fr: 'Quiz',
+  },
+  'games.tetrisGame': {
+    en: 'Tetris',
+    nl: 'Tetris',
+    fr: 'Tetris',
   },
   
   // Online status
@@ -745,6 +799,163 @@ export const translations: Translations = {
     nl: 'Munten Verdiend',
     fr: 'Pièces Gagnées',
   },
+
+  // Earn
+  'earn.earnCoins': {
+    en: 'Earn Coins',
+    nl: 'Munten Verdienen',
+    fr: 'Gagner des Pièces',
+  },
+  'earn.earnCoinsDesc': {
+    en: 'Complete tasks to earn coins for your profile',
+    nl: 'Voltooi taken om munten te verdienen voor je profiel',
+    fr: 'Complétez des tâches pour gagner des pièces pour votre profil',
+  },
+  'earn.dailyStreak': {
+    en: 'Daily Streak',
+    nl: 'Dagelijkse Reeks',
+    fr: 'Série Quotidienne',
+  },
+  'earn.streakDesc': {
+    en: 'Log in daily to earn bonus coins',
+    nl: 'Log dagelijks in om bonusmunten te verdienen',
+    fr: 'Connectez-vous quotidiennement pour gagner des pièces bonus',
+  },
+  'earn.days': {
+    en: 'days',
+    nl: 'dagen',
+    fr: 'jours',
+  },
+  'earn.coinsPerDay': {
+    en: 'coins per day',
+    nl: 'munten per dag',
+    fr: 'pièces par jour',
+  },
+  'earn.streakBonusText': {
+    en: 'Streak bonus active',
+    nl: 'Reeksbonus actief',
+    fr: 'Bonus de série actif',
+  },
+  'earn.claimDaily': {
+    en: 'Claim Daily Reward',
+    nl: 'Claim Dagelijkse Beloning',
+    fr: 'Réclamer Récompense Quotidienne',
+  },
+  'earn.nextReward': {
+    en: 'Next reward',
+    nl: 'Volgende beloning',
+    fr: 'Prochaine récompense',
+  },
+  'earn.checkBackTomorrow': {
+    en: 'Check back tomorrow',
+    nl: 'Kom morgen terug',
+    fr: 'Revenez demain',
+  },
+  'earn.ways': {
+    en: 'Ways to Earn',
+    nl: 'Manieren om te Verdienen',
+    fr: 'Façons de Gagner',
+  },
+  'earn.dailyLogin': {
+    en: 'Daily Login',
+    nl: 'Dagelijks Inloggen',
+    fr: 'Connexion Quotidienne',
+  },
+  'earn.dailyLoginDesc': {
+    en: 'Log in every day to earn coins',
+    nl: 'Log elke dag in om munten te verdienen',
+    fr: 'Connectez-vous chaque jour pour gagner des pièces',
+  },
+  'earn.playGames': {
+    en: 'Play Games',
+    nl: 'Speel Spellen',
+    fr: 'Jouer aux Jeux',
+  },
+  'earn.playGamesDesc': {
+    en: 'Play games to earn bonus coins',
+    nl: 'Speel spellen om bonusmunten te verdienen',
+    fr: 'Jouez à des jeux pour gagner des pièces bonus',
+  },
+  'earn.inviteFriends': {
+    en: 'Invite Friends',
+    nl: 'Nodig Vrienden Uit',
+    fr: 'Inviter des Amis',
+  },
+  'earn.inviteFriendsDesc': {
+    en: 'Invite friends to earn coins',
+    nl: 'Nodig vrienden uit om munten te verdienen',
+    fr: 'Invitez des amis pour gagner des pièces',
+  },
+  'earn.reachTop10': {
+    en: 'Reach Top 10',
+    nl: 'Bereik Top 10',
+    fr: 'Atteindre le Top 10',
+  },
+  'earn.reachTop10Desc': {
+    en: 'Get into the leaderboard top 10',
+    nl: 'Kom in de top 10 van het scorebord',
+    fr: 'Entrez dans le top 10 du classement',
+  },
+  'earn.completionOnce': {
+    en: 'Complete once per day',
+    nl: 'Eenmaal per dag voltooien',
+    fr: 'Complétez une fois par jour',
+  },
+  'earn.gameCompletion': {
+    en: 'Complete 3 games',
+    nl: 'Voltooi 3 spellen',
+    fr: 'Terminez 3 jeux',
+  },
+  'earn.perFriend': {
+    en: 'Per friend who joins',
+    nl: 'Per vriend die zich aanmeldt',
+    fr: 'Par ami qui rejoint',
+  },
+  'earn.oneTime': {
+    en: 'One time achievement',
+    nl: 'Eenmalige prestatie',
+    fr: 'Réalisation unique',
+  },
+  'earn.completed': {
+    en: 'Completed',
+    nl: 'Voltooid',
+    fr: 'Terminé',
+  },
+  'earn.goTo': {
+    en: 'Go to Task',
+    nl: 'Ga naar Taak',
+    fr: 'Aller à la Tâche',
+  },
+  'earn.streakBonus': {
+    en: 'Streak Bonus!',
+    nl: 'Reeksbonus!',
+    fr: 'Bonus de Série!',
+  },
+  'earn.streakBonusDesc': {
+    en: '{{days}} day streak: +{{bonus}} bonus coins',
+    nl: '{{days}} dagen reeks: +{{bonus}} bonusmunten',
+    fr: '{{days}} jours de série: +{{bonus}} pièces bonus',
+  },
+  'earn.alreadyClaimed': {
+    en: 'Already Claimed',
+    nl: 'Al Geclaimd',
+    fr: 'Déjà Réclamé',
+  },
+  'earn.comeBackTomorrow': {
+    en: 'Come back tomorrow for your next reward',
+    nl: 'Kom morgen terug voor je volgende beloning',
+    fr: 'Revenez demain pour votre prochaine récompense',
+  },
+  'earn.dailyReward': {
+    en: 'Daily Reward',
+    nl: 'Dagelijkse Beloning',
+    fr: 'Récompense Quotidienne',
+  },
+  'earn.coinsAdded': {
+    en: '{{amount}} coins added to your balance',
+    nl: '{{amount}} munten toegevoegd aan je saldo',
+    fr: '{{amount}} pièces ajoutées à votre solde',
+  },
 };
 
 interface LanguageContextProps {
@@ -793,95 +1004,3 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
               
             if (error) {
               console.error('Error fetching language preference:', error);
-              return;
-            }
-            
-            if (data && data.language) {
-              setLanguageState(data.language as LanguageCode);
-              // Also update localStorage
-              localStorage.setItem('preferredLanguage', data.language);
-            }
-          } catch (error) {
-            console.error('Failed to fetch language settings:', error);
-          }
-        }
-      } catch (error) {
-        console.error('Error in language initialization:', error);
-      }
-    };
-    
-    fetchLanguagePreference();
-  }, [isAuthenticated, user?.id]);
-  
-  // Function to set language and save preference to database
-  const setLanguage = async (newLanguage: LanguageCode) => {
-    setLanguageState(newLanguage);
-    // Always store in localStorage for consistency
-    localStorage.setItem('preferredLanguage', newLanguage);
-    
-    if (isAuthenticated && user?.id) {
-      try {
-        // Check if user settings exist
-        const { data: existingSettings } = await supabase
-          .from('user_settings')
-          .select('id')
-          .eq('user_id', user.id)
-          .single();
-          
-        if (existingSettings) {
-          // Update existing settings
-          const { error } = await supabase
-            .from('user_settings')
-            .update({ language: newLanguage })
-            .eq('user_id', user.id);
-            
-          if (error) {
-            console.error('Error updating language preference:', error);
-          }
-        } else {
-          // Create new settings
-          const { error } = await supabase
-            .from('user_settings')
-            .insert({ user_id: user.id, language: newLanguage });
-            
-          if (error) {
-            console.error('Error creating language preference:', error);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to save language preference:', error);
-      }
-    }
-  };
-  
-  // Translation function
-  const t = (key: string) => {
-    const translation = translations[key];
-    if (!translation) {
-      console.warn(`Translation missing for key: ${key}`);
-      return key;
-    }
-    
-    return translation[language] || translation.en || key;
-  };
-  
-  const availableLanguages: Array<{ code: LanguageCode, name: string }> = [
-    { code: 'nl', name: 'Nederlands' },
-    { code: 'en', name: 'English' },
-    { code: 'fr', name: 'Français' }
-  ];
-  
-  return (
-    <LanguageContext.Provider value={{ language, setLanguage, t, availableLanguages }}>
-      {children}
-    </LanguageContext.Provider>
-  );
-}
-
-export const useLanguage = () => {
-  const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error('useLanguage must be used within a LanguageProvider');
-  }
-  return context;
-};
