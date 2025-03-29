@@ -30,7 +30,6 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useNotification } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 
@@ -40,7 +39,6 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const { notifications, unreadCount, markAsRead } = useNotification();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [notificationPopoverOpen, setNotificationPopoverOpen] = useState(false);
   
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Home', path: '/' },
@@ -63,7 +61,6 @@ const Navbar = () => {
   
   const handleNotificationClick = (notification) => {
     markAsRead(notification.id);
-    setNotificationPopoverOpen(false);
     
     if (notification.url) {
       navigate(notification.url);
@@ -123,8 +120,8 @@ const Navbar = () => {
         <div className="flex items-center space-x-2">
           {user ? (
             <>
-              <Popover open={notificationPopoverOpen} onOpenChange={setNotificationPopoverOpen}>
-                <PopoverTrigger asChild>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
@@ -136,14 +133,14 @@ const Navbar = () => {
                       </Badge>
                     )}
                   </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80 p-0" align="end">
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 p-0">
                   <div className="flex justify-between items-center p-3 border-b">
                     <span className="font-semibold">Notifications</span>
                     {unreadCount > 0 && (
                       <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/notifications')}>
                         <CheckCircle className="h-3 w-3 mr-1" />
-                        View all
+                        Mark all as read
                       </Button>
                     )}
                   </div>
@@ -182,8 +179,8 @@ const Navbar = () => {
                       See all notifications
                     </Button>
                   </div>
-                </PopoverContent>
-              </Popover>
+                </DropdownMenuContent>
+              </DropdownMenu>
               
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
