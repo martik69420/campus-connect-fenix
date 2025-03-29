@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -12,10 +13,17 @@ import { useNavigate } from 'react-router-dom';
 // Define the structure of a notification
 export interface Notification {
   id: string;
-  type: 'message' | 'like' | 'friend' | 'system';
+  type: 'message' | 'like' | 'friend' | 'system' | 'comment' | 'mention' | 'coin';
   message: string;
   timestamp: string;
   read: boolean;
+  relatedId?: string;
+  url?: string;
+  sender?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
 }
 
 // Define the context properties
@@ -64,28 +72,81 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         id: '1',
         type: 'message',
         message: 'You have a new message from John Doe',
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
         read: false,
+        relatedId: 'user123',
+        url: '/messages',
+        sender: {
+          id: 'user123',
+          name: 'John Doe',
+          avatar: 'https://i.pravatar.cc/150?u=user123',
+        }
       },
       {
         id: '2',
         type: 'like',
         message: 'Your post received a like from Jane Smith',
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(Date.now() - 60 * 60000).toISOString(),
         read: false,
+        relatedId: 'post456',
+        sender: {
+          id: 'user456',
+          name: 'Jane Smith',
+          avatar: 'https://i.pravatar.cc/150?u=user456',
+        }
       },
       {
         id: '3',
         type: 'friend',
         message: 'You have a new friend request from Alice',
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
         read: false,
+        relatedId: 'user789',
+        url: '/friends',
+        sender: {
+          id: 'user789',
+          name: 'Alice Cooper',
+          avatar: 'https://i.pravatar.cc/150?u=user789',
+        }
       },
       {
         id: '4',
         type: 'system',
         message: 'Welcome to our platform!',
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(Date.now() - 24 * 60 * 60000).toISOString(),
+        read: true,
+      },
+      {
+        id: '5',
+        type: 'comment',
+        message: 'Bob commented on your post',
+        timestamp: new Date(Date.now() - 45 * 60000).toISOString(),
+        read: false,
+        relatedId: 'post789',
+        sender: {
+          id: 'user555',
+          name: 'Bob Wilson',
+          avatar: 'https://i.pravatar.cc/150?u=user555',
+        }
+      },
+      {
+        id: '6',
+        type: 'mention',
+        message: 'Emily mentioned you in a comment',
+        timestamp: new Date(Date.now() - 90 * 60000).toISOString(),
+        read: false,
+        relatedId: 'post123',
+        sender: {
+          id: 'user666',
+          name: 'Emily Davis',
+          avatar: 'https://i.pravatar.cc/150?u=user666',
+        }
+      },
+      {
+        id: '7',
+        type: 'coin',
+        message: 'You earned 50 coins for completing a challenge!',
+        timestamp: new Date(Date.now() - 180 * 60000).toISOString(),
         read: false,
       },
     ];
@@ -97,10 +158,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     fetchNotifications();
 
-    // Simulate new notifications arriving every 10 seconds
+    // Simulate new notifications arriving every 30 seconds
     const intervalId = setInterval(() => {
       fetchNotifications();
-    }, 10000);
+    }, 30000);
 
     return () => clearInterval(intervalId);
   }, [fetchNotifications]);
@@ -115,15 +176,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Display a toast notification
     const notification = notifications.find((n) => n.id === id);
-    if (notification) {
+    if (notification && !notification.read) {
       toast({
-        title: 'New Notification',
+        title: `New ${notification.type} notification`,
         description: notification.message,
-        action: (
-          <ToastAction altText="View" onClick={() => navigate('/notifications')}>
+        action: notification.url ? (
+          <ToastAction altText="View" onClick={() => navigate(notification.url || '/')}>
             View
           </ToastAction>
-        ),
+        ) : undefined,
       });
     }
   };

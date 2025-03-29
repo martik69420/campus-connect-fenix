@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNotification } from '@/context/NotificationContext';
 import { useLanguage } from '@/context/LanguageContext';
 
@@ -65,10 +66,80 @@ const NotificationMenu = () => {
     }
   };
   
+  // Group notifications by time (Today, Yesterday, Older)
+  const groupNotifications = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const groups = {
+      today: [] as any[],
+      yesterday: [] as any[],
+      older: [] as any[]
+    };
+    
+    notifications.forEach(notification => {
+      const notifDate = new Date(notification.timestamp);
+      if (notifDate >= today) {
+        groups.today.push(notification);
+      } else if (notifDate >= yesterday && notifDate < today) {
+        groups.yesterday.push(notification);
+      } else {
+        groups.older.push(notification);
+      }
+    });
+    
+    return groups;
+  };
+  
+  const notificationGroups = groupNotifications();
+  
+  const renderNotificationItem = (notification: any) => (
+    <DropdownMenuItem
+      key={notification.id}
+      className={`flex items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted/60' : ''}`}
+      onClick={() => handleNotificationClick(notification)}
+    >
+      <div className="flex gap-3 w-full">
+        {notification.sender?.avatar ? (
+          <Avatar className="h-9 w-9 border">
+            <AvatarImage src={notification.sender.avatar} alt={notification.sender.name || ''} />
+            <AvatarFallback className="bg-primary/10">
+              {notification.sender.name?.charAt(0) || 'U'}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <div className="rounded-full bg-muted p-2 h-9 w-9 flex items-center justify-center">
+            {getNotificationIcon(notification.type)}
+          </div>
+        )}
+        
+        <div className="flex-1 space-y-1 min-w-0">
+          <p className="text-sm leading-tight font-medium line-clamp-2">
+            {notification.message}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+          </p>
+        </div>
+        
+        {!notification.read && (
+          <div className="ml-2 flex-shrink-0">
+            <Badge variant="secondary" className="ml-auto">
+              {t('notifications.unread')}
+            </Badge>
+          </div>
+        )}
+      </div>
+    </DropdownMenuItem>
+  );
+  
   return (
     <DropdownMenuContent align="end" className="w-80">
-      <DropdownMenuLabel className="flex justify-between items-center">
-        <span>{t('notifications.all')}</span>
+      <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
+        <span className="text-lg font-semibold">{t('notifications.all')}</span>
         {unreadCount > 0 && (
           <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
             <Check className="h-3 w-3 mr-1" />
@@ -76,40 +147,55 @@ const NotificationMenu = () => {
           </Button>
         )}
       </DropdownMenuLabel>
-      <DropdownMenuSeparator />
       
-      <ScrollArea className="h-[300px]">
+      <ScrollArea className="h-[400px]">
         {notifications.length > 0 ? (
           <DropdownMenuGroup>
-            {notifications.map((notification) => (
-              <DropdownMenuItem
-                key={notification.id}
-                className={`flex items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted/50' : ''}`}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <div className="flex items-start gap-2">
-                  <div className="mt-0.5">
-                    {getNotificationIcon(notification.type)}
-                  </div>
-                  <div className="flex-1 space-y-1">
-                    <p className="text-sm leading-tight">{notification.message}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
-                    </p>
-                  </div>
-                  {!notification.read && (
-                    <Badge variant="secondary" className="ml-auto">{t('notifications.unread')}</Badge>
-                  )}
+            {notificationGroups.today.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                  Today
                 </div>
-              </DropdownMenuItem>
-            ))}
+                {notificationGroups.today.map(renderNotificationItem)}
+              </>
+            )}
+            
+            {notificationGroups.yesterday.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                  Yesterday
+                </div>
+                {notificationGroups.yesterday.map(renderNotificationItem)}
+              </>
+            )}
+            
+            {notificationGroups.older.length > 0 && (
+              <>
+                <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                  Older
+                </div>
+                {notificationGroups.older.map(renderNotificationItem)}
+              </>
+            )}
           </DropdownMenuGroup>
         ) : (
-          <div className="px-2 py-6 text-center">
-            <p className="text-sm text-muted-foreground">{t('notifications.empty')}</p>
+          <div className="px-4 py-10 text-center">
+            <Bell className="mx-auto h-10 w-10 text-muted-foreground opacity-25 mb-3" />
+            <p className="text-sm font-medium">{t('notifications.empty')}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              You don't have any notifications yet
+            </p>
           </div>
         )}
       </ScrollArea>
+      
+      <DropdownMenuSeparator />
+      <DropdownMenuItem 
+        className="py-2 justify-center font-medium text-primary text-center"
+        onClick={() => navigate('/notifications')}
+      >
+        View all notifications
+      </DropdownMenuItem>
     </DropdownMenuContent>
   );
 };
