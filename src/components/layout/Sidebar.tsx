@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
@@ -27,8 +26,7 @@ import {
   Heart,
   Trophy,
   UserPlus,
-  Gamepad2,
-  Table
+  Gamepad2
 } from "lucide-react";
 
 // Define the navigation items for the sidebar
@@ -42,7 +40,6 @@ const NAV_ITEMS = [
   { icon: Gamepad2, label: 'Games', href: '/games' },
   { icon: Heart, label: 'Earn', href: '/earn' },
   { icon: Trophy, label: 'Leaderboard', href: '/leaderboard' },
-  { icon: Table, label: 'Table', href: '/table' },
   { icon: Settings, label: 'Settings', href: '/settings' },
 ];
 
