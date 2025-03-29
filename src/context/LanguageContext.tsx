@@ -1011,6 +1011,7 @@ export const translations: Translations = {
     nl: '{{days}} dagen reeks: +{{bonus}} bonusmunten',
     fr: '{{days}} jours de série: +{{bonus}} pièces bonus',
   },
+  
   'earn.alreadyClaimed': {
     en: 'Already Claimed',
-    nl: 'Al Ge
+    nl: 'Al Geclaim
