@@ -290,23 +290,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const authValue: AuthContextType = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    register,
+    logout,
+    updateUser,
+    addCoins,
+    updatePassword,
+    updateUserProfile: handleUpdateUserProfile,
+    changePassword,
+    validateCurrentPassword
+  };
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        register,
-        logout,
-        updateUser,
-        addCoins,
-        updatePassword,
-        updateUserProfile: handleUpdateUserProfile,
-        changePassword,
-        validateCurrentPassword
-      }}
-    >
+    <AuthContext.Provider value={authValue}>
       {children}
     </AuthContext.Provider>
   );
