@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -217,7 +216,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
     
     try {
       setLoading(true);
-      const success = await register(username, email, displayName, school, password);
+      const success = await register(email, password, username, displayName, school);
       
       if (success) {
         navigate('/', { replace: true });
