@@ -119,7 +119,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         setUser(user);
         setIsAuthenticated(true);
-        // Toast is now handled in the component using this function
         return true;
       }
       
