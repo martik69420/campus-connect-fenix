@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -12,15 +11,52 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return null;
     }
     
+    // Get user profile data
     const { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();  // Change from .single() to .maybeSingle() to handle potential missing profiles
     
-    if (profileError || !profileData) {
+    if (profileError) {
       console.error("Error getting profile:", profileError);
       return null;
+    }
+    
+    // If profile doesn't exist, create one
+    if (!profileData) {
+      // Create a new profile
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: session.user.id,
+          username: session.user.email?.split('@')[0] || 'user',
+          email: session.user.email,
+          display_name: session.user.email?.split('@')[0] || 'User',
+          school: 'Not specified',
+          avatar_url: '',
+          bio: '',
+          coins: 100 // Starting coins
+        });
+        
+      if (insertError) {
+        console.error("Error creating profile:", insertError);
+        return null;
+      }
+      
+      // Fetch the newly created profile
+      const { data: newProfileData, error: newProfileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+        
+      if (newProfileError || !newProfileData) {
+        console.error("Error getting new profile:", newProfileError);
+        return null;
+      }
+      
+      profileData = newProfileData;
     }
     
     // Get user status data (online status, last active)
@@ -28,7 +64,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       .from('user_status')
       .select('*')
       .eq('user_id', session.user.id)
-      .single();
+      .maybeSingle();
     
     // Map database fields to our User interface
     return {
@@ -53,34 +89,41 @@ export const getCurrentUser = async (): Promise<User | null> => {
 
 export const loginUser = async (email: string, password: string): Promise<User | null> => {
   try {
-    // First find the user's email using their username
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('username', email)
-      .single();
+    // Check if the input is an email or username
+    let userEmail = email;
+    
+    // If it doesn't look like an email, assume it's a username and get the email
+    if (!email.includes('@')) {
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', email)
+        .single();
+        
+      if (userError || !userData || !userData.email) {
+        console.error("Error finding user by username:", userError);
+        throw new Error("User not found with that username");
+      }
       
-    if (userError || !userData || !userData.email) {
-      console.error("Error finding user by username:", userError);
-      return null;
+      userEmail = userData.email;
     }
     
     // Now log in with the email and password
     const { data: { session }, error } = await supabase.auth.signInWithPassword({
-      email: userData.email,
+      email: userEmail,
       password
     });
     
     if (error || !session) {
       console.error("Error logging in:", error);
-      return null;
+      throw error;
     }
     
     // Get the full user profile
     return await getCurrentUser();
   } catch (error) {
     console.error("Error in loginUser:", error);
-    return null;
+    throw error;
   }
 };
 

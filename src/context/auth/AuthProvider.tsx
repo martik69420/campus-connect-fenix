@@ -97,14 +97,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         setUser(user);
         setIsAuthenticated(true);
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${user.displayName || user.username}!`,
+        });
         return true;
       }
+      toast({
+        title: "Login failed",
+        description: "Invalid username or password",
+        variant: "destructive",
+      });
       return false;
     } catch (error: any) {
       console.error("Login error:", error);
       toast({
         title: "Login failed",
-        description: error.message,
+        description: error.message || "Invalid username or password",
         variant: "destructive",
       });
       return false;

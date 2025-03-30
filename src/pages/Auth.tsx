@@ -100,16 +100,16 @@ interface FormProps {
 const LoginForm = ({ loading, setLoading }: FormProps) => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [username, setUsername] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!username.trim() || !password.trim()) {
+    if (!identifier.trim() || !password.trim()) {
       toast({
         title: "Please fill all fields",
-        description: "Username and password are required",
+        description: "Email/username and password are required",
         variant: "destructive",
       });
       return;
@@ -117,20 +117,10 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
     
     try {
       setLoading(true);
-      const success = await login(username, password);
+      const success = await login(identifier, password);
       
       if (success) {
         navigate('/', { replace: true });
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
-      } else {
-        toast({
-          title: "Login failed",
-          description: "Invalid username or password",
-          variant: "destructive",
-        });
       }
     } catch (error: any) {
       toast({
@@ -146,15 +136,14 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="identifier">Email or Username</Label>
         <Input
-          id="username"
+          id="identifier"
           type="text"
-          placeholder="your_username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          placeholder="email@example.com or username"
+          value={identifier}
+          onChange={(e) => setIdentifier(e.target.value)}
           required
-          autoComplete="username"
           disabled={loading}
         />
       </div>
@@ -228,7 +217,6 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
         toast({
           title: "Registration failed",
           description: "Something went wrong. Please try again.",
-          variant: "destructive",
         });
       }
     } catch (error: any) {
