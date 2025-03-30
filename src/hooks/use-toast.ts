@@ -138,8 +138,8 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-// This is now outside of the hook so it can be called anywhere
-function toast({ ...props }: Toast) {
+// Create a standalone toast function that doesn't use React hooks
+export function toast(props: Toast) {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -168,7 +168,7 @@ function toast({ ...props }: Toast) {
   }
 }
 
-// Properly defined React hook
+// Define the hook separately in a proper React hook format
 export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
@@ -183,11 +183,8 @@ export function useToast() {
   }, [state])
 
   return {
-    ...state,
     toast,
+    ...state,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
-
-// Export toast function separately to allow usage outside components
-export { toast }
