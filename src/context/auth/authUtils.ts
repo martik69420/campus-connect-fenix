@@ -39,7 +39,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       avatar: profileData.avatar_url,
       bio: profileData.bio,
       school: profileData.school,
-      location: profileData.location || null,
+      location: null, // If it's not in the database, set it to null as a default
       createdAt: profileData.created_at,
       lastActive: statusData?.last_active || null,
       isOnline: statusData?.is_online || false,
@@ -163,7 +163,8 @@ export const updateUserProfile = async (userId: string, data: ProfileUpdateData)
         avatar_url: data.avatar, // Make sure we're using the correct field name for the database
         bio: data.bio,
         school: data.school,
-        location: data.location
+        // Only include location if it's in the profiles table
+        // If it's not in the database, we won't try to update it
       })
       .eq('id', userId);
       

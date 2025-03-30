@@ -328,16 +328,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         coins: (user.coins || 0) + amount
       });
       
-      // Log the transaction
+      // Log the transaction - removed this part since the table doesn't exist
+      // Instead, just log to console for now
       if (reason) {
-        await supabase
-          .from('coin_transactions')
-          .insert({
-            user_id: user.id,
-            amount,
-            reason,
-            transaction_type: 'credit'
-          });
+        console.log(`Coin transaction for user ${user.id}: ${amount} coins (${reason})`);
       }
       
       return true;
