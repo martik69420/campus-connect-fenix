@@ -17,6 +17,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const [authError, setAuthError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     // Check for existing session and set up auth state listener
@@ -112,6 +113,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
+      setAuthError(null);
       
       // Attempt to login - loginUser will throw an error if login fails
       const user = await loginUser(identifier, password);
@@ -122,9 +124,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
+      setAuthError("Invalid credentials");
       return false;
     } catch (error: any) {
       console.error("Login error:", error);
+      setAuthError(error.message || "Login failed");
       return false;
     } finally {
       setIsLoading(false);
@@ -140,6 +144,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
+      setAuthError(null);
       
       const result = await registerUser(email, password, username, displayName, school);
       
@@ -149,9 +154,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
+      setAuthError("Registration failed");
       return false;
     } catch (error: any) {
       console.error("Registration error:", error);
+      setAuthError(error.message || "Registration failed");
       return false;
     } finally {
       setIsLoading(false);
@@ -305,7 +312,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         coins: (user.coins || 0) + amount
       });
       
-      // Instead of trying to insert into a non-existent table, just log the transaction
+      // Log the transaction
       console.log(`Coin transaction for user ${user.id}: ${amount} coins (${reason || 'No reason provided'})`);
       
       return true;
@@ -326,7 +333,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     changePassword: handleChangePassword,
     uploadProfilePicture,
     updateUser,
-    addCoins
+    addCoins,
+    authError
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -10,11 +10,12 @@ import { useAuth } from '@/context/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, authError } = useAuth();
   
   useEffect(() => {
     if (isAuthenticated && !isLoading && user) {
@@ -60,6 +61,12 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {authError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertDescription>{authError}</AlertDescription>
+              </Alert>
+            )}
+            
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-4">
                 <TabsTrigger value="login">Login</TabsTrigger>
@@ -103,11 +110,9 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
     
     if (!identifier.trim() || !password.trim()) {
       toast({
@@ -124,21 +129,9 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
       
       if (success) {
         navigate('/', { replace: true });
-      } else {
-        setError('Invalid username or password');
-        toast({
-          title: "Login failed",
-          description: "Invalid username or password",
-          variant: "destructive",
-        });
       }
     } catch (error: any) {
-      setError(error.message || "Login failed");
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid username or password",
-        variant: "destructive",
-      });
+      // Error is now handled in the AuthProvider
     } finally {
       setLoading(false);
     }
@@ -146,11 +139,6 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
 
   return (
     <form onSubmit={handleLogin} className="space-y-4">
-      {error && (
-        <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-md">
-          {error}
-        </div>
-      )}
       <div className="space-y-2">
         <Label htmlFor="identifier">Email or Username</Label>
         <Input
@@ -231,19 +219,8 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           title: "Registration successful",
           description: "Welcome to Campus Fenix!",
         });
-      } else {
-        toast({
-          title: "Registration failed",
-          description: "Something went wrong. Please try again.",
-          variant: "destructive",
-        });
       }
-    } catch (error: any) {
-      toast({
-        title: "Registration failed",
-        description: error.message || "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+      // Errors are handled in the AuthProvider
     } finally {
       setLoading(false);
     }

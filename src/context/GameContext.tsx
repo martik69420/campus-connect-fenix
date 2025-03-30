@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth';
 
 // Game types
 type GameType = 'snake' | 'tetris' | 'trivia';
@@ -49,6 +50,8 @@ export const useGame = () => {
 };
 
 export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user: currentUser } = useAuth();
+  
   const [gameScores, setGameScores] = useState<Record<GameType, number>>({
     snake: 0,
     tetris: 0,
@@ -63,7 +66,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [isLoading, setIsLoading] = useState(true);
   const [hasDailyRewardAvailable, setHasDailyRewardAvailable] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   // Initialize game state
   const [gameState, setGameState] = useState<GameState>({
@@ -73,59 +75,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       trivia: { gamesPlayed: 0, highScore: 0 }
     }
   });
-  
-  // Get user info from auth state change
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (session?.user) {
-          // Get user profile from database
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('id, username, display_name, coins')
-            .eq('id', session.user.id)
-            .maybeSingle();
-            
-          if (profileData) {
-            setCurrentUser({
-              id: profileData.id,
-              username: profileData.username,
-              displayName: profileData.display_name,
-              coins: profileData.coins || 0
-            });
-          }
-        } else {
-          setCurrentUser(null);
-        }
-      }
-    );
-    
-    // Check current session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        // Get user profile from database
-        supabase
-          .from('profiles')
-          .select('id, username, display_name, coins')
-          .eq('id', session.user.id)
-          .maybeSingle()
-          .then(({ data: profileData }) => {
-            if (profileData) {
-              setCurrentUser({
-                id: profileData.id,
-                username: profileData.username,
-                displayName: profileData.display_name,
-                coins: profileData.coins || 0
-              });
-            }
-          });
-      }
-    });
-    
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, []);
   
   // Fetch best scores from the database
   useEffect(() => {
@@ -304,15 +253,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       if (error) throw error;
       
-      // Update local state
-      setCurrentUser(prev => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          coins: (prev.coins || 0) + amount
-        };
-      });
-      
       // Log the transaction
       console.log(`Coin transaction for user ${currentUser.id}: ${amount} coins (${reason || 'No reason provided'})`);
       
@@ -354,7 +294,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw error;
       }
       
-      // Update user's coin balance
+      // Update user's coin balance - using the context function
       await updateUserCoins(coinsRewarded, 'Daily login reward');
       
       // Update state to show reward has been claimed
