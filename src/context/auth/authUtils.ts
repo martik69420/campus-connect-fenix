@@ -58,17 +58,19 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
-export const loginUser = async (email: string, password: string): Promise<User | null> => {
+export const loginUser = async (identifier: string, password: string): Promise<User | null> => {
   try {
+    console.log(`Login attempt for: ${identifier}`);
+    
     // Check if the input is an email or username
-    let userEmail = email;
+    let userEmail = identifier;
     
     // If it doesn't look like an email, assume it's a username and get the email
-    if (!email.includes('@')) {
+    if (!identifier.includes('@')) {
       const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('email')
-        .eq('username', email)
+        .eq('username', identifier)
         .single();
         
       if (userError || !userData || !userData.email) {
@@ -79,18 +81,18 @@ export const loginUser = async (email: string, password: string): Promise<User |
       userEmail = userData.email;
     }
     
-    // Now log in with the email and password - this will verify the password
-    const { data: { session }, error } = await supabase.auth.signInWithPassword({
+    // Use signInWithPassword to validate the password properly
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: userEmail,
       password
     });
     
-    if (error || !session) {
-      console.error("Error logging in:", error);
-      throw error;
+    if (error || !data.session) {
+      console.error("Login failed:", error);
+      throw new Error(error?.message || "Invalid login credentials");
     }
     
-    // Get the full user profile
+    // Get the full user profile after successful auth
     return await getCurrentUser();
   } catch (error) {
     console.error("Error in loginUser:", error);

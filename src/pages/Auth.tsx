@@ -103,9 +103,11 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     
     if (!identifier.trim() || !password.trim()) {
       toast({
@@ -120,19 +122,16 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
       setLoading(true);
       const success = await login(identifier, password);
       
-      if (!success) {
-        toast({
-          title: "Login failed",
-          description: "Invalid username or password. If you haven't registered yet, please create an account first.",
-          variant: "destructive",
-        });
-      } else {
+      if (success) {
         navigate('/', { replace: true });
+      } else {
+        setError('Invalid username or password');
       }
     } catch (error: any) {
+      setError(error.message || "Login failed");
       toast({
         title: "Login failed",
-        description: error.message || "Invalid username or password. If you haven't registered yet, please create an account.",
+        description: error.message || "Invalid username or password",
         variant: "destructive",
       });
     } finally {
@@ -142,6 +141,11 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
 
   return (
     <form onSubmit={handleLogin} className="space-y-4">
+      {error && (
+        <div className="text-destructive text-sm bg-destructive/10 p-3 rounded-md">
+          {error}
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="identifier">Email or Username</Label>
         <Input

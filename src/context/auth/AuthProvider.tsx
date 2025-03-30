@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
@@ -101,10 +100,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (identifier: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const user = await loginUser(email, password);
+      
+      // This will throw an error if login fails
+      const user = await loginUser(identifier, password);
+      
       if (user) {
         setUser(user);
         setIsAuthenticated(true);
