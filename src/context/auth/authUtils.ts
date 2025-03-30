@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -12,7 +13,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
     }
     
     // Get user profile data
-    const { data: profileData, error: profileError } = await supabase
+    let { data: profileData, error: profileError } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
