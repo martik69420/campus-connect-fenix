@@ -27,40 +27,38 @@ import NotFound from './pages/NotFound';
 
 function App() {
   return (
-    <>
-      <AuthProvider>
-        <ThemeProvider>
-          <LanguageProvider>
-            <NotificationProvider>
-              <PostProvider>
-                <GameProvider>
-                  <div className="app dark:bg-background">
-                    <NotificationPermissionBanner />
-                    <Routes>
-                      <Route path="/" element={<Index />} />
-                      <Route path="/auth" element={<Auth />} />
-                      <Route path="/profile/:username" element={<Profile />} />
-                      <Route path="/messages" element={<Messages />} />
-                      <Route path="/games" element={<Games />} />
-                      <Route path="/snake" element={<Snake />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/leaderboard" element={<Leaderboard />} />
-                      <Route path="/friends" element={<Friends />} />
-                      <Route path="/add-friends" element={<AddFriends />} />
-                      <Route path="/earn" element={<Earn />} />
-                      <Route path="/search" element={<Search />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                    <Toaster />
-                  </div>
-                </GameProvider>
-              </PostProvider>
-            </NotificationProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </AuthProvider>
-    </>
+    <AuthProvider>
+      <ThemeProvider>
+        <LanguageProvider>
+          <NotificationProvider>
+            <PostProvider>
+              <GameProvider>
+                <div className="app dark:bg-background">
+                  <NotificationPermissionBanner />
+                  <Routes>
+                    <Route path="/" element={<Index />} />
+                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/profile/:username" element={<Profile />} />
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/games" element={<Games />} />
+                    <Route path="/snake" element={<Snake />} />
+                    <Route path="/settings" element={<Settings />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/friends" element={<Friends />} />
+                    <Route path="/add-friends" element={<AddFriends />} />
+                    <Route path="/earn" element={<Earn />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                  <Toaster />
+                </div>
+              </GameProvider>
+            </PostProvider>
+          </NotificationProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
