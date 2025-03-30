@@ -8,6 +8,10 @@ export interface User {
   bio?: string | null;
   school: string;
   location?: string | null;
+  coins?: number;
+  createdAt?: string;
+  lastActive?: string | null;
+  isOnline?: boolean;
 }
 
 export interface ProfileUpdateData {
@@ -34,4 +38,6 @@ export interface AuthContextType {
   updateUserProfile: (profileData: ProfileUpdateData) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   uploadProfilePicture: (file: File) => Promise<string | null>;
+  updateUser: (userData: Partial<User>) => void;
+  addCoins: (amount: number, reason?: string) => Promise<boolean>;
 }

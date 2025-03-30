@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -38,7 +39,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       avatar: profileData.avatar_url,
       bio: profileData.bio,
       school: profileData.school,
-      location: null, // We'll handle location in user_settings later
+      location: profileData.location || null,
       createdAt: profileData.created_at,
       lastActive: statusData?.last_active || null,
       isOnline: statusData?.is_online || false,

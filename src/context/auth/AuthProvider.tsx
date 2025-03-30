@@ -2,14 +2,23 @@
 import * as React from "react";
 import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { User, AuthContextType, ProfileUpdateData } from "./types";
-import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
+import { 
+  loginUser, 
+  registerUser, 
+  changePassword as changePasswordUtil, 
+  validateCurrentPassword, 
+  updateOnlineStatus, 
+  getCurrentUser, 
+  updateUserProfile as updateUserProfileUtil 
+} from "./authUtils";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
+  const { toast } = useToast();
 
   React.useEffect(() => {
     const checkUser = async () => {
@@ -18,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (currentUser) {
           setUser(currentUser);
           setIsAuthenticated(true);
-          updateOnlineStatus(true);
+          updateOnlineStatus(currentUser.id, true);
         }
       } catch (error) {
         console.error("Error checking user:", error);
@@ -42,7 +51,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (currentUser) {
               setUser(currentUser);
               setIsAuthenticated(true);
-              updateOnlineStatus(true);
+              updateOnlineStatus(currentUser.id, true);
             }
           } catch (error) {
             console.error("Error getting user:", error);
@@ -57,7 +66,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Update online status when window focus changes
     const handleVisibilityChange = () => {
       if (user && document.visibilityState === "visible") {
-        updateOnlineStatus(true);
+        updateOnlineStatus(user.id, true);
       }
     };
 
@@ -114,8 +123,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const success = await registerUser(email, password, username, displayName, school);
-      return success;
+      const result = await registerUser(username, email, displayName, school, password);
+      return result.success;
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({
@@ -133,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       if (user) {
-        await updateOnlineStatus(false);
+        await updateOnlineStatus(user.id, false);
       }
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -154,8 +163,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Update the user profile
   const handleUpdateUserProfile = async (profileData: ProfileUpdateData): Promise<boolean> => {
     try {
+      if (!user) return false;
+      
       setIsLoading(true);
-      const success = await updateUserProfile(profileData);
+      const success = await updateUserProfileUtil(user.id, profileData);
       
       if (success && user) {
         // Update local user state with new profile data
@@ -185,10 +196,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     newPassword: string
   ): Promise<boolean> => {
     try {
+      if (!user) return false;
+      
       setIsLoading(true);
       
       // First validate the current password
-      const isCurrentPasswordValid = await validateCurrentPassword(currentPassword);
+      const isCurrentPasswordValid = await validateCurrentPassword(user.id, currentPassword);
       
       if (!isCurrentPasswordValid) {
         toast({
@@ -200,7 +213,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Then change to the new password
-      const success = await changePassword(newPassword);
+      const success = await changePasswordUtil(user.id, newPassword);
       
       if (success) {
         toast({
@@ -256,7 +269,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const avatarUrl = data.publicUrl;
 
       // Update user profile with new avatar URL
-      const success = await updateUserProfile({
+      const success = await updateUserProfileUtil(user.id, {
         avatar: avatarUrl
       });
 
@@ -286,6 +299,53 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return null;
     }
   };
+  
+  // Update user data
+  const updateUser = (userData: Partial<User>): void => {
+    if (!user) return;
+    setUser({
+      ...user,
+      ...userData
+    });
+  };
+  
+  // Add coins to user balance
+  const addCoins = async (amount: number, reason?: string): Promise<boolean> => {
+    try {
+      if (!user) return false;
+      
+      // Update coins in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ coins: (user.coins || 0) + amount })
+        .eq('id', user.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setUser({
+        ...user,
+        coins: (user.coins || 0) + amount
+      });
+      
+      // Log the transaction
+      if (reason) {
+        await supabase
+          .from('coin_transactions')
+          .insert({
+            user_id: user.id,
+            amount,
+            reason,
+            transaction_type: 'credit'
+          });
+      }
+      
+      return true;
+    } catch (error) {
+      console.error("Error adding coins:", error);
+      return false;
+    }
+  };
 
   const value: AuthContextType = {
     user,
@@ -297,6 +357,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     updateUserProfile: handleUpdateUserProfile,
     changePassword: handleChangePassword,
     uploadProfilePicture,
+    updateUser,
+    addCoins
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
