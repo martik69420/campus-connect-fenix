@@ -27,8 +27,9 @@ import NotFound from './pages/NotFound';
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
+    // Change the order: put AuthProvider before ThemeProvider
+    <AuthProvider>
+      <ThemeProvider>
         <LanguageProvider>
           <NotificationProvider>
             <PostProvider>
@@ -57,8 +58,8 @@ function App() {
             </PostProvider>
           </NotificationProvider>
         </LanguageProvider>
-      </AuthProvider>
-    </ThemeProvider>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 

@@ -1,6 +1,5 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 type Theme = 'light' | 'dark';
@@ -19,7 +18,7 @@ const ThemeContext = createContext<ThemeContextType>({
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
-  const { user, isAuthenticated } = useAuth();
+  const [userId, setUserId] = useState<string | null>(null);
 
   // Load theme from localStorage first
   useEffect(() => {
@@ -30,10 +29,26 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  // Setup Supabase auth listener to get user ID directly
+  useEffect(() => {
+    const { data } = supabase.auth.onAuthStateChange((event, session) => {
+      setUserId(session?.user?.id || null);
+    });
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUserId(session?.user?.id || null);
+    });
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
+  }, []);
+
   // Fetch user theme preference when authenticated
   useEffect(() => {
     const fetchThemePreference = async () => {
-      if (isAuthenticated && user?.id) {
+      if (userId) {
         try {
           // We use a local variable instead of directly accessing theme property
           // since it doesn't exist in the database yet
@@ -48,7 +63,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     };
     
     fetchThemePreference();
-  }, [isAuthenticated, user?.id]);
+  }, [userId]);
 
   // Function to set theme and save preference to database
   const setTheme = async (newTheme: Theme) => {
