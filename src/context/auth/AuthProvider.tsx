@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
@@ -27,6 +28,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(currentUser);
           setIsAuthenticated(true);
           updateOnlineStatus(currentUser.id, true);
+        } else {
+          // User is logged in but doesn't have a profile
+          // We'll consider them not authenticated so they can register
+          const { data } = await supabase.auth.getSession();
+          if (data.session) {
+            // Sign them out since they don't have a profile
+            await supabase.auth.signOut();
+          }
+          setUser(null);
+          setIsAuthenticated(false);
         }
       } catch (error) {
         console.error("Error checking user:", error);

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -24,40 +23,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
       return null;
     }
     
-    // If profile doesn't exist, create one
+    // If profile doesn't exist, return null - don't create one automatically
     if (!profileData) {
-      // Create a new profile
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: session.user.id,
-          username: session.user.email?.split('@')[0] || 'user',
-          email: session.user.email,
-          display_name: session.user.email?.split('@')[0] || 'User',
-          school: 'Not specified',
-          avatar_url: '',
-          bio: '',
-          coins: 100 // Starting coins
-        });
-        
-      if (insertError) {
-        console.error("Error creating profile:", insertError);
-        return null;
-      }
-      
-      // Fetch the newly created profile
-      const { data: newProfileData, error: newProfileError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .single();
-        
-      if (newProfileError || !newProfileData) {
-        console.error("Error getting new profile:", newProfileError);
-        return null;
-      }
-      
-      profileData = newProfileData;
+      console.log("No profile found for user:", session.user.id);
+      return null;
     }
     
     // Get user status data (online status, last active)

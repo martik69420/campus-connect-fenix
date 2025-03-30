@@ -119,13 +119,19 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
       setLoading(true);
       const success = await login(identifier, password);
       
-      if (success) {
+      if (!success) {
+        toast({
+          title: "Login failed",
+          description: "If you haven't registered yet, please create an account first.",
+          variant: "destructive",
+        });
+      } else {
         navigate('/', { replace: true });
       }
     } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error.message || "Check your credentials and try again",
+        description: error.message || "If you haven't registered yet, please create an account.",
         variant: "destructive",
       });
     } finally {
