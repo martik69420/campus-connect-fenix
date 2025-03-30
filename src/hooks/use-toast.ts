@@ -138,7 +138,7 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-// Create a standalone toast function that doesn't use React hooks
+// Standalone toast function that doesn't depend on React hooks
 export function toast(props: Toast) {
   const id = genId()
 
@@ -168,7 +168,7 @@ export function toast(props: Toast) {
   }
 }
 
-// Define the hook separately in a proper React hook format
+// React hook for components to access toast functionality
 export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
