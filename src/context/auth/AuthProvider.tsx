@@ -20,26 +20,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
 
   React.useEffect(() => {
-    const checkUser = async () => {
+    // Check for existing session and set up auth state listener
+    const initializeAuth = async () => {
       try {
-        const currentUser = await getCurrentUser();
-        if (currentUser) {
-          setUser(currentUser);
-          setIsAuthenticated(true);
-          updateOnlineStatus(currentUser.id, true);
-        } else {
-          // User is logged in but doesn't have a profile
-          // We'll consider them not authenticated so they can register
-          const { data } = await supabase.auth.getSession();
-          if (data.session) {
-            // Sign them out since they don't have a profile
+        setIsLoading(true);
+        
+        // Check for existing session first
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (sessionData.session) {
+          const currentUser = await getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            updateOnlineStatus(currentUser.id, true);
+          } else {
+            // User is logged in but doesn't have a profile - sign them out
             await supabase.auth.signOut();
+            setUser(null);
+            setIsAuthenticated(false);
           }
+        } else {
           setUser(null);
           setIsAuthenticated(false);
         }
       } catch (error) {
-        console.error("Error checking user:", error);
+        console.error("Error initializing auth:", error);
         setUser(null);
         setIsAuthenticated(false);
       } finally {
@@ -47,30 +52,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     };
 
-    // Initial check
-    checkUser();
-
     // Set up auth state listener
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event);
-        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
-          try {
-            const currentUser = await getCurrentUser();
-            if (currentUser) {
-              setUser(currentUser);
-              setIsAuthenticated(true);
-              updateOnlineStatus(currentUser.id, true);
+    const setupAuthListener = () => {
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log("Auth state changed:", event);
+          if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+            try {
+              const currentUser = await getCurrentUser();
+              if (currentUser) {
+                setUser(currentUser);
+                setIsAuthenticated(true);
+                updateOnlineStatus(currentUser.id, true);
+              }
+            } catch (error) {
+              console.error("Error getting user:", error);
             }
-          } catch (error) {
-            console.error("Error getting user:", error);
+          } else if (event === "SIGNED_OUT") {
+            setUser(null);
+            setIsAuthenticated(false);
           }
-        } else if (event === "SIGNED_OUT") {
-          setUser(null);
-          setIsAuthenticated(false);
         }
-      }
-    );
+      );
+      
+      return authListener;
+    };
+
+    // Run initialization and setup listener
+    initializeAuth();
+    const authListener = setupAuthListener();
 
     // Update online status when window focus changes
     const handleVisibilityChange = () => {
@@ -104,7 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       
-      // This will throw an error if login fails
+      // Attempt to login - loginUser will throw an error if login fails
       const user = await loginUser(identifier, password);
       
       if (user) {
@@ -117,10 +127,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
-      // If we reached here, login failed but didn't throw an error
+      // This should not happen as loginUser should throw on failure
       toast({
         title: "Login failed",
-        description: "Invalid username or password",
+        description: "Unknown error during login",
         variant: "destructive",
       });
       return false;
@@ -146,18 +156,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
+      
       const result = await registerUser(email, password, username, displayName, school);
+      
       if (result.success && result.user) {
         setUser(result.user);
         setIsAuthenticated(true);
+        toast({
+          title: "Registration successful",
+          description: `Welcome to Campus Fenix, ${displayName}!`,
+        });
         return true;
       }
+      
+      toast({
+        title: "Registration failed",
+        description: "An unexpected error occurred during registration",
+        variant: "destructive",
+      });
       return false;
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({
         title: "Registration failed",
-        description: error.message,
+        description: error.message || "Could not create your account",
         variant: "destructive",
       });
       return false;

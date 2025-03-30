@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -12,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/context/AuthContext";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginFormSchema = z.object({
   username: z.string().min(2, {
@@ -45,6 +47,8 @@ type RegisterFormValues = z.infer<typeof registerFormSchema>;
 
 export function AuthForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const { login, register: registerUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -69,42 +73,50 @@ export function AuthForm() {
   });
 
   const onLoginSubmit = async (data: LoginFormValues) => {
+    setLoginError(null);
     setIsLoading(true);
+    
     try {
+      console.log("Attempting login with:", data.username);
       const success = await login(data.username, data.password);
+      
       if (success) {
+        setLoginError(null);
         navigate("/");
+      } else {
+        setLoginError("Login failed. Please check your credentials and try again.");
       }
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error("Login submission error:", error);
+      setLoginError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const onRegisterSubmit = async (data: RegisterFormValues) => {
+    setRegisterError(null);
     setIsLoading(true);
+    
     try {
+      console.log("Attempting registration for:", data.username);
       const success = await registerUser(
-        data.username,
         data.email,
+        data.password,
+        data.username,
         data.displayName,
-        data.school,
-        data.password
+        data.school
       );
+      
       if (success) {
+        setRegisterError(null);
         navigate("/");
+      } else {
+        setRegisterError("Registration failed. Please try again.");
       }
-    } catch (error) {
-      toast({
-        title: "Registration failed",
-        description: "Something went wrong. Please try again.",
-        variant: "destructive",
-      });
+    } catch (error: any) {
+      console.error("Registration submission error:", error);
+      setRegisterError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -120,11 +132,20 @@ export function AuthForm() {
       </CardHeader>
       <CardContent className="grid gap-4">
         <Tabs defaultValue="login" className="w-full">
-          <TabsList>
+          <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="register">Register</TabsTrigger>
           </TabsList>
+          
           <TabsContent value="login" className="space-y-4">
+            {loginError && (
+              <Alert variant="destructive" className="bg-destructive/10 border-destructive/30 text-destructive">
+                <AlertDescription>
+                  {loginError}
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(onLoginSubmit)} className="space-y-4">
                 <FormField
@@ -132,9 +153,13 @@ export function AuthForm() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel>Username or Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="shadcn" {...field} />
+                        <Input 
+                          placeholder="Enter your username or email" 
+                          autoComplete="username"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -147,19 +172,33 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input 
+                          type="password" 
+                          autoComplete="current-password"
+                          placeholder="Enter your password"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <Button disabled={isLoading} type="submit" className="w-full">
-                  {isLoading ? "Loading" : "Login"}
+                  {isLoading ? "Logging in..." : "Login"}
                 </Button>
               </form>
             </Form>
           </TabsContent>
+          
           <TabsContent value="register" className="space-y-4">
+            {registerError && (
+              <Alert variant="destructive" className="bg-destructive/10 border-destructive/30 text-destructive">
+                <AlertDescription>
+                  {registerError}
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <Form {...registerForm}>
               <form onSubmit={registerForm.handleSubmit(onRegisterSubmit)} className="space-y-4">
                 <FormField
@@ -169,7 +208,11 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="johndoe" {...field} />
+                        <Input 
+                          placeholder="Choose a username" 
+                          autoComplete="username"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -182,7 +225,12 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Email</FormLabel>
                       <FormControl>
-                        <Input placeholder="john@example.com" type="email" {...field} />
+                        <Input 
+                          placeholder="your.email@example.com" 
+                          type="email" 
+                          autoComplete="email"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -195,7 +243,11 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Display Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="John Doe" {...field} />
+                        <Input 
+                          placeholder="Your full name" 
+                          autoComplete="name"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -208,7 +260,11 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>School</FormLabel>
                       <FormControl>
-                        <Input placeholder="University of Example" {...field} />
+                        <Input 
+                          placeholder="Your school or university" 
+                          autoComplete="organization"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -221,14 +277,19 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input type="password" {...field} />
+                        <Input 
+                          type="password" 
+                          autoComplete="new-password"
+                          placeholder="Create a secure password"
+                          {...field} 
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <Button disabled={isLoading} type="submit" className="w-full">
-                  {isLoading ? "Loading" : "Register"}
+                  {isLoading ? "Creating account..." : "Register"}
                 </Button>
               </form>
             </Form>

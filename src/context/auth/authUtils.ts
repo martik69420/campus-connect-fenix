@@ -1,8 +1,7 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
-// Re-export these functions to be used by the AuthProvider
+// Get the current user session and profile data
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
     const { data: { session }, error } = await supabase.auth.getSession();
@@ -17,14 +16,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .maybeSingle();  // Change from .single() to .maybeSingle() to handle potential missing profiles
+      .maybeSingle();
     
     if (profileError) {
       console.error("Error getting profile:", profileError);
       return null;
     }
     
-    // If profile doesn't exist, return null - don't create one automatically
     if (!profileData) {
       console.log("No profile found for user:", session.user.id);
       return null;
@@ -46,7 +44,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       avatar: profileData.avatar_url,
       bio: profileData.bio,
       school: profileData.school,
-      location: null, // Not in database, set to null
+      location: null,
       createdAt: profileData.created_at,
       lastActive: statusData?.last_active || null,
       isOnline: statusData?.is_online || false,
@@ -58,48 +56,66 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
+// Secure login function that properly validates credentials
 export const loginUser = async (identifier: string, password: string): Promise<User | null> => {
   try {
-    console.log(`Login attempt for: ${identifier}`);
+    console.log(`Attempting login for user: ${identifier}`);
     
-    // Check if the input is an email or username
+    // Check if input is email or username
     let userEmail = identifier;
     
-    // If it doesn't look like an email, assume it's a username and get the email
+    // If it doesn't look like an email, find the email by username
     if (!identifier.includes('@')) {
       const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('email')
         .eq('username', identifier)
-        .single();
+        .maybeSingle();
         
-      if (userError || !userData || !userData.email) {
+      if (userError) {
         console.error("Error finding user by username:", userError);
-        throw new Error("User not found with that username");
+        throw new Error("Error looking up user account");
+      }
+      
+      if (!userData || !userData.email) {
+        console.error("User not found with username:", identifier);
+        throw new Error("No account found with that username");
       }
       
       userEmail = userData.email;
     }
     
-    // Use signInWithPassword to validate the password properly
+    // Use signInWithPassword to securely validate credentials
     const { data, error } = await supabase.auth.signInWithPassword({
       email: userEmail,
-      password
+      password: password
     });
     
-    if (error || !data.session) {
-      console.error("Login failed:", error);
-      throw new Error(error?.message || "Invalid login credentials");
+    if (error) {
+      console.error("Login authentication failed:", error);
+      throw new Error(error.message || "Invalid login credentials");
     }
     
-    // Get the full user profile after successful auth
-    return await getCurrentUser();
-  } catch (error) {
-    console.error("Error in loginUser:", error);
+    if (!data.session) {
+      console.error("No session returned after login");
+      throw new Error("Authentication failed");
+    }
+    
+    // Get the complete user profile after successful authentication
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error("Successfully authenticated but failed to retrieve user profile");
+    }
+    
+    console.log("Login successful for user:", user.username);
+    return user;
+  } catch (error: any) {
+    console.error("Login process failed:", error);
     throw error;
   }
 };
 
+// Register a new user with complete profile
 export const registerUser = async (
   email: string, 
   password: string,
@@ -113,11 +129,11 @@ export const registerUser = async (
       .from('profiles')
       .select('username')
       .eq('username', username)
-      .single();
+      .maybeSingle();
       
     if (existingUser) {
       console.error("Username already taken");
-      return { success: false, user: null };
+      throw new Error("This username is already taken. Please choose another one.");
     }
     
     // Sign up with Supabase Auth
@@ -128,7 +144,7 @@ export const registerUser = async (
     
     if (signUpError || !authUser) {
       console.error("Error signing up:", signUpError);
-      return { success: false, user: null };
+      throw new Error(signUpError?.message || "Registration failed");
     }
     
     // Create profile entry
@@ -147,7 +163,7 @@ export const registerUser = async (
       
     if (profileError) {
       console.error("Error creating profile:", profileError);
-      return { success: false, user: null };
+      throw new Error("Account created but failed to set up profile");
     }
     
     // Return the new user
@@ -167,9 +183,9 @@ export const registerUser = async (
     };
     
     return { success: true, user: newUser };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error in registerUser:", error);
-    return { success: false, user: null };
+    throw error;
   }
 };
 
