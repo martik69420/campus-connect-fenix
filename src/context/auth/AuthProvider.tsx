@@ -12,8 +12,10 @@ import {
   getCurrentUser, 
   updateUserProfile as updateUserProfileUtil 
 } from "./authUtils";
+import { useToast } from "@/hooks/use-toast";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { toast } = useToast();
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
