@@ -1,48 +1,37 @@
 
-// User interface that matches Supabase structure
 export interface User {
   id: string;
-  username: string;
   email?: string;
-  displayName?: string;
-  avatar?: string;
-  bio?: string;
-  school?: string;
+  username: string;
+  displayName: string;
+  avatar?: string | null;
+  bio?: string | null;
+  school: string;
   location?: string | null;
-  createdAt?: string;
-  lastActive?: string | null;
-  isOnline?: boolean;
-  coins: number;
-  // Remove the reference to "friends" property as it's not supported in our schema
 }
 
-// Profile update data structure
 export interface ProfileUpdateData {
   displayName?: string;
-  avatar?: string;
-  bio?: string;
+  avatar?: string | null;
+  bio?: string | null;
   school?: string;
-  location?: string;
+  location?: string | null;
 }
 
-// Auth context type
 export interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
   register: (
-    username: string,
-    email: string,
+    email: string, 
+    password: string, 
+    username: string, 
     displayName: string,
-    school: string,
-    password: string
+    school: string
   ) => Promise<boolean>;
-  logout: () => void;
-  updateUser: (userData: Partial<User>) => void;
-  addCoins: (amount: number, reason?: string) => void;
-  updatePassword: (newPassword: string) => Promise<boolean>;
-  updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
-  changePassword: (userId: string, newPassword: string) => Promise<boolean>;
-  validateCurrentPassword: (userId: string, password: string) => Promise<boolean>;
+  updateUserProfile: (profileData: ProfileUpdateData) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
+  uploadProfilePicture: (file: File) => Promise<string | null>;
 }

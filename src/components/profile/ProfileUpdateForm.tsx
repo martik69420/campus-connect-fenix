@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+
+import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -15,9 +16,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Camera, Image, UserRound } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
+import ProfilePictureUpload from './ProfilePictureUpload';
 
 const profileFormSchema = z.object({
   displayName: z.string().min(2, {
@@ -32,9 +32,6 @@ const profileFormSchema = z.object({
   location: z.string().max(100, {
     message: "Location must not be longer than 100 characters.",
   }).optional(),
-  avatar: z.string().url({
-    message: "Please enter a valid URL for your avatar.",
-  }).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -42,15 +39,13 @@ type ProfileFormValues = z.infer<typeof profileFormSchema>;
 const ProfileUpdateForm = () => {
   const { user, updateUserProfile } = useAuth();
   const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(user?.avatar || null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const defaultValues: Partial<ProfileFormValues> = {
     displayName: user?.displayName || '',
     bio: user?.bio || '',
     school: user?.school || '',
     location: user?.location || '',
-    avatar: user?.avatar || '',
   };
 
   const form = useForm<ProfileFormValues>({
@@ -58,75 +53,27 @@ const ProfileUpdateForm = () => {
     defaultValues,
   });
 
-  // Update avatar preview when the form field changes
-  React.useEffect(() => {
-    const subscription = form.watch((value, { name }) => {
-      if (name === 'avatar' && value.avatar) {
-        setAvatarPreview(value.avatar as string);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-  // Set initial avatar preview
-  React.useEffect(() => {
-    if (user?.avatar) {
-      setAvatarPreview(user.avatar);
-    }
-  }, [user?.avatar]);
-
   async function onSubmit(data: ProfileFormValues) {
     setIsSubmitting(true);
     try {
-      console.log("Updating profile with data:", data);
-      
       const profileData = {
-        display_name: data.displayName,
+        displayName: data.displayName,
         bio: data.bio || null,
         school: data.school,
-        avatar_url: data.avatar || null, // Match the field name in the database
         location: data.location || null,
       };
       
-      // First update the user profile in Supabase directly
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update(profileData)
-          .eq('id', user?.id);
-          
-        if (error) {
-          console.error('Failed to update profile in Supabase:', error);
-          throw error;
-        }
-        
-        console.log("Profile updated in Supabase successfully");
-        
-        // Then update the local profile state via auth context
-        const success = await updateUserProfile({
-          displayName: data.displayName,
-          avatar: data.avatar || user?.avatar, // Ensure avatar is passed correctly
-          bio: data.bio || null,
-          school: data.school,
-          location: data.location || null
-        });
-        
-        if (success) {
-          toast({
-            title: "Profile updated",
-            description: "Your profile has been updated successfully",
-          });
-        } else {
-          toast({
-            title: "Failed to update profile state",
-            description: "Your profile was saved to the database but there was an error updating your local profile. Try refreshing the page.",
-          });
-        }
-      } catch (supabaseError) {
-        console.error('Supabase update error:', supabaseError);
+      const success = await updateUserProfile(profileData);
+      
+      if (success) {
         toast({
-          title: "Database Error",
-          description: "There was an error updating your profile in the database.",
+          title: "Profile updated",
+          description: "Your profile has been updated successfully",
+        });
+      } else {
+        toast({
+          title: "Failed to update profile",
+          description: "There was an error updating your profile. Please try again.",
           variant: "destructive",
         });
       }
@@ -145,57 +92,15 @@ const ProfileUpdateForm = () => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Avatar Preview and Input */}
+        {/* Avatar Upload */}
         <div className="flex flex-col items-center sm:items-start sm:flex-row gap-6 mb-6">
-          <div className="relative group">
-            <Avatar className="h-24 w-24 border-2 border-border">
-              <AvatarImage src={avatarPreview || ""} alt={user?.displayName || ""} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-                {user?.displayName?.charAt(0) || user?.username?.charAt(0) || <UserRound />}
-              </AvatarFallback>
-            </Avatar>
-            <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-              <Camera className="h-6 w-6 text-white" />
-            </div>
-          </div>
+          <ProfilePictureUpload />
           
-          <div className="flex-1 space-y-4">
-            <FormField
-              control={form.control}
-              name="avatar"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Profile Picture URL</FormLabel>
-                  <FormControl>
-                    <div className="flex gap-2">
-                      <Input 
-                        placeholder="https://example.com/avatar.jpg" 
-                        {...field} 
-                        value={field.value || ''} 
-                        className="flex-1"
-                      />
-                      {field.value && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => {
-                            form.setValue('avatar', '');
-                            setAvatarPreview(null);
-                          }}
-                        >
-                          <Image className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </FormControl>
-                  <p className="text-xs text-muted-foreground">
-                    Enter a URL to an image (JPG, PNG, or GIF)
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div className="flex-1 space-y-2">
+            <h3 className="font-medium">Profile Picture</h3>
+            <p className="text-sm text-muted-foreground">
+              Upload a profile picture. JPG, PNG, GIF or WebP, max 5MB.
+            </p>
           </div>
         </div>
         

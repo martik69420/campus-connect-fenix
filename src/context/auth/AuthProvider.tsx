@@ -1,314 +1,303 @@
 
 import * as React from "react";
-import { toast } from "@/hooks/use-toast"; 
+import { AuthContext } from "./context";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 import { User, AuthContextType, ProfileUpdateData } from "./types";
 import { loginUser, registerUser, changePassword, validateCurrentPassword, updateOnlineStatus, getCurrentUser, updateUserProfile } from "./authUtils";
-import { supabase } from "@/integrations/supabase/client";
-import { AuthContext } from "./context";
 
-// Provider component
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isAuthenticated, setIsAuthenticated] = React.useState(false);
 
-  // Safely update online status
-  const safeUpdateOnlineStatus = React.useCallback(async (userId: string, isOnline: boolean) => {
-    if (!userId) return false;
-    
-    try {
-      return await updateOnlineStatus(userId, isOnline);
-    } catch (error) {
-      console.error("Failed to update online status:", error);
-      return false;
-    }
-  }, []);
-
-  // Check for existing session on mount
   React.useEffect(() => {
-    let isMounted = true;
-    
-    const checkExistingUser = async () => {
+    const checkUser = async () => {
       try {
-        // Try to get current user from Supabase session
         const currentUser = await getCurrentUser();
-        
-        if (currentUser && isMounted) {
+        if (currentUser) {
           setUser(currentUser);
-          
-          // Update online status when session is restored
-          await safeUpdateOnlineStatus(currentUser.id, true);
-          
-          // Set up interval to keep online status updated
-          const interval = setInterval(() => {
-            if (currentUser.id) {
-              safeUpdateOnlineStatus(currentUser.id, true)
-                .catch(err => console.error("Failed to update online status in interval:", err));
-            }
-          }, 5 * 60 * 1000); // Every 5 minutes
-          
-          return () => clearInterval(interval);
-        } else {
-          // Check localStorage as a fallback
-          const storedUser = localStorage.getItem("fenixUser");
-          if (storedUser && isMounted) {
-            try {
-              const parsedUser = JSON.parse(storedUser);
-              setUser(parsedUser);
-              
-              // Update online status when session is restored from localStorage
-              await safeUpdateOnlineStatus(parsedUser.id, true);
-              
-              // Set up interval to keep online status updated
-              const interval = setInterval(() => {
-                if (parsedUser.id) {
-                  safeUpdateOnlineStatus(parsedUser.id, true)
-                    .catch(err => console.error("Failed to update online status in interval:", err));
-                }
-              }, 5 * 60 * 1000); // Every 5 minutes
-              
-              return () => clearInterval(interval);
-            } catch (error) {
-              console.error("Failed to parse stored user:", error);
-              localStorage.removeItem("fenixUser");
-            }
-          }
+          setIsAuthenticated(true);
+          updateOnlineStatus(true);
         }
       } catch (error) {
-        console.error("Error checking existing user:", error);
+        console.error("Error checking user:", error);
+        setUser(null);
+        setIsAuthenticated(false);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        setIsLoading(false);
       }
     };
-    
-    checkExistingUser();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [safeUpdateOnlineStatus]);
 
-  // Update localStorage when user changes
-  React.useEffect(() => {
-    if (user) {
-      localStorage.setItem("fenixUser", JSON.stringify(user));
-    }
+    // Initial check
+    checkUser();
+
+    // Set up auth state listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event);
+        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+          try {
+            const currentUser = await getCurrentUser();
+            if (currentUser) {
+              setUser(currentUser);
+              setIsAuthenticated(true);
+              updateOnlineStatus(true);
+            }
+          } catch (error) {
+            console.error("Error getting user:", error);
+          }
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      }
+    );
+
+    // Update online status when window focus changes
+    const handleVisibilityChange = () => {
+      if (user && document.visibilityState === "visible") {
+        updateOnlineStatus(true);
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Set up beforeunload event to update status when user leaves
+    window.addEventListener("beforeunload", () => {
+      if (user) {
+        // Use a synchronous method to update status before page unloads
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", "/api/update-status", false); // false makes it synchronous
+        xhr.setRequestHeader("Content-Type", "application/json");
+        xhr.send(JSON.stringify({ userId: user.id, isOnline: false }));
+      }
+    });
+
+    return () => {
+      if (authListener) {
+        authListener.subscription.unsubscribe();
+      }
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [user]);
 
-  // Set up beforeunload event to update online status when user leaves
-  React.useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (user) {
-        // Update localStorage directly for better reliability on page unload
-        localStorage.setItem('lastOfflineTime', new Date().toISOString());
-
-        // Try to use sendBeacon if available
-        try {
-          const channel = supabase.channel('online-users');
-          channel.untrack();
-        } catch (error) {
-          console.error("Error in beforeunload handler:", error);
-        }
-      }
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      if (user) {
-        safeUpdateOnlineStatus(user.id, false).catch(console.error);
-      }
-    };
-  }, [user, safeUpdateOnlineStatus]);
-
-  // Login function
-  const login = async (username: string, password: string): Promise<boolean> => {
-    setIsLoading(true);
-    
+  const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const loggedInUser = await loginUser(username, password);
-      
-      if (loggedInUser) {
-        setUser(loggedInUser);
+      setIsLoading(true);
+      const user = await loginUser(email, password);
+      if (user) {
+        setUser(user);
+        setIsAuthenticated(true);
         return true;
       }
-      
       return false;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: error.message,
+        variant: "destructive",
+      });
       return false;
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Register function
   const register = async (
-    username: string, 
     email: string,
-    displayName: string, 
-    school: string, 
-    password: string
+    password: string,
+    username: string,
+    displayName: string,
+    school: string
   ): Promise<boolean> => {
-    setIsLoading(true);
-    
     try {
-      const result = await registerUser(username, email, displayName, school, password);
-      
-      if (result.success && result.user) {
-        setUser(result.user);
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Registration error:", error);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Update profile function
-  const handleUpdateUserProfile = async (data: ProfileUpdateData): Promise<boolean> => {
-    if (!user) return false;
-
-    try {
-      const success = await updateUserProfile(user.id, data);
-      
-      if (success) {
-        // Update the local user state with new data
-        setUser(prevUser => {
-          if (!prevUser) return null;
-          
-          return {
-            ...prevUser,
-            displayName: data.displayName ?? prevUser.displayName,
-            avatar: data.avatar ?? prevUser.avatar,
-            bio: data.bio ?? prevUser.bio,
-            school: data.school ?? prevUser.school,
-            location: data.location ?? prevUser.location
-          };
-        });
-        
-        // Update localStorage to ensure consistency
-        localStorage.setItem("fenixUser", JSON.stringify({
-          ...user,
-          displayName: data.displayName ?? user.displayName,
-          avatar: data.avatar ?? user.avatar,
-          bio: data.bio ?? user.bio,
-          school: data.school ?? user.school,
-          location: data.location ?? user.location
-        }));
-        
-        return true;
-      }
-      
-      return false;
-    } catch (error) {
-      console.error("Error updating profile:", error);
-      return false;
-    }
-  };
-
-  // Update password function
-  const updatePassword = async (newPassword: string): Promise<boolean> => {
-    if (!user) return false;
-
-    try {
-      // Update password
-      const success = await changePassword(user.id, newPassword);
+      setIsLoading(true);
+      const success = await registerUser(email, password, username, displayName, school);
       return success;
     } catch (error: any) {
-      console.error("Error updating password:", error);
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: error.message,
+        variant: "destructive",
+      });
       return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Logout function
-  const logout = async () => {
-    if (user) {
-      try {
-        // Update online status to offline
-        await safeUpdateOnlineStatus(user.id, false);
-      } catch (error) {
-        console.error("Error updating online status during logout:", error);
+  const logout = async (): Promise<void> => {
+    try {
+      setIsLoading(true);
+      if (user) {
+        await updateOnlineStatus(false);
       }
-      
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
       setUser(null);
-      localStorage.removeItem("fenixUser");
+      setIsAuthenticated(false);
+    } catch (error: any) {
+      console.error("Logout error:", error);
+      toast({
+        title: "Error signing out",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Update the user profile
+  const handleUpdateUserProfile = async (profileData: ProfileUpdateData): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const success = await updateUserProfile(profileData);
       
-      // Sign out from Supabase auth if using it
-      try {
-        await supabase.auth.signOut();
-      } catch (error) {
-        console.error("Error signing out from Supabase:", error);
+      if (success && user) {
+        // Update local user state with new profile data
+        setUser({
+          ...user,
+          ...profileData,
+        });
       }
       
+      return success;
+    } catch (error: any) {
+      console.error("Profile update error:", error);
       toast({
-        title: "Logged out",
-        description: "You have been logged out successfully"
+        title: "Profile update failed",
+        description: error.message,
+        variant: "destructive",
       });
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Update user data
-  const updateUser = (userData: Partial<User>) => {
-    if (user) {
-      const updatedUser = { ...user, ...userData };
-      setUser(updatedUser);
-      // Update localStorage to ensure consistency
-      localStorage.setItem("fenixUser", JSON.stringify(updatedUser));
-    }
-  };
-
-  // Add coins to user balance and update in database
-  const addCoins = async (amount: number, reason?: string) => {
-    if (user) {
-      const newCoins = user.coins + amount;
-      const updatedUser = { ...user, coins: newCoins };
-      setUser(updatedUser);
+  // Password change functionality
+  const handleChangePassword = async (
+    currentPassword: string,
+    newPassword: string
+  ): Promise<boolean> => {
+    try {
+      setIsLoading(true);
       
-      // Update localStorage to ensure consistency
-      localStorage.setItem("fenixUser", JSON.stringify(updatedUser));
+      // First validate the current password
+      const isCurrentPasswordValid = await validateCurrentPassword(currentPassword);
       
-      // Update coins in database
-      try {
-        await supabase
-          .from('profiles')
-          .update({ coins: newCoins })
-          .eq('id', user.id);
-      } catch (error) {
-        console.error("Error updating coins in database:", error);
+      if (!isCurrentPasswordValid) {
+        toast({
+          title: "Password change failed",
+          description: "Current password is incorrect",
+          variant: "destructive",
+        });
+        return false;
       }
       
+      // Then change to the new password
+      const success = await changePassword(newPassword);
+      
+      if (success) {
+        toast({
+          title: "Password changed",
+          description: "Your password has been updated successfully",
+        });
+      }
+      
+      return success;
+    } catch (error: any) {
+      console.error("Password change error:", error);
       toast({
-        title: `+${amount} coins`,
-        description: reason || "Coins added to your balance"
+        title: "Password change failed",
+        description: error.message,
+        variant: "destructive",
       });
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const authValue: AuthContextType = {
+  // Upload profile picture
+  const uploadProfilePicture = async (file: File): Promise<string | null> => {
+    try {
+      if (!user) {
+        toast({
+          title: "Error",
+          description: "You must be logged in to upload a profile picture",
+          variant: "destructive",
+        });
+        return null;
+      }
+
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+      const filePath = `avatars/${fileName}`;
+
+      // Upload file to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file);
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const avatarUrl = data.publicUrl;
+
+      // Update user profile with new avatar URL
+      const success = await updateUserProfile({
+        avatar: avatarUrl
+      });
+
+      if (success && user) {
+        // Update local user state
+        setUser({
+          ...user,
+          avatar: avatarUrl
+        });
+        
+        toast({
+          title: "Profile picture updated",
+          description: "Your profile picture has been updated successfully",
+        });
+        
+        return avatarUrl;
+      }
+      
+      return null;
+    } catch (error: any) {
+      console.error("Profile picture upload error:", error);
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload profile picture",
+        variant: "destructive",
+      });
+      return null;
+    }
+  };
+
+  const value: AuthContextType = {
     user,
-    isAuthenticated: !!user,
     isLoading,
+    isAuthenticated,
     login,
-    register,
     logout,
-    updateUser,
-    addCoins,
-    updatePassword,
+    register,
     updateUserProfile: handleUpdateUserProfile,
-    changePassword,
-    validateCurrentPassword
+    changePassword: handleChangePassword,
+    uploadProfilePicture,
   };
 
-  return (
-    <AuthContext.Provider value={authValue}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
