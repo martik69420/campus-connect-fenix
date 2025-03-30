@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { GraduationCap, Users } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -126,6 +126,11 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
         navigate('/', { replace: true });
       } else {
         setError('Invalid username or password');
+        toast({
+          title: "Login failed",
+          description: "Invalid username or password",
+          variant: "destructive",
+        });
       }
     } catch (error: any) {
       setError(error.message || "Login failed");
@@ -230,6 +235,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
         toast({
           title: "Registration failed",
           description: "Something went wrong. Please try again.",
+          variant: "destructive",
         });
       }
     } catch (error: any) {

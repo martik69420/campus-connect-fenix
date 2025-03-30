@@ -122,7 +122,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return true;
       }
       
-      // This should not happen as loginUser should throw on failure
       return false;
     } catch (error: any) {
       console.error("Login error:", error);
