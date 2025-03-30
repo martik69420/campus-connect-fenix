@@ -114,6 +114,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return true;
       }
+      
+      // If we reached here, login failed but didn't throw an error
       toast({
         title: "Login failed",
         description: "Invalid username or password",

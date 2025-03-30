@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -78,7 +79,7 @@ export const loginUser = async (email: string, password: string): Promise<User |
       userEmail = userData.email;
     }
     
-    // Now log in with the email and password
+    // Now log in with the email and password - this will verify the password
     const { data: { session }, error } = await supabase.auth.signInWithPassword({
       email: userEmail,
       password

@@ -122,7 +122,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
       if (!success) {
         toast({
           title: "Login failed",
-          description: "If you haven't registered yet, please create an account first.",
+          description: "Invalid username or password. If you haven't registered yet, please create an account first.",
           variant: "destructive",
         });
       } else {
@@ -131,7 +131,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
     } catch (error: any) {
       toast({
         title: "Login failed",
-        description: error.message || "If you haven't registered yet, please create an account.",
+        description: error.message || "Invalid username or password. If you haven't registered yet, please create an account.",
         variant: "destructive",
       });
     } finally {
