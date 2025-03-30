@@ -40,6 +40,11 @@ self.addEventListener('activate', (event) => {
 
 // Fetch event - serve from cache if available
 self.addEventListener('fetch', (event) => {
+  // Skip non-HTTP(S) requests and chrome-extension URLs
+  if (!event.request.url.startsWith('http')) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -62,7 +67,11 @@ self.addEventListener('fetch', (event) => {
             // Open the cache and put the fetched response in it
             caches.open(CACHE_NAME)
               .then((cache) => {
-                cache.put(event.request, responseToCache);
+                try {
+                  cache.put(event.request, responseToCache);
+                } catch (error) {
+                  console.log('Caching failed:', error);
+                }
               });
               
             return response;

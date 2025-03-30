@@ -84,6 +84,11 @@ const translations: Translations = {
     nl: 'Uitloggen',
     fr: 'Déconnexion',
   },
+  'auth.signOut': {
+    en: 'Sign Out',
+    nl: 'Uitloggen',
+    fr: 'Déconnexion',
+  },
   'post.removed': {
     en: 'Removed',
     nl: 'Verwijderd',
@@ -348,6 +353,41 @@ const translations: Translations = {
     en: 'Save',
     nl: 'Opslaan',
     fr: 'Enregistrer',
+  },
+  'profile.addFriend': {
+    en: 'Add Friend',
+    nl: 'Vriend Toevoegen',
+    fr: 'Ajouter un Ami',
+  },
+  'profile.message': {
+    en: 'Message',
+    nl: 'Bericht',
+    fr: 'Message',
+  },
+  'profile.reportProfile': {
+    en: 'Report Profile',
+    nl: 'Profiel Rapporteren',
+    fr: 'Signaler le Profil',
+  },
+  'profile.blockProfile': {
+    en: 'Block Profile',
+    nl: 'Profiel Blokkeren',
+    fr: 'Bloquer le Profil',
+  },
+  'profile.privacySettings': {
+    en: 'Privacy Settings',
+    nl: 'Privacy-instellingen',
+    fr: 'Paramètres de Confidentialité',
+  },
+  'profile.joined': {
+    en: 'Joined',
+    nl: 'Lid geworden',
+    fr: 'Rejoint le',
+  },
+  'profile.aboutMe': {
+    en: 'About Me',
+    nl: 'Over Mij',
+    fr: 'À Propos de Moi',
   },
   // Table translations
   'table.noResults': {

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -151,6 +152,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
           onChange={(e) => setIdentifier(e.target.value)}
           required
           disabled={loading}
+          autoComplete="username"
         />
       </div>
       
@@ -164,6 +166,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
           onChange={(e) => setPassword(e.target.value)}
           required
           disabled={loading}
+          autoComplete="current-password"
         />
       </div>
       
@@ -289,6 +292,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           value={school}
           onChange={(e) => setSchool(e.target.value)}
           required
+          autoComplete="organization"
           disabled={loading}
         />
       </div>
@@ -302,6 +306,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="new-password"
           disabled={loading}
         />
       </div>
@@ -315,6 +320,7 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
+          autoComplete="new-password"
           disabled={loading}
         />
       </div>
