@@ -125,6 +125,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
     
     try {
       setLoading(true);
+      console.log(`Attempting to login with: ${identifier}`);
       const success = await login(identifier, password);
       
       if (success) {
@@ -135,8 +136,12 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
         });
       }
     } catch (error: any) {
-      // Error is now handled in the AuthProvider
       console.error("Login failed:", error);
+      toast({
+        title: "Login failed",
+        description: error.message || "Invalid credentials",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
@@ -214,8 +219,18 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       return;
     }
     
+    if (password.length < 6) {
+      toast({
+        title: "Password too short",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     try {
       setLoading(true);
+      console.log(`Attempting to register: ${username}, ${email}`);
       const success = await register(email, password, username, displayName, school);
       
       if (success) {
@@ -225,7 +240,13 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
           description: "Welcome to Campus Fenix!",
         });
       }
-      // Errors are handled in the AuthProvider
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Registration failed",
+        description: error.message || "Failed to create account",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

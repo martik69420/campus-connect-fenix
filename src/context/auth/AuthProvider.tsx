@@ -35,6 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             updateOnlineStatus(currentUser.id, true);
           } else {
             // User is logged in but doesn't have a profile - sign them out
+            console.log("User is logged in but doesn't have a profile - signing out");
             await supabase.auth.signOut();
             setUser(null);
             setIsAuthenticated(false);
@@ -64,9 +65,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setUser(currentUser);
                 setIsAuthenticated(true);
                 updateOnlineStatus(currentUser.id, true);
+              } else {
+                // User signed in but profile not found
+                console.error("User signed in but profile not found");
+                await supabase.auth.signOut();
+                setUser(null);
+                setIsAuthenticated(false);
+                setAuthError("User profile not found. Please contact support.");
               }
             } catch (error) {
               console.error("Error getting user:", error);
+              setAuthError("Error retrieving user profile");
             }
           } else if (event === "SIGNED_OUT") {
             setUser(null);
@@ -115,6 +124,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setAuthError(null);
       
+      if (!identifier.trim() || !password.trim()) {
+        setAuthError("Please enter both username/email and password");
+        return false;
+      }
+      
       // Attempt to login - loginUser will throw an error if login fails
       const user = await loginUser(identifier, password);
       
@@ -146,6 +160,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       setAuthError(null);
       
+      // Basic validation
+      if (!email.trim() || !password.trim() || !username.trim() || !displayName.trim() || !school.trim()) {
+        setAuthError("All fields are required");
+        return false;
+      }
+      
+      if (password.length < 6) {
+        setAuthError("Password must be at least 6 characters long");
+        return false;
+      }
+      
+      if (!email.includes('@') || !email.includes('.')) {
+        setAuthError("Please enter a valid email address");
+        return false;
+      }
+      
       const result = await registerUser(email, password, username, displayName, school);
       
       if (result.success && result.user) {
@@ -172,9 +202,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await updateOnlineStatus(user.id, false);
       }
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      if (error) {
+        console.error("Error signing out:", error);
+        throw error;
+      }
       setUser(null);
       setIsAuthenticated(false);
+      console.log("User successfully logged out");
     } catch (error: any) {
       console.error("Logout error:", error);
     } finally {

@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -56,7 +57,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
-// Secure login function that properly validates credentials
+// Secure login function that properly validates credentials against database
 export const loginUser = async (identifier: string, password: string): Promise<User | null> => {
   try {
     console.log(`Attempting login for user: ${identifier}`);
@@ -83,6 +84,23 @@ export const loginUser = async (identifier: string, password: string): Promise<U
       }
       
       userEmail = userData.email;
+    } else {
+      // Verify the email exists in our database
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('email', identifier)
+        .maybeSingle();
+        
+      if (userError) {
+        console.error("Error finding user by email:", userError);
+        throw new Error("Error looking up user account");
+      }
+      
+      if (!userData || !userData.email) {
+        console.error("User not found with email:", identifier);
+        throw new Error("No account found with that email");
+      }
     }
     
     // Use signInWithPassword to securely validate credentials
@@ -134,6 +152,18 @@ export const registerUser = async (
     if (existingUser) {
       console.error("Username already taken");
       throw new Error("This username is already taken. Please choose another one.");
+    }
+    
+    // Check if email is already taken in profiles table
+    const { data: existingEmail, error: existingEmailError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('email', email)
+      .maybeSingle();
+      
+    if (existingEmail) {
+      console.error("Email already taken");
+      throw new Error("This email is already registered. Please use a different email or log in.");
     }
     
     // Sign up with Supabase Auth
