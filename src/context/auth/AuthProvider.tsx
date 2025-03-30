@@ -1,7 +1,8 @@
+
 import * as React from "react";
 import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 import { User, AuthContextType, ProfileUpdateData } from "./types";
 import { 
   loginUser, 
@@ -17,7 +18,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
-  const { toast } = useToast();
 
   React.useEffect(() => {
     // Check for existing session and set up auth state listener
