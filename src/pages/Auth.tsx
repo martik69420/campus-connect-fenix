@@ -129,9 +129,14 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
       
       if (success) {
         navigate('/', { replace: true });
+        toast({
+          title: "Login successful",
+          description: "Welcome back!",
+        });
       }
     } catch (error: any) {
       // Error is now handled in the AuthProvider
+      console.error("Login failed:", error);
     } finally {
       setLoading(false);
     }
