@@ -1,7 +1,5 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from './AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 // Game types
@@ -14,6 +12,13 @@ interface GameState {
     tetris: { gamesPlayed: number; highScore: number };
     trivia: { gamesPlayed: number; highScore: number };
   };
+}
+
+interface User {
+  id: string;
+  username: string;
+  displayName: string;
+  coins?: number;
 }
 
 interface GameContextType {
@@ -58,6 +63,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   
   const [isLoading, setIsLoading] = useState(true);
   const [hasDailyRewardAvailable, setHasDailyRewardAvailable] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
   
   // Initialize game state
   const [gameState, setGameState] = useState<GameState>({
@@ -68,13 +74,63 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   });
   
-  const { toast } = useToast();
-  const { user, addCoins } = useAuth();
+  // Get user info from auth state change
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          // Get user profile from database
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('id, username, display_name, coins')
+            .eq('id', session.user.id)
+            .maybeSingle();
+            
+          if (profileData) {
+            setCurrentUser({
+              id: profileData.id,
+              username: profileData.username,
+              displayName: profileData.display_name,
+              coins: profileData.coins || 0
+            });
+          }
+        } else {
+          setCurrentUser(null);
+        }
+      }
+    );
+    
+    // Check current session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        // Get user profile from database
+        supabase
+          .from('profiles')
+          .select('id, username, display_name, coins')
+          .eq('id', session.user.id)
+          .maybeSingle()
+          .then(({ data: profileData }) => {
+            if (profileData) {
+              setCurrentUser({
+                id: profileData.id,
+                username: profileData.username,
+                displayName: profileData.display_name,
+                coins: profileData.coins || 0
+              });
+            }
+          });
+      }
+    });
+    
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
   
   // Fetch best scores from the database
   useEffect(() => {
     const fetchBestScores = async () => {
-      if (!user) {
+      if (!currentUser) {
         setIsLoading(false);
         return;
       }
@@ -85,7 +141,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data, error } = await supabase
           .from('game_history')
           .select('game_type, score')
-          .eq('user_id', user.id)
+          .eq('user_id', currentUser.id)
           .order('score', { ascending: false });
           
         if (error) {
@@ -121,22 +177,18 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }));
       } catch (error) {
         console.error('Error fetching game scores:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load your game scores'
-        });
       } finally {
         setIsLoading(false);
       }
     };
     
     fetchBestScores();
-  }, [user, toast]);
+  }, [currentUser]);
   
   // Check if daily reward is available
   useEffect(() => {
     const checkDailyReward = async () => {
-      if (!user) return;
+      if (!currentUser) return;
       
       try {
         const now = new Date();
@@ -145,7 +197,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { data, error } = await supabase
           .from('daily_rewards')
           .select('created_at')
-          .eq('user_id', user.id)
+          .eq('user_id', currentUser.id)
           .gte('created_at', today)
           .maybeSingle();
           
@@ -157,10 +209,6 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setHasDailyRewardAvailable(!data);
       } catch (error) {
         console.error('Error checking daily reward:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to check daily reward status'
-        });
       }
     };
     
@@ -172,10 +220,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 60000);
     
     return () => clearInterval(interval);
-  }, [user, toast]);
+  }, [currentUser]);
   
   const updateGameScore = async (game: GameType, score: number) => {
-    if (!user) return;
+    if (!currentUser) return;
     
     try {
       // Update local state
@@ -208,7 +256,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const { error } = await supabase
           .from('game_history')
           .insert({
-            user_id: user.id,
+            user_id: currentUser.id,
             game_type: game,
             score: score
           });
@@ -217,19 +265,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
           throw error;
         }
         
-        // Show toast message
-        toast({
-          title: 'New High Score!',
-          description: `You've set a new record for ${game}: ${score} points`
-        });
-        
-        // Reward coins for high scores
+        // Add coins for high scores
         if (game === 'snake' && score > 10) {
-          addCoins(Math.floor(score / 10), 'Snake game score');
+          await updateUserCoins(Math.floor(score / 10), 'Snake game score');
         } else if (game === 'tetris' && score > 100) {
-          addCoins(Math.floor(score / 100), 'Tetris game score');
+          await updateUserCoins(Math.floor(score / 100), 'Tetris game score');
         } else if (game === 'trivia' && score > 5) {
-          addCoins(score, 'Trivia game score');
+          await updateUserCoins(score, 'Trivia game score');
         }
       } else {
         // Even if not a high score, increment games played
@@ -246,10 +288,38 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     } catch (error) {
       console.error('Error updating game score:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save your game score'
+    }
+  };
+  
+  // Function to update user coins
+  const updateUserCoins = async (amount: number, reason?: string) => {
+    if (!currentUser) return false;
+    
+    try {
+      // Update coins in database
+      const { error } = await supabase
+        .from('profiles')
+        .update({ coins: (currentUser.coins || 0) + amount })
+        .eq('id', currentUser.id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setCurrentUser(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          coins: (prev.coins || 0) + amount
+        };
       });
+      
+      // Log the transaction
+      console.log(`Coin transaction for user ${currentUser.id}: ${amount} coins (${reason || 'No reason provided'})`);
+      
+      return true;
+    } catch (error) {
+      console.error("Error adding coins:", error);
+      return false;
     }
   };
   
@@ -267,7 +337,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
   
   const claimDailyReward = async () => {
-    if (!user || !hasDailyRewardAvailable) return;
+    if (!currentUser || !hasDailyRewardAvailable) return;
     
     try {
       const coinsRewarded = 25; // Standard daily reward
@@ -276,7 +346,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase
         .from('daily_rewards')
         .insert({
-          user_id: user.id,
+          user_id: currentUser.id,
           coins_rewarded: coinsRewarded
         });
         
@@ -285,22 +355,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Update user's coin balance
-      addCoins(coinsRewarded, 'Daily login reward');
+      await updateUserCoins(coinsRewarded, 'Daily login reward');
       
       // Update state to show reward has been claimed
       setHasDailyRewardAvailable(false);
       
-      // Show success toast
-      toast({
-        title: 'Daily Reward Claimed!',
-        description: `You've received ${coinsRewarded} coins. Come back tomorrow for more!`
-      });
     } catch (error) {
       console.error('Error claiming daily reward:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to claim your daily reward'
-      });
     }
   };
   
