@@ -123,8 +123,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   ): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const result = await registerUser(username, email, displayName, school, password);
-      return result.success;
+      const result = await registerUser(email, password, username, displayName, school);
+      if (result.success && result.user) {
+        setUser(result.user);
+        setIsAuthenticated(true);
+        return true;
+      }
+      return false;
     } catch (error: any) {
       console.error("Registration error:", error);
       toast({
@@ -201,7 +206,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       
       // First validate the current password
-      const isCurrentPasswordValid = await validateCurrentPassword(user.id, currentPassword);
+      const isCurrentPasswordValid = await validateCurrentPassword(user.email || "", currentPassword);
       
       if (!isCurrentPasswordValid) {
         toast({
@@ -213,7 +218,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Then change to the new password
-      const success = await changePasswordUtil(user.id, newPassword);
+      const success = await changePasswordUtil(newPassword);
       
       if (success) {
         toast({
@@ -328,11 +333,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         coins: (user.coins || 0) + amount
       });
       
-      // Log the transaction - removed this part since the table doesn't exist
-      // Instead, just log to console for now
-      if (reason) {
-        console.log(`Coin transaction for user ${user.id}: ${amount} coins (${reason})`);
-      }
+      // Instead of trying to insert into a non-existent table, just log the transaction
+      console.log(`Coin transaction for user ${user.id}: ${amount} coins (${reason || 'No reason provided'})`);
       
       return true;
     } catch (error) {

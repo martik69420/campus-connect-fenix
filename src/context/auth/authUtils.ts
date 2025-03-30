@@ -39,7 +39,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       avatar: profileData.avatar_url,
       bio: profileData.bio,
       school: profileData.school,
-      location: null, // If it's not in the database, set it to null as a default
+      location: null, // Not in database, set to null
       createdAt: profileData.created_at,
       lastActive: statusData?.last_active || null,
       isOnline: statusData?.is_online || false,
@@ -51,13 +51,13 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
-export const loginUser = async (username: string, password: string): Promise<User | null> => {
+export const loginUser = async (email: string, password: string): Promise<User | null> => {
   try {
     // First find the user's email using their username
     const { data: userData, error: userError } = await supabase
       .from('profiles')
       .select('email')
-      .eq('username', username)
+      .eq('username', email)
       .single();
       
     if (userError || !userData || !userData.email) {
@@ -85,11 +85,11 @@ export const loginUser = async (username: string, password: string): Promise<Use
 };
 
 export const registerUser = async (
+  email: string, 
+  password: string,
   username: string, 
-  email: string,
   displayName: string, 
-  school: string, 
-  password: string
+  school: string
 ): Promise<{ success: boolean; user: User | null }> => {
   try {
     // Check if username is already taken
@@ -143,7 +143,10 @@ export const registerUser = async (
       school,
       avatar: '',
       bio: '',
+      location: null,
       createdAt: new Date().toISOString(),
+      lastActive: null,
+      isOnline: true,
       coins: 100
     };
     
@@ -156,16 +159,17 @@ export const registerUser = async (
 
 export const updateUserProfile = async (userId: string, data: ProfileUpdateData): Promise<boolean> => {
   try {
+    const updateData: any = {};
+    
+    if (data.displayName !== undefined) updateData.display_name = data.displayName;
+    if (data.avatar !== undefined) updateData.avatar_url = data.avatar;
+    if (data.bio !== undefined) updateData.bio = data.bio;
+    if (data.school !== undefined) updateData.school = data.school;
+    // Don't include location as it doesn't exist in the database
+    
     const { error } = await supabase
       .from('profiles')
-      .update({
-        display_name: data.displayName,
-        avatar_url: data.avatar, // Make sure we're using the correct field name for the database
-        bio: data.bio,
-        school: data.school,
-        // Only include location if it's in the profiles table
-        // If it's not in the database, we won't try to update it
-      })
+      .update(updateData)
       .eq('id', userId);
       
     if (error) {
@@ -180,7 +184,7 @@ export const updateUserProfile = async (userId: string, data: ProfileUpdateData)
   }
 };
 
-export const changePassword = async (userId: string, newPassword: string): Promise<boolean> => {
+export const changePassword = async (newPassword: string): Promise<boolean> => {
   try {
     const { error } = await supabase.auth.updateUser({
       password: newPassword
@@ -198,23 +202,11 @@ export const changePassword = async (userId: string, newPassword: string): Promi
   }
 };
 
-export const validateCurrentPassword = async (userId: string, password: string): Promise<boolean> => {
+export const validateCurrentPassword = async (email: string, password: string): Promise<boolean> => {
   try {
-    // Get user's email
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('id', userId)
-      .single();
-      
-    if (error || !data || !data.email) {
-      console.error("Error getting user email:", error);
-      return false;
-    }
-    
     // Try to sign in with current credentials
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: data.email,
+      email,
       password
     });
     
