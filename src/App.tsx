@@ -27,7 +27,6 @@ import NotFound from './pages/NotFound';
 
 function App() {
   return (
-    // Change the order: put AuthProvider before ThemeProvider
     <AuthProvider>
       <ThemeProvider>
         <LanguageProvider>

@@ -1,25 +1,25 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User } from "./auth/types";
-import { useAuth } from "./AuthContext";
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 // Define the Comment type
 export type Comment = {
   id: string;
   content: string;
-  createdAt: string; // Changed from Date to string
+  createdAt: string;
   userId: string;
-  likes: string[]; // array of user IDs who liked this comment
+  likes: string[];
 };
 
 // Define the Post type
 export type Post = {
   id: string;
   content: string;
-  createdAt: string; // Changed from Date to string
+  createdAt: string;
   userId: string;
-  likes: string[]; // array of user IDs who liked the post
+  likes: string[];
   comments: Comment[];
   shares: number;
   images?: string[];
@@ -35,7 +35,6 @@ type PostContextType = {
   deletePost: (postId: string) => Promise<void>;
   fetchPosts: () => Promise<void>;
   loading: boolean;
-  // Add missing methods needed by components
   createPost: (content: string, images?: string[]) => Promise<void>;
   commentOnPost: (postId: string, content: string) => Promise<void>;
   likeComment: (postId: string, commentId: string) => Promise<void>;
@@ -51,8 +50,55 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [userCache, setUserCache] = useState<Record<string, User>>({});
-  const { user } = useAuth();
-  const { toast } = useToast();
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  // Get the current authenticated user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        try {
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          
+          if (profileData) {
+            setCurrentUser({
+              id: profileData.id,
+              username: profileData.username,
+              email: profileData.email,
+              displayName: profileData.display_name,
+              avatar: profileData.avatar_url,
+              bio: profileData.bio,
+              school: profileData.school,
+              coins: profileData.coins || 0,
+              createdAt: profileData.created_at
+            });
+          }
+        } catch (error) {
+          console.error("Error fetching current user:", error);
+        }
+      }
+    };
+
+    fetchCurrentUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+          fetchCurrentUser();
+        } else if (event === "SIGNED_OUT") {
+          setCurrentUser(null);
+        }
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   // Function to fetch user information by ID
   const getUserById = useCallback((userId: string): User | undefined => {
@@ -104,7 +150,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           displayName: post.profiles.display_name,
           avatar: post.profiles.avatar_url || '/placeholder.svg',
           coins: 0,
-          createdAt: new Date().toISOString(), // Converted to string
+          createdAt: new Date().toISOString(),
           email: '',
           school: '',
         } : undefined,
@@ -121,7 +167,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, []);
 
   // Function to add a post (alias for createPost)
   const addPost = useCallback(async (content: string) => {
@@ -130,7 +176,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Function to create a post with optional images
   const createPost = useCallback(async (content: string, images?: string[]) => {
-    if (!user) {
+    if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to add a post.",
@@ -142,7 +188,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const postData = { 
         content, 
-        user_id: user.id,
+        user_id: currentUser.id,
         images: images || null
       };
 
@@ -167,14 +213,14 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         shares: 0,
         images: data.images || [],
         user: {
-          id: user.id,
-          username: user.username,
-          displayName: user.displayName,
-          avatar: user.avatar || '/placeholder.svg',
-          coins: user.coins,
-          email: user.email,
-          school: user.school,
-          createdAt: user.createdAt || new Date().toISOString(),
+          id: currentUser.id,
+          username: currentUser.username,
+          displayName: currentUser.displayName,
+          avatar: currentUser.avatar || '/placeholder.svg',
+          coins: currentUser.coins,
+          email: currentUser.email || '',
+          school: currentUser.school,
+          createdAt: currentUser.createdAt || new Date().toISOString(),
         },
       };
 
@@ -192,11 +238,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       });
     }
-  }, [user, toast]);
+  }, [currentUser]);
 
   // Function to like a post
   const likePost = useCallback(async (postId: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to like a post.",
@@ -208,20 +254,20 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       // Check if the user already liked the post
       const post = posts.find(p => p.id === postId);
-      if (post && post.likes.includes(user.id)) {
+      if (post && post.likes.includes(currentUser.id)) {
         return; // User already liked this post
       }
 
       // Optimistically update the state
       setPosts(prevPosts =>
         prevPosts.map(post =>
-          post.id === postId ? { ...post, likes: [...post.likes, user.id] } : post
+          post.id === postId ? { ...post, likes: [...post.likes, currentUser.id] } : post
         )
       );
 
       const { error } = await supabase
         .from('likes')
-        .insert([{ post_id: postId, user_id: user.id }]);
+        .insert([{ post_id: postId, user_id: currentUser.id }]);
 
       if (error) {
         throw error;
@@ -237,15 +283,15 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Revert optimistic update on error
       setPosts(prevPosts =>
         prevPosts.map(post =>
-          post.id === postId ? { ...post, likes: post.likes.filter(id => id !== user.id) } : post
+          post.id === postId ? { ...post, likes: post.likes.filter(id => id !== currentUser.id) } : post
         )
       );
     }
-  }, [user, posts, toast]);
+  }, [currentUser, posts]);
 
   // Function to unlike a post
   const unlikePost = useCallback(async (postId: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to unlike a post.",
@@ -258,14 +304,14 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Optimistically update the state
       setPosts(prevPosts =>
         prevPosts.map(post =>
-          post.id === postId ? { ...post, likes: post.likes.filter(id => id !== user.id) } : post
+          post.id === postId ? { ...post, likes: post.likes.filter(id => id !== currentUser.id) } : post
         )
       );
 
       const { error } = await supabase
         .from('likes')
         .delete()
-        .match({ post_id: postId, user_id: user.id });
+        .match({ post_id: postId, user_id: currentUser.id });
 
       if (error) {
         throw error;
@@ -281,15 +327,15 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Revert optimistic update on error
       setPosts(prevPosts =>
         prevPosts.map(post =>
-          post.id === postId ? { ...post, likes: [...post.likes, user.id] } : post
+          post.id === postId ? { ...post, likes: [...post.likes, currentUser.id] } : post
         )
       );
     }
-  }, [user, toast]);
+  }, [currentUser]);
 
   // Function to comment on a post
   const commentOnPost = useCallback(async (postId: string, content: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to comment on a post.",
@@ -301,7 +347,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const { data, error } = await supabase
         .from('comments')
-        .insert([{ post_id: postId, user_id: user.id, content }])
+        .insert([{ post_id: postId, user_id: currentUser.id, content }])
         .select()
         .single();
 
@@ -341,11 +387,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       });
     }
-  }, [user, toast]);
+  }, [currentUser]);
 
   // Function to like a comment
   const likeComment = useCallback(async (postId: string, commentId: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to like a comment.",
@@ -364,12 +410,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
               comments: post.comments.map(comment => {
                 if (comment.id === commentId) {
                   // Toggle like
-                  const isLiked = comment.likes.includes(user.id);
+                  const isLiked = comment.likes.includes(currentUser.id);
                   return {
                     ...comment,
                     likes: isLiked 
-                      ? comment.likes.filter(id => id !== user.id) 
-                      : [...comment.likes, user.id]
+                      ? comment.likes.filter(id => id !== currentUser.id) 
+                      : [...comment.likes, currentUser.id]
                   };
                 }
                 return comment;
@@ -394,11 +440,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         variant: "destructive",
       });
     }
-  }, [user, toast]);
+  }, [currentUser]);
 
   // Function to share a post
   const sharePost = useCallback(async (postId: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to share a post.",
@@ -418,11 +464,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       title: "Post shared",
       description: "Post has been shared successfully.",
     });
-  }, [user, toast]);
+  }, [currentUser]);
 
   // Function to delete a post
   const deletePost = useCallback(async (postId: string) => {
-    if (!user) {
+    if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to delete a post.",
@@ -438,7 +484,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error } = await supabase
         .from('posts')
         .delete()
-        .match({ id: postId, user_id: user.id });
+        .match({ id: postId, user_id: currentUser.id });
 
       if (error) {
         throw error;
@@ -459,7 +505,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Revert optimistic update on error
       fetchPosts();
     }
-  }, [user, fetchPosts, toast]);
+  }, [currentUser, fetchPosts]);
 
   return (
     <PostContext.Provider value={{ 

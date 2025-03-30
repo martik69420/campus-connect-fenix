@@ -2,8 +2,7 @@
 import * as React from "react";
 import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
-import { User, AuthContextType, ProfileUpdateData } from "./types";
+import type { User, AuthContextType, ProfileUpdateData } from "./types";
 import { 
   loginUser, 
   registerUser, 
@@ -120,27 +119,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         setUser(user);
         setIsAuthenticated(true);
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${user.displayName || user.username}!`,
-        });
+        // Toast is now handled in the component using this function
         return true;
       }
       
       // This should not happen as loginUser should throw on failure
-      toast({
-        title: "Login failed",
-        description: "Unknown error during login",
-        variant: "destructive",
-      });
       return false;
     } catch (error: any) {
       console.error("Login error:", error);
-      toast({
-        title: "Login failed",
-        description: error.message || "Invalid username or password",
-        variant: "destructive",
-      });
       return false;
     } finally {
       setIsLoading(false);
@@ -162,26 +148,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.success && result.user) {
         setUser(result.user);
         setIsAuthenticated(true);
-        toast({
-          title: "Registration successful",
-          description: `Welcome to Campus Fenix, ${displayName}!`,
-        });
         return true;
       }
       
-      toast({
-        title: "Registration failed",
-        description: "An unexpected error occurred during registration",
-        variant: "destructive",
-      });
       return false;
     } catch (error: any) {
       console.error("Registration error:", error);
-      toast({
-        title: "Registration failed",
-        description: error.message || "Could not create your account",
-        variant: "destructive",
-      });
       return false;
     } finally {
       setIsLoading(false);
@@ -200,11 +172,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsAuthenticated(false);
     } catch (error: any) {
       console.error("Logout error:", error);
-      toast({
-        title: "Error signing out",
-        description: error.message,
-        variant: "destructive",
-      });
     } finally {
       setIsLoading(false);
     }
@@ -229,11 +196,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return success;
     } catch (error: any) {
       console.error("Profile update error:", error);
-      toast({
-        title: "Profile update failed",
-        description: error.message,
-        variant: "destructive",
-      });
       return false;
     } finally {
       setIsLoading(false);
@@ -254,32 +216,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const isCurrentPasswordValid = await validateCurrentPassword(user.email || "", currentPassword);
       
       if (!isCurrentPasswordValid) {
-        toast({
-          title: "Password change failed",
-          description: "Current password is incorrect",
-          variant: "destructive",
-        });
         return false;
       }
       
       // Then change to the new password
       const success = await changePasswordUtil(newPassword);
-      
-      if (success) {
-        toast({
-          title: "Password changed",
-          description: "Your password has been updated successfully",
-        });
-      }
-      
       return success;
     } catch (error: any) {
       console.error("Password change error:", error);
-      toast({
-        title: "Password change failed",
-        description: error.message,
-        variant: "destructive",
-      });
       return false;
     } finally {
       setIsLoading(false);
@@ -290,11 +234,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const uploadProfilePicture = async (file: File): Promise<string | null> => {
     try {
       if (!user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to upload a profile picture",
-          variant: "destructive",
-        });
         return null;
       }
 
@@ -330,22 +269,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatar: avatarUrl
         });
         
-        toast({
-          title: "Profile picture updated",
-          description: "Your profile picture has been updated successfully",
-        });
-        
         return avatarUrl;
       }
       
       return null;
     } catch (error: any) {
       console.error("Profile picture upload error:", error);
-      toast({
-        title: "Upload failed",
-        description: error.message || "Failed to upload profile picture",
-        variant: "destructive",
-      });
       return null;
     }
   };
