@@ -33,27 +33,53 @@ const MessagesList: React.FC<MessagesListProps> = ({
   const endOfMessagesRef = useRef<HTMLDivElement>(null);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
   const [initialLoad, setInitialLoad] = useState(true);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
-  // Only scroll automatically on new messages or when explicitly triggered
+  // Only scroll automatically on new messages if user is already at the bottom
   useEffect(() => {
-    // On initial load, don't auto-scroll
-    if (initialLoad) {
-      setInitialLoad(false);
+    if (initialLoad && messages.length > 0) {
+      // On initial load, scroll to bottom once messages are loaded
+      setTimeout(() => {
+        if (endOfMessagesRef.current) {
+          endOfMessagesRef.current.scrollIntoView({ behavior: 'auto' });
+        }
+        setInitialLoad(false);
+      }, 100);
       return;
     }
 
     // Check if new messages arrived and we should auto-scroll
-    if (shouldAutoScroll && endOfMessagesRef.current) {
+    if (shouldAutoScroll && isAtBottom && endOfMessagesRef.current) {
       endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, optimisticMessages, shouldAutoScroll]);
+  }, [messages, optimisticMessages, shouldAutoScroll, isAtBottom, initialLoad]);
 
   // Enable auto-scroll when user sends a message (optimistic message added)
   useEffect(() => {
     if (optimisticMessages.length > 0) {
       setShouldAutoScroll(true);
+      setIsAtBottom(true);
+      
+      // Scroll to bottom when user sends a message
+      setTimeout(() => {
+        if (endOfMessagesRef.current) {
+          endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 50);
     }
   }, [optimisticMessages]);
+
+  // Handle scroll events to determine if user is at bottom
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (scrollAreaRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
+      const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+      
+      // Consider "at bottom" if within 50px of the bottom
+      setIsAtBottom(distanceFromBottom < 50);
+    }
+  };
 
   const formatMessageTime = (dateString: string) => {
     try {
@@ -163,7 +189,11 @@ const MessagesList: React.FC<MessagesListProps> = ({
 
   return (
     <div className="flex-1 overflow-hidden bg-gradient-to-b from-background to-background/90">
-      <ScrollArea className="h-full p-3 chat-scrollbar">
+      <ScrollArea 
+        className="h-full px-3 py-4 chat-scrollbar"
+        onScrollCapture={handleScroll}
+        ref={scrollAreaRef}
+      >
         <div className="space-y-5">
           {sortedDates.map(date => (
             <div key={date} className="space-y-3">

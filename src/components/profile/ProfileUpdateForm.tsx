@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Form,
   FormControl,
@@ -29,9 +30,6 @@ const profileFormSchema = z.object({
   school: z.string().min(2, {
     message: "School must be at least 2 characters.",
   }),
-  location: z.string().max(100, {
-    message: "Location must not be longer than 100 characters.",
-  }).optional(),
 });
 
 type ProfileFormValues = z.infer<typeof profileFormSchema>;
@@ -45,7 +43,6 @@ const ProfileUpdateForm = () => {
     displayName: user?.displayName || '',
     bio: user?.bio || '',
     school: user?.school || '',
-    location: user?.location || '',
   };
 
   const form = useForm<ProfileFormValues>({
@@ -56,13 +53,36 @@ const ProfileUpdateForm = () => {
   async function onSubmit(data: ProfileFormValues) {
     setIsSubmitting(true);
     try {
+      console.log("Updating profile with data:", data);
+      
       const profileData = {
         displayName: data.displayName,
         bio: data.bio || null,
         school: data.school,
-        location: data.location || null,
+        // Don't include location as it doesn't exist in the database
       };
       
+      // First try to update directly via Supabase to see errors
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({
+            display_name: profileData.displayName,
+            bio: profileData.bio,
+            school: profileData.school,
+          })
+          .eq('id', user?.id || '');
+        
+        if (error) {
+          console.error("Failed to update profile in Supabase:", error);
+          throw new Error(error.message);
+        }
+      } catch (error: any) {
+        console.error("Supabase update error:", error);
+        throw error;
+      }
+      
+      // If direct update succeeds, update the context as well
       const success = await updateUserProfile(profileData);
       
       if (success) {
@@ -77,11 +97,11 @@ const ProfileUpdateForm = () => {
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating profile:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred.",
+        description: error.message || "An unexpected error occurred.",
         variant: "destructive",
       });
     } finally {
@@ -145,20 +165,6 @@ const ProfileUpdateForm = () => {
               <FormLabel>School</FormLabel>
               <FormControl>
                 <Input placeholder="Your school" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input placeholder="Your location" {...field} value={field.value || ''} />
               </FormControl>
               <FormMessage />
             </FormItem>

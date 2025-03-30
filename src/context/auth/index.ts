@@ -1,8 +1,6 @@
 
-import { AuthContext } from './context';
-import { AuthProvider } from './AuthProvider';
-import { useAuth } from './hooks';
-import type { User, AuthContextType } from './types';
-
-export { AuthContext, AuthProvider, useAuth };
-export type { User, AuthContextType };
+// Re-export everything from the auth context
+export * from './AuthProvider';
+export * from './context';
+export * from './hooks';
+export * from './types';
