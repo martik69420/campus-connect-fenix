@@ -5,32 +5,13 @@ import { motion } from 'framer-motion';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/context/auth';
 import LoginForm from '@/components/auth/LoginForm';
 import RegisterForm from '@/components/auth/RegisterForm';
 
+// Create a standalone Login page that doesn't depend on Auth context
 const Login = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading } = useAuth();
   const [activeTab, setActiveTab] = useState('login');
-
-  useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      navigate('/', { replace: true });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-      </div>
-    );
-  }
-
-  if (isAuthenticated) {
-    return null;
-  }
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 p-4">
