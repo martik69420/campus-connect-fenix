@@ -14,6 +14,5 @@ export function useAuth() {
   return context;
 }
 
-// Re-export the AuthProvider
-export { AuthProvider } from './AuthProvider';
+// Re-export types
 export type { User, ProfileUpdateData } from './types';
