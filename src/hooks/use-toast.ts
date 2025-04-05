@@ -138,8 +138,8 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-// Standalone toast function that doesn't depend on React hooks
-// Safe to use outside of React components
+// IMPORTANT: This is a standalone toast function that does not use React hooks
+// Safe to use anywhere, including outside of React components
 export const toast = (props: Toast) => {
   const id = genId()
 
@@ -170,7 +170,7 @@ export const toast = (props: Toast) => {
   }
 }
 
-// React hook for components - ONLY use this inside React components
+// React hook for toast state - ONLY use this inside React components
 export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 

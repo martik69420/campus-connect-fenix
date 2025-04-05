@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -9,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-// Import the standalone toast function, which is safe to use everywhere
+// Import ONLY the standalone toast function, not the useToast hook
 import { toast } from '@/hooks/use-toast';
 
 const Auth = () => {

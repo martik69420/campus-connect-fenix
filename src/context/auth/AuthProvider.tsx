@@ -12,7 +12,7 @@ import {
   getCurrentUser, 
   updateUserProfile as updateUserProfileUtil 
 } from "./authUtils";
-// Import the standalone toast function (not the hook)
+// Import ONLY the standalone toast function (not the useToast hook)
 import { toast } from "@/hooks/use-toast";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
