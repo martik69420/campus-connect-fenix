@@ -1,3 +1,3 @@
 
-// Re-export everything from the auth folder
+// Re-export everything from the auth context
 export * from './auth';

@@ -1,17 +1,19 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { GraduationCap, Users, Lock, LogIn, UserPlus, Mail, Key, Eye, EyeOff, User } from 'lucide-react';
-import { useAuth } from '@/context/auth';
+import { useAuth } from '@/context/auth/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-// Import ONLY the standalone toast function, not the useToast hook
+// Import ONLY the standalone toast function
 import { toast } from '@/hooks/use-toast';
 
+// Interface for form props
 interface FormProps {
   loading: boolean;
   setLoading: (loading: boolean) => void;
@@ -284,10 +286,6 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       
       if (success) {
         navigate('/', { replace: true });
-        toast({
-          title: "Registration successful",
-          description: "Welcome to Campus Fenix!",
-        });
       }
     } catch (error: any) {
       console.error("Registration error:", error);
