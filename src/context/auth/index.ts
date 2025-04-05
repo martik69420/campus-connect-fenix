@@ -1,3 +1,3 @@
 
-// Export everything from AuthContext
+// Export everything from the auth context
 export * from './AuthContext';

@@ -1,5 +1,6 @@
+
 import * as React from "react";
-import { AuthContext } from "./AuthContext";
+import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, AuthContextType, ProfileUpdateData } from "./types";
 import { 
@@ -11,8 +12,8 @@ import {
   getCurrentUser, 
   updateUserProfile as updateUserProfileUtil 
 } from "./authUtils";
-// Import ONLY the standalone toast function (not the useToast hook)
-import { toast } from "@/hooks/use-toast";
+// Import the standalone toast function, not the hook
+import { toast } from "@/components/ui/use-toast";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = React.useState<User | null>(null);
@@ -139,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(user);
         setIsAuthenticated(true);
         
-        // Using the standalone toast function (not the hook)
+        // Using the standalone toast function
         toast({
           title: "Login successful",
           description: `Welcome back, ${user.displayName || user.username}!`,
