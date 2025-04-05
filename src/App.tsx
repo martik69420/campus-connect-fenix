@@ -37,7 +37,6 @@ function App() {
                   <NotificationPermissionBanner />
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Login />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/profile/:username" element={<Profile />} />
                     <Route path="/messages" element={<Messages />} />

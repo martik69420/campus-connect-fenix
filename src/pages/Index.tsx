@@ -45,9 +45,9 @@ const Index = () => {
   const [loadingPosts, setLoadingPosts] = useState(false);
 
   useEffect(() => {
-    // If authentication has completed loading and user is not authenticated, redirect to auth page
+    // If authentication has completed loading and user is not authenticated, redirect to login page
     if (!isLoading && !isAuthenticated) {
-      navigate('/auth');
+      navigate('/login');
       return;
     }
     

@@ -14,7 +14,7 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   React.useEffect(() => {
     // Only redirect if we're sure the user is not authenticated and auth is not still loading
     if (!isLoading && !isAuthenticated) {
-      navigate("/auth");
+      navigate("/login");
     }
   }, [isAuthenticated, isLoading, navigate]);
 
