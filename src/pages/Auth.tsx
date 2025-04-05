@@ -12,6 +12,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 // Import ONLY the standalone toast function, not the useToast hook
 import { toast } from '@/hooks/use-toast';
 
+interface FormProps {
+  loading: boolean;
+  setLoading: (loading: boolean) => void;
+}
+
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
@@ -114,11 +119,6 @@ const Auth = () => {
     </div>
   );
 };
-
-interface FormProps {
-  loading: boolean;
-  setLoading: (loading: boolean) => void;
-}
 
 const LoginForm = ({ loading, setLoading }: FormProps) => {
   const navigate = useNavigate();
