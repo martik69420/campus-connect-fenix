@@ -138,7 +138,8 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-// Standalone toast function - doesn't use React hooks, can be used outside components
+// Standalone toast function that doesn't depend on React hooks
+// Safe to use outside of React components
 export const toast = (props: Toast) => {
   const id = genId()
 

@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { useToast } from "@/hooks/use-toast"; // Correctly using the hook in a component
+import { useToast } from "@/hooks/use-toast"; // This is correct - we use the hook inside a component
 import { useAuth } from "@/context/AuthContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -50,7 +50,7 @@ export function AuthForm() {
   const [loginError, setLoginError] = useState<string | null>(null);
   const [registerError, setRegisterError] = useState<string | null>(null);
   const { login, register: registerUser } = useAuth();
-  const { toast } = useToast(); // Properly use the useToast hook within the component
+  const { toast } = useToast(); // Using the hook correctly inside a component
   const navigate = useNavigate();
 
   const loginForm = useForm<LoginFormValues>({

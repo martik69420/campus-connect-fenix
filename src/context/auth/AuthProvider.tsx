@@ -12,7 +12,8 @@ import {
   getCurrentUser, 
   updateUserProfile as updateUserProfileUtil 
 } from "./authUtils";
-import { toast } from "@/hooks/use-toast"; // Import only the standalone toast function
+// Import the standalone toast function (not the hook)
+import { toast } from "@/hooks/use-toast";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = React.useState<User | null>(null);
@@ -139,7 +140,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(user);
         setIsAuthenticated(true);
         
-        // Using the standalone toast function
+        // Using the standalone toast function (not the hook)
         toast({
           title: "Login successful",
           description: `Welcome back, ${user.displayName || user.username}!`,
