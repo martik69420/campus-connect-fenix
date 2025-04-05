@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Mail, Key, AtSign, School, User } from "lucide-react";
+import { User, Key, AtSign, School } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,8 +83,12 @@ export function AuthForm() {
       if (success) {
         setLoginError(null);
         navigate("/");
+        toast({
+          title: "Login successful",
+          description: "Welcome back to Campus Fenix!"
+        });
       } else {
-        setLoginError("Login failed. Please check your credentials and try again.");
+        setLoginError("Login failed. Please check your username and password and try again.");
       }
     } catch (error: any) {
       console.error("Login submission error:", error);
@@ -153,13 +157,17 @@ export function AuthForm() {
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username or Email</FormLabel>
+                      <FormLabel>Username</FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Enter your username or email" 
-                          autoComplete="username"
-                          {...field} 
-                        />
+                        <div className="relative">
+                          <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                          <Input 
+                            placeholder="Enter your username" 
+                            autoComplete="username"
+                            className="pl-10"
+                            {...field} 
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -172,12 +180,16 @@ export function AuthForm() {
                     <FormItem>
                       <FormLabel>Password</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="password" 
-                          autoComplete="current-password"
-                          placeholder="Enter your password"
-                          {...field} 
-                        />
+                        <div className="relative">
+                          <Key className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+                          <Input 
+                            type="password" 
+                            autoComplete="current-password"
+                            placeholder="Enter your password"
+                            className="pl-10"
+                            {...field} 
+                          />
+                        </div>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

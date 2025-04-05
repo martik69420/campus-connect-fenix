@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast'; // Import the standalone toast function
-import { GraduationCap, Users } from 'lucide-react';
+import { GraduationCap, Users, Lock } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -91,6 +92,10 @@ const Auth = () => {
                 <Users className="h-4 w-4" />
                 <span>Connect with your classmates</span>
               </div>
+              <div className="flex items-center justify-center gap-2 mt-2">
+                <Lock className="h-4 w-4" />
+                <span>Secure credentials verification</span>
+              </div>
             </div>
           </CardFooter>
         </Card>
@@ -116,7 +121,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
     if (!identifier.trim() || !password.trim()) {
       toast({
         title: "Please fill all fields",
-        description: "Email/username and password are required",
+        description: "Username and password are required",
         variant: "destructive",
       });
       return;
@@ -129,10 +134,6 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
       
       if (success) {
         navigate('/', { replace: true });
-        toast({
-          title: "Login successful",
-          description: "Welcome back!",
-        });
       }
     } catch (error: any) {
       console.error("Login failed:", error);
@@ -149,11 +150,11 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="identifier">Email or Username</Label>
+        <Label htmlFor="identifier">Username</Label>
         <Input
           id="identifier"
           type="text"
-          placeholder="email@example.com or username"
+          placeholder="Enter your username"
           value={identifier}
           onChange={(e) => setIdentifier(e.target.value)}
           required

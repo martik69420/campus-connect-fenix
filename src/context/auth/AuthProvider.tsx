@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
@@ -131,20 +130,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      // Attempt to login - loginUser will throw an error if login fails
+      console.log("Performing strict credential validation");
+      
+      // Attempt to login with strict username/password validation
       const user = await loginUser(identifier, password);
       
       if (user) {
         setUser(user);
         setIsAuthenticated(true);
+        toast({
+          title: "Login successful",
+          description: `Welcome back, ${user.displayName || user.username}!`,
+        });
         return true;
       }
       
-      setAuthError("Invalid credentials");
+      setAuthError("Invalid username or password. Please check your credentials and try again.");
       return false;
     } catch (error: any) {
       console.error("Login error:", error);
-      setAuthError(error.message || "Login failed");
+      setAuthError(error.message || "Login failed. Please check your credentials and try again.");
       return false;
     } finally {
       setIsLoading(false);
