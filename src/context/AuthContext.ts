@@ -1,3 +1,3 @@
 
 // Re-export everything from the auth context
-export * from './auth';
+export * from './auth/AuthContext';

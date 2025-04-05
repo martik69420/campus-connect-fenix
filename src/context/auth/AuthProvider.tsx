@@ -131,9 +131,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      console.log("Performing strict credential validation");
+      console.log("Performing credential validation");
       
-      // Attempt to login with strict username/password validation
+      // Attempt to login with validation
       const user = await loginUser(identifier, password);
       
       if (user) {

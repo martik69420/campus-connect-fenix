@@ -1,7 +1,7 @@
 
 import * as React from 'react';
 import { Route, Routes } from 'react-router-dom';
-import { AuthProvider } from './context/auth/AuthContext';
+import { AuthProvider } from './context/auth/AuthProvider';
 import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { PostProvider } from './context/PostContext';
@@ -10,7 +10,7 @@ import { GameProvider } from './context/GameContext';
 import { Toaster } from '@/components/ui/toaster';
 import NotificationPermissionBanner from '@/components/notifications/NotificationPermissionBanner';
 
-import Auth from './pages/Auth';
+import Login from './pages/Login';
 import Index from './pages/Index';
 import Profile from './pages/Profile';
 import Messages from './pages/Messages';
@@ -37,7 +37,8 @@ function App() {
                   <NotificationPermissionBanner />
                   <Routes>
                     <Route path="/" element={<Index />} />
-                    <Route path="/auth" element={<Auth />} />
+                    <Route path="/auth" element={<Login />} />
+                    <Route path="/login" element={<Login />} />
                     <Route path="/profile/:username" element={<Profile />} />
                     <Route path="/messages" element={<Messages />} />
                     <Route path="/games" element={<Games />} />
