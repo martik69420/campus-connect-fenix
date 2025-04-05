@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast'; // Use the hook since this is a component
 import { useAuth } from '@/context/AuthContext';
 import {
   Dialog,
@@ -68,7 +68,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
   targetId,
   targetName
 }) => {
-  const { toast } = useToast();
+  const { toast } = useToast(); // Use the hook since this is a component
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   

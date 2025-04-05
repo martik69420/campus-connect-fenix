@@ -9,7 +9,7 @@ import {
   DialogTitle 
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast"; // Use the hook since this is a component
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface ShareModalProps {
@@ -20,7 +20,7 @@ interface ShareModalProps {
 }
 
 const ShareModal: React.FC<ShareModalProps> = ({ open, onClose, postId, postTitle = "" }) => {
-  const { toast } = useToast();
+  const { toast } = useToast(); // Use the hook since this is a component
   const [showLinkCopied, setShowLinkCopied] = useState(false);
   
   const postUrl = `${window.location.origin}/post/${postId}`;

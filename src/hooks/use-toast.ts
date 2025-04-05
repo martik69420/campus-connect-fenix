@@ -138,8 +138,8 @@ function dispatch(action: Action) {
 
 type Toast = Omit<ToasterToast, "id">
 
-// Standalone toast function that doesn't depend on React hooks
-export function toast(props: Toast) {
+// Standalone toast function that doesn't require React hooks
+export const toast = (props: Toast) => {
   const id = genId()
 
   const update = (props: ToasterToast) =>
@@ -147,6 +147,7 @@ export function toast(props: Toast) {
       type: "UPDATE_TOAST",
       toast: { ...props, id },
     })
+    
   const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
 
   dispatch({
@@ -162,7 +163,7 @@ export function toast(props: Toast) {
   })
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   }
@@ -183,8 +184,8 @@ export function useToast() {
   }, [state])
 
   return {
-    toast,
     ...state,
+    toast,
     dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
   }
 }
