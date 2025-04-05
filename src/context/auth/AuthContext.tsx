@@ -16,3 +16,4 @@ export function useAuth() {
 
 // Re-export the AuthProvider
 export { AuthProvider } from './AuthProvider';
+export type { User, ProfileUpdateData } from './types';

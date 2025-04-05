@@ -1,6 +1,5 @@
-
 import * as React from "react";
-import { AuthContext } from "./context";
+import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, AuthContextType, ProfileUpdateData } from "./types";
 import { 
