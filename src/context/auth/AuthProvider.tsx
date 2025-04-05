@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { AuthContext } from "./context";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +12,7 @@ import {
   getCurrentUser, 
   updateUserProfile as updateUserProfileUtil 
 } from "./authUtils";
-import { toast } from "@/hooks/use-toast"; // Import only the standalone toast function
+import { toast } from "@/hooks/use-toast"; // Import the standalone toast function, not the hook
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // We're not using the useToast hook here, just the standalone toast function

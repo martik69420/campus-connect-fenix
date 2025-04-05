@@ -4,18 +4,19 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast'; // Import the standalone toast function
-import { GraduationCap, Users, Lock } from 'lucide-react';
+import { GraduationCap, Users, Lock, LogIn, UserPlus, Mail, Key, Eye, EyeOff, User } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { toast } from '@/hooks/use-toast'; // Import the standalone toast function
 
 const Auth = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const { isAuthenticated, isLoading, user, authError } = useAuth();
+  const [activeTab, setActiveTab] = useState('login');
   
   useEffect(() => {
     if (isAuthenticated && !isLoading && user) {
@@ -53,7 +54,7 @@ const Auth = () => {
         transition={{ duration: 0.5, delay: 0.1 }}
         className="w-full max-w-md"
       >
-        <Card className="border-2">
+        <Card className="border-2 shadow-lg">
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
@@ -62,15 +63,21 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             {authError && (
-              <Alert variant="destructive" className="mb-4">
+              <Alert variant="destructive" className="mb-4 animate-fade-in">
                 <AlertDescription>{authError}</AlertDescription>
               </Alert>
             )}
             
-            <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-4">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login" className="flex items-center gap-2">
+                  <LogIn className="h-4 w-4" />
+                  Login
+                </TabsTrigger>
+                <TabsTrigger value="register" className="flex items-center gap-2">
+                  <UserPlus className="h-4 w-4" />
+                  Register
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="login">
@@ -83,18 +90,22 @@ const Auth = () => {
             </Tabs>
           </CardContent>
           <CardFooter className="flex flex-col space-y-4">
-            <div className="text-sm text-muted-foreground text-center">
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <GraduationCap className="h-4 w-4" />
-                <span>School-exclusive platform</span>
-              </div>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <Users className="h-4 w-4" />
-                <span>Connect with your classmates</span>
-              </div>
-              <div className="flex items-center justify-center gap-2 mt-2">
-                <Lock className="h-4 w-4" />
-                <span>Secure credentials verification</span>
+            <div className="w-full border-t pt-4">
+              <div className="text-sm text-muted-foreground">
+                <div className="flex flex-col space-y-2">
+                  <div className="flex items-center gap-2">
+                    <GraduationCap className="h-4 w-4 text-primary" />
+                    <span>School-exclusive platform</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4 text-primary" />
+                    <span>Connect with your classmates</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Lock className="h-4 w-4 text-primary" />
+                    <span>Secure credentials verification</span>
+                  </div>
+                </div>
               </div>
             </div>
           </CardFooter>
@@ -114,6 +125,7 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   const { login } = useAuth();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -150,39 +162,74 @@ const LoginForm = ({ loading, setLoading }: FormProps) => {
   return (
     <form onSubmit={handleLogin} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="identifier">Username</Label>
-        <Input
-          id="identifier"
-          type="text"
-          placeholder="Enter your username"
-          value={identifier}
-          onChange={(e) => setIdentifier(e.target.value)}
-          required
-          disabled={loading}
-          autoComplete="username"
-        />
+        <Label htmlFor="identifier" className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          Username
+        </Label>
+        <div className="relative">
+          <Input
+            id="identifier"
+            type="text"
+            placeholder="Enter your username"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            required
+            disabled={loading}
+            autoComplete="username"
+            className="pl-10"
+          />
+          <Mail className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+        </div>
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="Enter your password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          disabled={loading}
-          autoComplete="current-password"
-        />
+        <Label htmlFor="password" className="flex items-center gap-2">
+          <Key className="h-4 w-4" />
+          Password
+        </Label>
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="Enter your password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            disabled={loading}
+            autoComplete="current-password"
+            className="pl-10 pr-10"
+          />
+          <Key className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
+          <button
+            type="button"
+            className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
       
       <Button
         type="submit"
         disabled={loading}
-        className="w-full"
+        className="w-full transition-all hover:bg-primary/90 hover:shadow-md"
       >
-        {loading ? "Logging in..." : "Login"}
+        {loading ? (
+          <div className="flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin mr-2"></div>
+            Logging in...
+          </div>
+        ) : (
+          <div className="flex items-center justify-center">
+            <LogIn className="mr-2 h-4 w-4" />
+            Login
+          </div>
+        )}
       </Button>
     </form>
   );
@@ -197,6 +244,8 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
   const [school, setSchool] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -255,7 +304,10 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
   return (
     <form onSubmit={handleRegister} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="username">Username</Label>
+        <Label htmlFor="username" className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          Username
+        </Label>
         <Input
           id="username"
           type="text"
@@ -269,7 +321,10 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email" className="flex items-center gap-2">
+          <Mail className="h-4 w-4" />
+          Email
+        </Label>
         <Input
           id="email"
           type="email"
@@ -283,7 +338,10 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="displayName">Display Name</Label>
+        <Label htmlFor="displayName" className="flex items-center gap-2">
+          <User className="h-4 w-4" />
+          Display Name
+        </Label>
         <Input
           id="displayName"
           type="text"
@@ -297,7 +355,10 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="school">School</Label>
+        <Label htmlFor="school" className="flex items-center gap-2">
+          <GraduationCap className="h-4 w-4" />
+          School
+        </Label>
         <Input
           id="school"
           type="text"
@@ -311,39 +372,81 @@ const RegisterForm = ({ loading, setLoading }: FormProps) => {
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="password">Password</Label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="Choose a password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete="new-password"
-          disabled={loading}
-        />
+        <Label htmlFor="password" className="flex items-center gap-2">
+          <Key className="h-4 w-4" />
+          Password
+        </Label>
+        <div className="relative">
+          <Input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            placeholder="Choose a password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+            disabled={loading}
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+            onClick={() => setShowPassword(!showPassword)}
+          >
+            {showPassword ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
-        <Input
-          id="confirmPassword"
-          type="password"
-          placeholder="Confirm your password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-          autoComplete="new-password"
-          disabled={loading}
-        />
+        <Label htmlFor="confirmPassword" className="flex items-center gap-2">
+          <Key className="h-4 w-4" />
+          Confirm Password
+        </Label>
+        <div className="relative">
+          <Input
+            id="confirmPassword"
+            type={showConfirmPassword ? "text" : "password"}
+            placeholder="Confirm your password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+            autoComplete="new-password"
+            disabled={loading}
+          />
+          <button
+            type="button"
+            className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-700"
+            onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+          >
+            {showConfirmPassword ? (
+              <EyeOff className="h-5 w-5" />
+            ) : (
+              <Eye className="h-5 w-5" />
+            )}
+          </button>
+        </div>
       </div>
       
       <Button
         type="submit"
         disabled={loading}
-        className="w-full"
+        className="w-full transition-all hover:bg-primary/90 hover:shadow-md"
       >
-        {loading ? "Creating account..." : "Register"}
+        {loading ? (
+          <div className="flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin mr-2"></div>
+            Creating account...
+          </div>
+        ) : (
+          <div className="flex items-center justify-center">
+            <UserPlus className="mr-2 h-4 w-4" />
+            Register
+          </div>
+        )}
       </Button>
     </form>
   );
