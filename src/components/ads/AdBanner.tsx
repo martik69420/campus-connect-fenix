@@ -19,8 +19,8 @@ const AdBanner: React.FC<AdBannerProps> = ({
   adFormat = 'auto',
   className = 'w-full overflow-hidden my-4'
 }) => {
-  // Change the ref type to HTMLInsElement which is the correct type for <ins> elements
-  const adRef = useRef<HTMLElement>(null);
+  // Use HTMLInsElement interface for the correct type
+  const adRef = useRef<HTMLElement | null>(null);
   const adKey = useRef(`ad-${Math.random().toString(36).substring(2, 9)}`);
   const initialized = useRef(false);
 
@@ -62,8 +62,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive="true"
-        // Changed ref to be passed without explicit typing which allows React to handle the correct element type
-        ref={adRef}
+        ref={adRef as React.RefObject<HTMLElement>}
         key={adKey.current}
       />
     </div>
