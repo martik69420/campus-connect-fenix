@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Smile, Paperclip, Loader2 } from 'lucide-react';
+import { Send, Smile, Paperclip, Loader2, Image, Mic } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/hooks/use-toast';
 
 interface MessageInputProps {
   onSendMessage: (message: string) => Promise<void>;
@@ -12,7 +13,7 @@ interface MessageInputProps {
 }
 
 const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, disabled }) => {
-  const { t } = useLanguage();
+  const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -32,8 +33,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
         setMessage('');
       } catch (error) {
         console.error('Failed to send message:', error);
-      } finally {
-        // Don't reset isSubmitting here - we'll let the effect handle it
+        toast({
+          title: "Failed to send message",
+          description: "Your message could not be sent. Please try again.",
+          variant: "destructive"
+        });
       }
     }
   };
@@ -60,12 +64,18 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
     }
   }, []);
 
+  const handleFeatureNotReady = () => {
+    toast({
+      description: "This feature is coming soon!",
+    });
+  };
+
   return (
     <div className="border-t p-3 dark:border-gray-800 bg-background/95 backdrop-blur-sm">
       <div className="flex gap-2 items-end">
         <Textarea
           ref={textareaRef}
-          placeholder={t('messages.typeMessage') || "Type a message..."}
+          placeholder="Type a message..."
           className="min-h-[40px] max-h-[150px] flex-1 resize-none py-2 px-3 focus-visible:ring-1 focus-visible:ring-primary"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -74,26 +84,57 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
           rows={1}
         />
         <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            type="button"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            disabled={isSending || isSubmitting || disabled}
-          >
-            <Paperclip className="h-5 w-5" />
-            <span className="sr-only">{t('messages.attachFile') || "Attach file"}</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            type="button"
-            className="text-muted-foreground hover:text-foreground transition-colors"
-            disabled={isSending || isSubmitting || disabled}
-          >
-            <Smile className="h-5 w-5" />
-            <span className="sr-only">{t('messages.addEmoji') || "Add emoji"}</span>
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSending || isSubmitting || disabled}
+                onClick={handleFeatureNotReady}
+              >
+                <Image className="h-5 w-5" />
+                <span className="sr-only">Attach image</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Attach image</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSending || isSubmitting || disabled}
+                onClick={handleFeatureNotReady}
+              >
+                <Paperclip className="h-5 w-5" />
+                <span className="sr-only">Attach file</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Attach file</TooltipContent>
+          </Tooltip>
+          
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                disabled={isSending || isSubmitting || disabled}
+                onClick={handleFeatureNotReady}
+              >
+                <Smile className="h-5 w-5" />
+                <span className="sr-only">Add emoji</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Add emoji</TooltipContent>
+          </Tooltip>
+          
           <Button
             variant="default"
             size="icon"
@@ -106,7 +147,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
             ) : (
               <Send className="h-5 w-5" />
             )}
-            <span className="sr-only">{t('messages.send') || "Send"}</span>
+            <span className="sr-only">Send</span>
           </Button>
         </div>
       </div>

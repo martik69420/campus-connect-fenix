@@ -1,71 +1,30 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardContent } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Copy, Mail, MapPin, User } from 'lucide-react';
+import { CalendarIcon, Mail, MapPin, Globe, Briefcase, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { motion } from 'framer-motion';
 import AppLayout from '@/components/layout/AppLayout';
-import ProfilePictureUpload from '@/components/profile/ProfilePictureUpload';
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
-import { useForm } from "react-hook-form"
-import { z } from "zod"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
-import { format } from "date-fns"
-import { Checkbox } from "@/components/ui/checkbox"
-
-// Define a schema for the profile update form
-const profileUpdateSchema = z.object({
-  displayName: z.string().min(2, {
-    message: "Display name must be at least 2 characters.",
-  }),
-  username: z.string().min(2, {
-    message: "Username must be at least 2 characters.",
-  }),
-  bio: z.string().max(160, {
-    message: "Bio must be less than 160 characters.",
-  }).optional(),
-  location: z.string().optional(),
-  website: z.string().url({
-    message: "Please enter a valid URL.",
-  }).optional(),
-  birthday: z.date().optional(),
-  availableForHire: z.boolean().default(false).optional(),
-})
+import ProfileHeader from '@/components/profile/ProfileHeader';
+import ProfileUpdateForm from '@/components/profile/ProfileUpdateForm';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AdBanner from '@/components/ads/AdBanner';
 
 const Profile = () => {
   const { username } = useParams();
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading, updateUserProfile } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [initialValues, setInitialValues] = useState<any>(null);
-  
-  const form = useForm<z.infer<typeof profileUpdateSchema>>({
-    resolver: zodResolver(profileUpdateSchema),
-    defaultValues: {
-      displayName: "",
-      username: "",
-      bio: "",
-      location: "",
-      website: "",
-      birthday: undefined,
-      availableForHire: false,
-    },
-    mode: "onChange",
-  })
+  const [friendStatus, setFriendStatus] = useState<'none' | 'pending' | 'friends'>('none');
+  const [friendActionLoading, setFriendActionLoading] = useState(false);
   
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
@@ -75,31 +34,11 @@ const Profile = () => {
     
     if (username) {
       fetchProfile(username);
+      if (user) {
+        checkFriendStatus(username);
+      }
     }
-  }, [username, isAuthenticated, isLoading, navigate]);
-  
-  useEffect(() => {
-    if (profile) {
-      form.reset({
-        displayName: profile.display_name || "",
-        username: profile.username || "",
-        bio: profile.bio || "",
-        location: profile.location || "",
-        website: profile.website || "",
-        birthday: profile.birthday ? new Date(profile.birthday) : undefined,
-        availableForHire: profile.available_for_hire || false,
-      });
-      setInitialValues({
-        displayName: profile.display_name || "",
-        username: profile.username || "",
-        bio: profile.bio || "",
-        location: profile.location || "",
-        website: profile.website || "",
-        birthday: profile.birthday ? new Date(profile.birthday) : undefined,
-        availableForHire: profile.available_for_hire || false,
-      });
-    }
-  }, [profile, form]);
+  }, [username, isAuthenticated, isLoading, navigate, user]);
   
   const fetchProfile = async (username: string) => {
     setLoading(true);
@@ -122,7 +61,7 @@ const Profile = () => {
       if (data) {
         setProfile(data);
       } else {
-        // If no profile found, redirect to a 404 page or handle the case accordingly
+        // If no profile found, redirect to a 404 page
         navigate('/not-found');
       }
     } finally {
@@ -130,59 +69,118 @@ const Profile = () => {
     }
   };
   
-  const handleEditProfile = () => {
-    setIsEditing(true);
-  };
-  
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    form.reset(initialValues);
-  };
-  
-  const onSubmit = async (values: z.infer<typeof profileUpdateSchema>) => {
-    setIsSaving(true);
+  const checkFriendStatus = async (username: string) => {
     try {
-      const success = await updateUserProfile({
-        displayName: values.displayName,
-        username: values.username,
-        bio: values.bio,
-        location: values.location,
-        website: values.website,
-        birthday: values.birthday ? values.birthday.toISOString() : null,
-        availableForHire: values.availableForHire,
-      });
-      
-      if (success) {
-        toast({
-          title: "Success",
-          description: "Profile updated successfully.",
-        });
-        // Refresh the profile data
-        fetchProfile(values.username);
-        setIsEditing(false);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to update profile.",
-          variant: "destructive"
-        });
+      // First check if the profile belongs to the current user
+      if (user?.username === username) {
+        setFriendStatus('none');
+        return;
       }
+      
+      // Get the user ID for the username
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('username', username)
+        .single();
+        
+      if (!profileData) return;
+      
+      // Check if they are already friends
+      const { data: friendsData } = await supabase
+        .from('friends')
+        .select('status')
+        .or(`and(user_id.eq.${user?.id},friend_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},friend_id.eq.${user?.id})`)
+        .eq('status', 'friends');
+        
+      if (friendsData && friendsData.length > 0) {
+        setFriendStatus('friends');
+        return;
+      }
+      
+      // Check if there's a pending request
+      const { data: pendingData } = await supabase
+        .from('friends')
+        .select('status')
+        .or(`and(user_id.eq.${user?.id},friend_id.eq.${profileData.id}),and(user_id.eq.${profileData.id},friend_id.eq.${user?.id})`)
+        .eq('status', 'pending');
+        
+      if (pendingData && pendingData.length > 0) {
+        setFriendStatus('pending');
+        return;
+      }
+      
+      setFriendStatus('none');
     } catch (error) {
-      console.error("Profile update error:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update profile.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsSaving(false);
+      console.error("Error checking friend status:", error);
     }
   };
   
-  const copyToClipboard = (text: string, message: string) => {
-    navigator.clipboard.writeText(text);
-    toast({ description: message });
+  const handleAddFriend = async () => {
+    if (!profile || !user) return;
+    
+    setFriendActionLoading(true);
+    try {
+      const { error } = await supabase
+        .from('friends')
+        .insert([
+          { user_id: user.id, friend_id: profile.id, status: 'pending' }
+        ]);
+        
+      if (error) throw error;
+      
+      setFriendStatus('pending');
+      toast({
+        title: "Friend request sent",
+        description: `Friend request sent to ${profile.display_name || profile.username}`,
+      });
+    } catch (error: any) {
+      console.error("Error sending friend request:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send friend request",
+        variant: "destructive"
+      });
+    } finally {
+      setFriendActionLoading(false);
+    }
   };
+  
+  const handleRemoveFriend = async () => {
+    if (!profile || !user) return;
+    
+    setFriendActionLoading(true);
+    try {
+      // Delete friend relationship in both directions
+      await supabase
+        .from('friends')
+        .delete()
+        .or(`and(user_id.eq.${user.id},friend_id.eq.${profile.id}),and(user_id.eq.${profile.id},friend_id.eq.${user.id})`);
+        
+      setFriendStatus('none');
+      toast({
+        title: "Friend removed",
+        description: `${profile.display_name || profile.username} has been removed from your friends`,
+      });
+    } catch (error: any) {
+      console.error("Error removing friend:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove friend",
+        variant: "destructive"
+      });
+    } finally {
+      setFriendActionLoading(false);
+    }
+  };
+  
+  const handleMessage = () => {
+    if (profile) {
+      navigate(`/messages?userId=${profile.id}`);
+    }
+  };
+
+  const isOwnProfile = user?.username === profile?.username;
   
   if (loading) {
     return (
@@ -196,259 +194,168 @@ const Profile = () => {
       </AppLayout>
     );
   }
-  
-  if (!profile) {
-    return (
-      <AppLayout>
-        <div className="flex items-center justify-center min-h-screen">
-          <p className="text-lg font-medium">Profile not found.</p>
-        </div>
-      </AppLayout>
-    );
-  }
-  
-  const isOwnProfile = user?.username === profile?.username;
-  
+
   return (
     <AppLayout>
-      <div className="container mx-auto py-6">
-        <Card className="w-full max-w-4xl mx-auto">
-          <CardHeader>
-            <CardTitle className="text-2xl font-bold">
-              {isEditing ? "Edit Profile" : "Profile"}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      <div className="container max-w-5xl mx-auto px-4 py-6 space-y-8">
+        {/* Ad Banner at the top */}
+        <AdBanner adSlot="5082313008" />
+        
+        {/* Profile Header with Avatar, Name, and Primary Actions */}
+        {profile && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ProfileHeader 
+              user={profile}
+              isCurrentUser={isOwnProfile}
+              isFriend={friendStatus === 'friends'}
+              onAddFriend={handleAddFriend}
+              onRemoveFriend={handleRemoveFriend}
+              loading={friendActionLoading}
+            />
+          </motion.div>
+        )}
+        
+        {/* Profile Tabs */}
+        <Tabs defaultValue="about" className="mt-8">
+          <TabsList className="grid grid-cols-3 md:w-[400px]">
+            <TabsTrigger value="about">
+              <Users className="mr-2 h-4 w-4" />
+              About
+            </TabsTrigger>
+            <TabsTrigger value="posts">
+              <Mail className="mr-2 h-4 w-4" />
+              Posts
+            </TabsTrigger>
+            <TabsTrigger value="friends">
+              <Users className="mr-2 h-4 w-4" />
+              Friends
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="about" className="space-y-6 mt-6">
             {isEditing ? (
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="displayName"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Display Name</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Display Name" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="username"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Username</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Username" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="bio"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Bio</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Write a short bio about yourself"
-                            className="resize-none"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Write a short bio about yourself. Max 160 characters.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="location"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Location</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Location" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="website"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Website</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Website" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  
-                  <FormField
-                    control={form.control}
-                    name="birthday"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-col">
-                        <FormLabel>Birthday</FormLabel>
-                        <Popover>
-                          <PopoverTrigger asChild>
-                            <FormControl>
-                              <Button
-                                variant={"outline"}
-                                className={cn(
-                                  "w-[240px] pl-3 text-left font-normal",
-                                  !field.value && "text-muted-foreground"
-                                )}
-                              >
-                                {field.value ? (
-                                  format(field.value, "PPP")
-                                ) : (
-                                  <span>Pick a date</span>
-                                )}
-                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                              </Button>
-                            </FormControl>
-                          </PopoverTrigger>
-                          <PopoverContent className="w-auto p-0" align="start">
-                            <DatePicker
-                              mode="single"
-                              selected={field.value}
-                              onSelect={field.onChange}
-                              setDate={field.onChange} // Add the missing setDate prop
-                              disabled={false}
-                              initialFocus
-                            />
-                          </PopoverContent>
-                        </Popover>
-                        <FormDescription>
-                          Your birthday will not be publicly displayed.
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <FormField
-                    control={form.control}
-                    name="availableForHire"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Available for hire</FormLabel>
-                          <FormDescription>
-                            Let others know that you are open to job opportunities.
-                          </FormDescription>
-                        </div>
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  
-                  <div className="flex justify-end gap-2">
-                    <Button variant="ghost" onClick={handleCancelEdit}>Cancel</Button>
-                    <Button type="submit" disabled={isSaving || !form.formState.isValid}>
-                      {isSaving ? (
-                        <>
-                          <span className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></span>
-                          Saving...
-                        </>
-                      ) : (
-                        "Update Profile"
-                      )}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+              <ProfileUpdateForm />
             ) : (
-              <div className="space-y-6">
-                <div className="flex items-center space-x-4">
-                  <ProfilePictureUpload />
-                  <div>
-                    <h2 className="text-2xl font-bold">{profile.display_name}</h2>
-                    <p className="text-muted-foreground">@{profile.username}</p>
-                    {profile.available_for_hire && (
-                      <Badge variant="secondary">Available for Hire</Badge>
-                    )}
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium">Profile Information</h3>
-                  <div className="text-muted-foreground space-y-1">
-                    {profile.bio && (
-                      <p>{profile.bio}</p>
-                    )}
-                    {profile.location && (
-                      <div className="flex items-center space-x-2">
-                        <MapPin className="h-4 w-4" />
-                        <span>{profile.location}</span>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* About section */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <Card>
+                    <CardContent className="p-6 space-y-4">
+                      <h3 className="text-xl font-semibold flex items-center">
+                        <Users className="mr-2 h-5 w-5" />
+                        About
+                      </h3>
+                      <Separator />
+                      
+                      <div className="space-y-3">
+                        {profile?.bio ? (
+                          <p className="text-muted-foreground">{profile.bio}</p>
+                        ) : (
+                          <p className="text-muted-foreground italic">No bio provided</p>
+                        )}
+                        
+                        {profile?.school && (
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-muted-foreground" />
+                            <span>{profile.school}</span>
+                          </div>
+                        )}
+                        
+                        {profile?.location && (
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            <span>{profile.location}</span>
+                          </div>
+                        )}
+                        
+                        {profile?.website && (
+                          <div className="flex items-center gap-2">
+                            <Globe className="h-4 w-4 text-muted-foreground" />
+                            <a 
+                              href={profile.website} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-primary hover:underline"
+                            >
+                              {profile.website}
+                            </a>
+                          </div>
+                        )}
+                        
+                        {profile?.birthday && (
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                            <span>{new Date(profile.birthday).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                        
+                        <div className="flex items-center gap-2">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          <span>{profile?.email}</span>
+                        </div>
                       </div>
-                    )}
-                    {profile.website && (
-                      <div className="flex items-center space-x-2">
-                        <a href={profile.website} target="_blank" rel="noopener noreferrer" className="underline hover:text-primary">
-                          {profile.website}
-                        </a>
-                        <Button variant="ghost" size="icon" onClick={() => copyToClipboard(profile.website, "Website URL copied to clipboard.")}>
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+                
+                {/* Interests section */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.3 }}
+                >
+                  <Card>
+                    <CardContent className="p-6 space-y-4">
+                      <h3 className="text-xl font-semibold">Interests</h3>
+                      <Separator />
+                      
+                      <div className="flex flex-wrap gap-2">
+                        {profile?.interests ? (
+                          (Array.isArray(profile.interests) ? profile.interests : []).map((interest: string, index: number) => (
+                            <Badge key={index} variant="secondary" className="px-3 py-1.5">
+                              {interest}
+                            </Badge>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground italic">No interests listed</p>
+                        )}
                       </div>
-                    )}
-                    {profile.birthday && (
-                      <div className="flex items-center space-x-2">
-                        <CalendarIcon className="h-4 w-4" />
-                        <span>{new Date(profile.birthday).toLocaleDateString()}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                
-                <Separator />
-                
-                <div className="space-y-2">
-                  <h3 className="text-lg font-medium">Contact Information</h3>
-                  <div className="text-muted-foreground space-y-1">
-                    <div className="flex items-center space-x-2">
-                      <Mail className="h-4 w-4" />
-                      <span>{profile.email}</span>
-                      <Button variant="ghost" size="icon" onClick={() => copyToClipboard(profile.email, "Email copied to clipboard.")}>
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-                
-                {isOwnProfile && (
-                  <Button onClick={handleEditProfile}>Edit Profile</Button>
-                )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </TabsContent>
+          
+          <TabsContent value="posts" className="mt-6">
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-4">Posts</h3>
+                <p className="text-muted-foreground">No posts to show yet.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="friends" className="mt-6">
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-4">Friends</h3>
+                <p className="text-muted-foreground">Coming soon!</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+        
+        {/* Ad Banner at the bottom */}
+        <AdBanner adSlot="2813542194" />
       </div>
     </AppLayout>
   );

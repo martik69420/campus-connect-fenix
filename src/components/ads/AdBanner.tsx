@@ -21,15 +21,16 @@ const AdBanner: React.FC<AdBannerProps> = ({
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
   const adInitialized = useRef(false);
+  const adKey = useRef(`ad-${Math.random().toString(36).substring(2, 9)}`);
 
   useEffect(() => {
     // Only initialize this ad if it hasn't been initialized yet
     if (adRef.current && !adInitialized.current && window.adsbygoogle) {
       try {
         // Use a random key for each ad instance to avoid duplication issues
-        const randomKey = `ad-${Math.random().toString(36).substring(2, 9)}`;
-        adRef.current.dataset.adKey = randomKey;
+        adRef.current.dataset.adKey = adKey.current;
         
+        // Push the ad
         (window.adsbygoogle = window.adsbygoogle || []).push({});
         adInitialized.current = true;
       } catch (error) {
@@ -38,7 +39,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
     }
     
     return () => {
-      // Reset the initialization flag when component unmounts
+      // Clean up on unmount
       adInitialized.current = false;
     };
   }, []);
@@ -53,6 +54,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
         data-ad-format={adFormat}
         data-full-width-responsive="true"
         ref={adRef as any}
+        key={adKey.current}
       />
     </div>
   );

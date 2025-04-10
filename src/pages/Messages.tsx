@@ -13,6 +13,7 @@ import MessageInput from '@/components/messaging/MessageInput';
 import { Loader2, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AdBanner from '@/components/ads/AdBanner';
+import useMessages from '@/hooks/use-messages';
 
 interface Message {
   id: string;
@@ -57,6 +58,7 @@ const Messages = () => {
   const [searchQuery, setSearchQuery] = useState('');
   
   const userIdFromParams = searchParams.get('userId');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Check authentication
   useEffect(() => {
@@ -106,6 +108,15 @@ const Messages = () => {
         const newMsg = payload.new as Message;
         if (newMsg.receiver_id === user.id) {
           setMessages(prev => [...prev, newMsg]);
+          
+          // Mark the message as read
+          supabase
+            .from('messages')
+            .update({ is_read: true })
+            .eq('id', newMsg.id);
+            
+          // Scroll to bottom on new message
+          scrollToBottom();
         }
       })
       .subscribe();
@@ -114,6 +125,12 @@ const Messages = () => {
       supabase.removeChannel(channel);
     };
   }, [activeContact, user]);
+  
+  const scrollToBottom = () => {
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
   
   const fetchContacts = async () => {
     if (!user?.id) return;
@@ -195,13 +212,23 @@ const Messages = () => {
         })
       );
       
-      // Filter contacts by search query
-      const filteredContacts = contactsWithMessages.filter(contact => {
-        if (!searchQuery) return true;
-        
-        return contact.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               contact.username.toLowerCase().includes(searchQuery.toLowerCase());
-      });
+      // Filter contacts by search query and sort by most recent message
+      const filteredContacts = contactsWithMessages
+        .filter(contact => {
+          if (!searchQuery) return true;
+          
+          return contact.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                contact.username.toLowerCase().includes(searchQuery.toLowerCase());
+        })
+        .sort((a, b) => {
+          // Sort by unread messages first, then by latest message
+          if (a.unreadCount && !b.unreadCount) return -1;
+          if (!a.unreadCount && b.unreadCount) return 1;
+          
+          const dateA = a.lastMessageTime ? new Date(a.lastMessageTime).getTime() : 0;
+          const dateB = b.lastMessageTime ? new Date(b.lastMessageTime).getTime() : 0;
+          return dateB - dateA;
+        });
       
       setContacts(filteredContacts);
     } catch (error: any) {
@@ -251,7 +278,19 @@ const Messages = () => {
           .from('messages')
           .update({ is_read: true })
           .in('id', unreadMsgIds);
+          
+        // Update unread count in contacts list
+        setContacts(prev => 
+          prev.map(contact => 
+            contact.id === contactId
+              ? { ...contact, unreadCount: 0 }
+              : contact
+          )
+        );
       }
+      
+      // Scroll to bottom after messages load
+      scrollToBottom();
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       toast({
@@ -303,7 +342,7 @@ const Messages = () => {
         prev.filter(msg => msg.id !== optimisticMsg.id)
       );
       
-      // Refresh messages to include the new one
+      // Add the real message to the list
       setMessages(prev => [...prev, data]);
       
       // Also update contacts to show latest message
@@ -318,6 +357,9 @@ const Messages = () => {
             : contact
         )
       );
+      
+      // Scroll to bottom
+      scrollToBottom();
     } catch (error: any) {
       console.error('Error sending message:', error);
       
@@ -372,13 +414,14 @@ const Messages = () => {
                   contact={activeContact} 
                   onOpenUserActions={handleOpenUserActions} 
                 />
-                <div className="flex-1 overflow-y-auto">
+                <div className="flex-1 overflow-y-auto" id="messages-container">
                   <MessagesList
                     messages={messages}
                     optimisticMessages={optimisticMessages}
                     currentUserId={user?.id || ''}
                     isLoading={messagesLoading}
                   />
+                  <div ref={messagesEndRef} />
                 </div>
                 <div className="p-3 border-t">
                   <MessageInput 
