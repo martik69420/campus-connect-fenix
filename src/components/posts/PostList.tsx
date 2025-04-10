@@ -1,6 +1,5 @@
 
 import React from 'react';
-import { usePost } from '@/context/PostContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -19,7 +18,7 @@ const PostList: React.FC<PostListProps> = ({ posts, isLoading }) => {
     );
   }
 
-  if (posts.length === 0) {
+  if (!posts || posts.length === 0) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center p-10 text-center">
@@ -44,15 +43,25 @@ const PostList: React.FC<PostListProps> = ({ posts, isLoading }) => {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-start gap-3">
-                <div className="h-10 w-10 rounded-full bg-muted flex-shrink-0">
-                  {/* User avatar would go here */}
+                <div className="h-10 w-10 rounded-full bg-muted flex-shrink-0 overflow-hidden">
+                  {post.user?.avatar && (
+                    <img 
+                      src={post.user.avatar} 
+                      alt={post.user?.displayName || 'User'} 
+                      className="w-full h-full object-cover"
+                    />
+                  )}
                 </div>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="font-medium">{post.user?.displayName || 'Unknown User'}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(post.createdAt).toLocaleDateString()}
+                        {new Date(post.createdAt).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                        })}
                       </p>
                     </div>
                   </div>

@@ -26,6 +26,10 @@ const AdBanner: React.FC<AdBannerProps> = ({
     // Only initialize this ad if it hasn't been initialized yet
     if (adRef.current && !adInitialized.current && window.adsbygoogle) {
       try {
+        // Use a random key for each ad instance to avoid duplication issues
+        const randomKey = `ad-${Math.random().toString(36).substring(2, 9)}`;
+        adRef.current.dataset.adKey = randomKey;
+        
         (window.adsbygoogle = window.adsbygoogle || []).push({});
         adInitialized.current = true;
       } catch (error) {

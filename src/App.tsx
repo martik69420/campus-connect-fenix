@@ -21,7 +21,7 @@ declare global {
 }
 
 // Lazy load components to optimize initial load time
-const Index = lazy(() => import('./pages/Index'));
+const Index = lazy(() => import('./pages/index'));
 const Profile = lazy(() => import('./pages/Profile'));
 const Messages = lazy(() => import('./pages/Messages'));
 const Games = lazy(() => import('./pages/Games'));
@@ -56,7 +56,7 @@ function App() {
     } else if (location.pathname.includes('/messages')) {
       // If in messages, preload friends and index
       import('./pages/Friends');
-      import('./pages/Index');
+      import('./pages/index');
     } else if (location.pathname.includes('/friends')) {
       // If in friends, preload messages and add-friends
       import('./pages/Messages');
