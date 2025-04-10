@@ -1,17 +1,17 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { formatDistanceToNow } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Card } from '@/components/ui/card';
 import AppLayout from '@/components/layout/AppLayout';
-import { Send, User, Loader2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import ContactsList from '@/components/messaging/ContactsList';
+import MessagesList from '@/components/messaging/MessagesList';
+import ChatHeader from '@/components/messaging/ChatHeader';
+import MessageInput from '@/components/messaging/MessageInput';
+import { Loader2, UserX } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface Message {
   id: string;
@@ -19,331 +19,401 @@ interface Message {
   sender_id: string;
   receiver_id: string;
   created_at: string;
-  sender_profile?: {
-    username: string;
-    display_name: string;
-    avatar_url: string;
-  };
+  is_read: boolean;
+}
+
+interface Contact {
+  id: string;
+  username: string;
+  displayName: string;
+  avatar: string | null;
+  lastMessage?: string;
+  lastMessageTime?: string;
+  unreadCount?: number;
 }
 
 const Messages = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [friendProfile, setFriendProfile] = useState<any | null>(null);
+  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
+  const [activeContact, setActiveContact] = useState<Contact | null>(null);
   const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [contactsLoading, setContactsLoading] = useState(true);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [newMessage, setNewMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   
   const userIdFromParams = searchParams.get('userId');
-  const [friendId, setFriendId] = useState(userIdFromParams || '');
   
+  // Check authentication
   useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
+    if (!authLoading && !isAuthenticated) {
       navigate('/login');
-      return;
     }
-    
-    if (user) {
-      if (userIdFromParams) {
-        setFriendId(userIdFromParams);
+  }, [isAuthenticated, authLoading, navigate]);
+  
+  // Load contacts when authenticated
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchContacts();
+    }
+  }, [isAuthenticated, user]);
+  
+  // Set active contact from URL parameter or first contact
+  useEffect(() => {
+    if (userIdFromParams && contacts.length > 0) {
+      const contact = contacts.find(c => c.id === userIdFromParams);
+      if (contact) {
+        setActiveContact(contact);
       }
-      fetchMessages();
+    } else if (contacts.length > 0 && !activeContact) {
+      setActiveContact(contacts[0]);
     }
-  }, [user, isAuthenticated, isLoading, navigate, userIdFromParams]);
+  }, [userIdFromParams, contacts, activeContact]);
   
+  // Load messages when active contact changes
   useEffect(() => {
-    if (friendId) {
-      fetchFriendProfile();
+    if (activeContact) {
+      fetchMessages(activeContact.id);
     }
-  }, [friendId]);
+  }, [activeContact]);
   
+  // Set up realtime subscription for messages
   useEffect(() => {
-    // Scroll to bottom when messages change
-    scrollToBottom();
-  }, [messages]);
-  
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
-  
-  const fetchMessages = async () => {
-    if (!user || !friendId) {
-      console.log("Cannot fetch messages: User is not authenticated or friendId is missing");
-      setLoading(false);
-      return;
-    }
+    if (!user?.id || !activeContact?.id) return;
     
-    setLoading(true);
+    const channel = supabase
+      .channel('messages-channel')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `sender_id=eq.${activeContact.id}`,
+      }, (payload) => {
+        const newMsg = payload.new as Message;
+        if (newMsg.receiver_id === user.id) {
+          setMessages(prev => [...prev, newMsg]);
+        }
+      })
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [activeContact, user]);
+  
+  const fetchContacts = async () => {
+    if (!user?.id) return;
+    
+    setContactsLoading(true);
     
     try {
-      // Fetch messages between the current user and the selected friend
-      const { data: messagesData, error: messagesError } = await supabase
-        .from('messages')
+      // First get all friend relationships
+      const { data: friendsData, error: friendsError } = await supabase
+        .from('friends')
         .select(`
           id,
-          content,
-          sender_id,
-          receiver_id,
-          created_at
+          status,
+          friend_id,
+          profiles:friend_id (id, username, display_name, avatar_url)
         `)
-        .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .or(`sender_id.eq.${friendId},receiver_id.eq.${friendId}`)
+        .eq('user_id', user.id)
+        .eq('status', 'friends');
+      
+      if (friendsError) throw friendsError;
+      
+      // Also get reverse relationships
+      const { data: reverseData, error: reverseError } = await supabase
+        .from('friends')
+        .select(`
+          id,
+          status,
+          user_id,
+          profiles:user_id (id, username, display_name, avatar_url)
+        `)
+        .eq('friend_id', user.id)
+        .eq('status', 'friends');
+      
+      if (reverseError) throw reverseError;
+      
+      const allFriends = [
+        ...(friendsData || []).map(item => ({
+          friendId: item.friend_id,
+          profile: item.profiles
+        })),
+        ...(reverseData || []).map(item => ({
+          friendId: item.user_id,
+          profile: item.profiles
+        }))
+      ];
+      
+      // Now get last message and unread count for each friend
+      const contactsWithMessages = await Promise.all(
+        allFriends.map(async (friend) => {
+          // Get last message
+          const { data: lastMessageData } = await supabase
+            .from('messages')
+            .select('*')
+            .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+            .or(`sender_id.eq.${friend.friendId},receiver_id.eq.${friend.friendId}`)
+            .order('created_at', { ascending: false })
+            .limit(1);
+          
+          // Get unread count
+          const { count: unreadCount } = await supabase
+            .from('messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('sender_id', friend.friendId)
+            .eq('receiver_id', user.id)
+            .eq('is_read', false);
+          
+          const lastMessage = lastMessageData && lastMessageData[0];
+          
+          return {
+            id: friend.friendId,
+            username: friend.profile.username,
+            displayName: friend.profile.display_name,
+            avatar: friend.profile.avatar_url,
+            lastMessage: lastMessage?.content,
+            lastMessageTime: lastMessage?.created_at,
+            unreadCount: unreadCount || 0
+          };
+        })
+      );
+      
+      // Filter contacts by search query
+      const filteredContacts = contactsWithMessages.filter(contact => {
+        if (!searchQuery) return true;
+        
+        return contact.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+               contact.username.toLowerCase().includes(searchQuery.toLowerCase());
+      });
+      
+      setContacts(filteredContacts);
+    } catch (error: any) {
+      console.error('Error fetching contacts:', error);
+      toast({
+        title: "Failed to load contacts",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setContactsLoading(false);
+      setLoading(false);
+    }
+  };
+  
+  const fetchMessages = async (contactId: string) => {
+    if (!user?.id) return;
+    
+    setMessagesLoading(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .select('*')
+        .or(`sender_id.eq.${user.id},sender_id.eq.${contactId}`)
+        .or(`receiver_id.eq.${user.id},receiver_id.eq.${contactId}`)
         .order('created_at', { ascending: true });
-        
-      if (messagesError) {
-        console.error("Error fetching messages:", messagesError);
-        throw messagesError;
+      
+      if (error) throw error;
+      
+      // Filter messages to only include those between the current user and selected contact
+      const filteredMessages = data?.filter(
+        (msg) =>
+          (msg.sender_id === user.id && msg.receiver_id === contactId) ||
+          (msg.sender_id === contactId && msg.receiver_id === user.id)
+      ) || [];
+      
+      setMessages(filteredMessages);
+      
+      // Mark received messages as read
+      const unreadMsgIds = filteredMessages
+        .filter(msg => msg.sender_id === contactId && !msg.is_read)
+        .map(msg => msg.id);
+      
+      if (unreadMsgIds.length > 0) {
+        await supabase
+          .from('messages')
+          .update({ is_read: true })
+          .in('id', unreadMsgIds);
       }
-      
-      // Fetch all relevant user profiles for the messages
-      const senderIds = new Set<string>();
-      messagesData?.forEach((msg: any) => {
-        senderIds.add(msg.sender_id);
-      });
-      
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, avatar_url')
-        .in('id', Array.from(senderIds));
-        
-      if (profilesError) {
-        console.error("Error fetching profiles:", profilesError);
-        throw profilesError;
-      }
-      
-      // Map profiles to a dictionary
-      const profilesMap: Record<string, any> = {};
-      profilesData?.forEach((profile: any) => {
-        profilesMap[profile.id] = profile;
-      });
-      
-      // Filter messages to only include those between the current user and the selected friend
-      const filteredMessages = messagesData?.filter(
-        (msg: any) =>
-          (msg.sender_id === user.id && msg.receiver_id === friendId) ||
-          (msg.sender_id === friendId && msg.receiver_id === user.id)
-      ).map((msg: any) => ({
-        ...msg,
-        sender_profile: profilesMap[msg.sender_id]
-      }));
-      
-      setMessages(filteredMessages || []);
-      
     } catch (error: any) {
       console.error('Error fetching messages:', error);
       toast({
         title: "Failed to load messages",
-        description: error.message || "An unexpected error occurred",
+        description: error.message,
         variant: "destructive"
       });
     } finally {
-      setLoading(false);
+      setMessagesLoading(false);
     }
   };
   
-  const fetchFriendProfile = async () => {
-    if (!friendId) return;
+  const handleSendMessage = async (content: string) => {
+    if (!user?.id || !activeContact || !content.trim()) return;
+    
+    // Create a temporary optimistic message
+    const optimisticMsg: Message = {
+      id: `temp-${Date.now()}`,
+      content,
+      sender_id: user.id,
+      receiver_id: activeContact.id,
+      created_at: new Date().toISOString(),
+      is_read: false
+    };
+    
+    // Add to optimistic messages
+    setOptimisticMessages(prev => [...prev, optimisticMsg]);
     
     try {
-      const { data: friendData, error: friendError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', friendId)
-        .single();
-        
-      if (friendError) {
-        console.error("Error fetching friend profile:", friendError);
-        throw friendError;
-      }
-      
-      setFriendProfile(friendData || null);
-      
-    } catch (error: any) {
-      console.error('Error fetching friend profile:', error);
-      toast({
-        title: "Failed to load friend profile",
-        description: error.message || "An unexpected error occurred",
-        variant: "destructive"
-      });
-    }
-  };
-  
-  const handleSendMessage = async () => {
-    if (!user || !friendId) {
-      toast({
-        title: "Error",
-        description: "Could not send message. Please ensure you are logged in and have a recipient selected.",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    if (!newMessage.trim()) return;
-    
-    setSending(true);
-    
-    try {
-      // Create a temporary optimistic message for UI feedback
-      const optimisticMessage: Message = {
-        id: `temp-${Date.now()}`,
-        content: newMessage,
-        sender_id: user.id,
-        receiver_id: friendId,
-        created_at: new Date().toISOString(),
-        sender_profile: {
-          username: user.username,
-          display_name: user.displayName,
-          avatar_url: user.avatar || ''
-        }
-      };
-      
-      // Update UI optimistically
-      setMessages(prevMessages => [...prevMessages, optimisticMessage]);
-      
-      // Send the new message
-      const { data: newMessageData, error: newMessageError } = await supabase
+      // Send the actual message
+      const { data, error } = await supabase
         .from('messages')
         .insert([
           {
-            content: newMessage,
+            content,
             sender_id: user.id,
-            receiver_id: friendId,
+            receiver_id: activeContact.id,
           },
-        ]);
-        
-      if (newMessageError) {
-        console.error("Error sending message:", newMessageError);
-        
-        // Remove optimistic message on error
-        setMessages(prevMessages => 
-          prevMessages.filter(msg => msg.id !== optimisticMessage.id)
-        );
-        
-        throw newMessageError;
-      }
+        ])
+        .select('*')
+        .single();
       
-      // Clear the input field
-      setNewMessage('');
+      if (error) throw error;
       
-      // Scroll to bottom after sending
-      scrollToBottom();
+      // Remove optimistic message when real one arrives
+      setOptimisticMessages(prev => 
+        prev.filter(msg => msg.id !== optimisticMsg.id)
+      );
       
+      // Refresh messages to include the new one
+      setMessages(prev => [...prev, data]);
+      
+      // Also update contacts to show latest message
+      setContacts(prevContacts => 
+        prevContacts.map(contact => 
+          contact.id === activeContact.id
+            ? {
+                ...contact,
+                lastMessage: content,
+                lastMessageTime: new Date().toISOString()
+              }
+            : contact
+        )
+      );
     } catch (error: any) {
       console.error('Error sending message:', error);
+      
+      // Remove the optimistic message on error
+      setOptimisticMessages(prev => 
+        prev.filter(msg => msg.id !== optimisticMsg.id)
+      );
+      
       toast({
         title: "Failed to send message",
-        description: error.message || "An unexpected error occurred",
+        description: error.message,
         variant: "destructive"
       });
-    } finally {
-      setSending(false);
     }
+  };
+  
+  const handleOpenNewChat = () => {
+    navigate('/add-friends');
+  };
+  
+  const handleOpenUserActions = () => {
+    // This would be implemented later for reporting users, etc.
+    console.log('Open user actions for:', activeContact?.username);
   };
   
   return (
     <AppLayout>
-      <div className="container mx-auto py-6">
-        {friendProfile ? (
-          <Card className="max-w-2xl mx-auto">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-4 mb-4">
-                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-                  ←
-                </Button>
-                <Avatar>
-                  <AvatarImage src={friendProfile.avatar_url || "/placeholder.svg"} alt={friendProfile.display_name} />
-                  <AvatarFallback>{friendProfile.display_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h2 className="text-lg font-semibold">{friendProfile.display_name}</h2>
-                  <p className="text-sm text-muted-foreground">@{friendProfile.username}</p>
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                {loading ? (
-                  <div className="flex justify-center p-4">
-                    <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-                  </div>
-                ) : messages.length > 0 ? (
-                  messages.map((message) => (
-                    <motion.div
-                      key={message.id}
-                      className={`flex flex-col ${message.sender_id === user?.id ? 'items-end' : 'items-start'}`}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.1 }}
-                    >
-                      <div className={cn(
-                        "px-4 py-2 rounded-xl shadow-sm max-w-[75%] break-words",
-                        message.sender_id === user?.id
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-secondary text-secondary-foreground"
-                      )}>
-                        {message.content}
-                      </div>
-                      <span className="text-xs text-muted-foreground mt-1">
-                        {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
-                      </span>
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="text-center py-10">
-                    <User className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">No messages yet</h3>
-                    <p className="text-muted-foreground mt-1">
-                      Start the conversation!
-                    </p>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
-              </div>
-              
-              <div className="mt-4">
-                <div className="flex items-center space-x-2">
-                  <Input
-                    type="text"
-                    placeholder="Type your message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
-                      }
-                    }}
-                  />
-                  <Button onClick={handleSendMessage} disabled={sending}>
-                    {sending ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Sending
-                      </>
-                    ) : (
-                      <>
-                        Send
-                        <Send className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="text-center py-10">
-            <User className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">Select a friend to start messaging</h3>
-            <p className="text-muted-foreground mt-1">
-              Go to the Friends page to connect with people
-            </p>
-            <Button onClick={() => navigate('/friends')}>Go to Friends</Button>
+      <div className="container max-w-6xl mx-auto py-4 px-0 md:px-4">
+        {/* AdSense Ad at the top of Messages */}
+        <div className="w-full overflow-hidden mb-4">
+          <ins className="adsbygoogle w-full"
+               style={{ display: 'block' }}
+               data-ad-client="ca-pub-3116464894083582"
+               data-ad-slot="5082313008"
+               data-ad-format="auto"
+               data-full-width-responsive="true">
+          </ins>
+          <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+        </div>
+      
+        <Card className="flex flex-col md:flex-row h-[calc(100vh-200px)]">
+          {/* Left side: Contacts */}
+          <div className="flex-none w-full md:w-80 md:border-r flex flex-col overflow-hidden">
+            <ContactsList
+              contacts={contacts}
+              activeContactId={activeContact?.id || ''}
+              setActiveContact={setActiveContact}
+              isLoading={contactsLoading}
+              searchQuery={searchQuery}
+              setSearchQuery={setSearchQuery}
+              onNewChat={handleOpenNewChat}
+            />
           </div>
-        )}
+          
+          {/* Right side: Messages */}
+          <div className="flex-1 flex flex-col">
+            {activeContact ? (
+              <>
+                <ChatHeader 
+                  contact={activeContact} 
+                  onOpenUserActions={handleOpenUserActions} 
+                />
+                <div className="flex-1 overflow-y-auto">
+                  <MessagesList
+                    messages={messages}
+                    optimisticMessages={optimisticMessages}
+                    currentUserId={user?.id || ''}
+                    isLoading={messagesLoading}
+                  />
+                </div>
+                <div className="p-3 border-t">
+                  <MessageInput 
+                    onSendMessage={handleSendMessage} 
+                    disabled={!activeContact}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full">
+                <UserX className="h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium">No conversation selected</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Select a friend from the list or add new friends
+                </p>
+                <Button onClick={handleOpenNewChat}>
+                  Find Friends
+                </Button>
+              </div>
+            )}
+          </div>
+        </Card>
+        
+        {/* AdSense Ad at the bottom of Messages */}
+        <div className="w-full overflow-hidden mt-4">
+          <ins className="adsbygoogle w-full"
+               style={{ display: 'block' }}
+               data-ad-client="ca-pub-3116464894083582"
+               data-ad-slot="2813542194"
+               data-ad-format="auto"
+               data-full-width-responsive="true">
+          </ins>
+          <script>
+            (adsbygoogle = window.adsbygoogle || []).push({});
+          </script>
+        </div>
       </div>
     </AppLayout>
   );
