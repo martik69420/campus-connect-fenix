@@ -1,9 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-// Update import path for useAuth
 import { useAuth } from '@/context/auth';
 
-interface Message {
+export interface Message {
   id: string;
   created_at: string;
   sender_id: string;
@@ -43,8 +43,8 @@ const useMessages = (userId: string | undefined): UseMessagesResult => {
 
         if (error) {
           setError(error.message);
-        } else {
-          setMessages(data || []);
+        } else if (data) {
+          setMessages(data as Message[]);
         }
       } catch (err: any) {
         setError(err.message);
@@ -63,14 +63,17 @@ const useMessages = (userId: string | undefined): UseMessagesResult => {
         { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
           if (payload.new) {
+            // Properly type the payload as a Message
+            const newMsg = payload.new as Message;
+            
             // Optimistically update the messages array
             setMessages((prevMessages) => {
               // Check if the new message involves the current user and the target user
               if (
-                (payload.new.sender_id === user?.id && payload.new.receiver_id === userId) ||
-                (payload.new.sender_id === userId && payload.new.receiver_id === user?.id)
+                (newMsg.sender_id === user?.id && newMsg.receiver_id === userId) ||
+                (newMsg.sender_id === userId && newMsg.receiver_id === user?.id)
               ) {
-                return [...prevMessages, payload.new];
+                return [...prevMessages, newMsg];
               }
               return prevMessages;
             });

@@ -16,10 +16,14 @@ export interface User {
 
 export interface ProfileUpdateData {
   displayName?: string;
+  username?: string; // Added username to the interface
   avatar?: string | null;
   bio?: string | null;
   school?: string;
   location?: string | null;
+  website?: string | null; // Added website
+  birthday?: string | null; // Added birthday
+  availableForHire?: boolean; // Added availableForHire
 }
 
 export interface AuthContextType {

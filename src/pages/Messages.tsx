@@ -88,12 +88,7 @@ const Messages = () => {
           content,
           sender_id,
           receiver_id,
-          created_at,
-          sender_profile:sender_id (
-            username,
-            display_name,
-            avatar_url
-          )
+          created_at
         `)
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
         .or(`sender_id.eq.${friendId},receiver_id.eq.${friendId}`)
@@ -104,12 +99,37 @@ const Messages = () => {
         throw messagesError;
       }
       
+      // Fetch all relevant user profiles for the messages
+      const senderIds = new Set<string>();
+      messagesData?.forEach((msg: any) => {
+        senderIds.add(msg.sender_id);
+      });
+      
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', Array.from(senderIds));
+        
+      if (profilesError) {
+        console.error("Error fetching profiles:", profilesError);
+        throw profilesError;
+      }
+      
+      // Map profiles to a dictionary
+      const profilesMap: Record<string, any> = {};
+      profilesData?.forEach((profile: any) => {
+        profilesMap[profile.id] = profile;
+      });
+      
       // Filter messages to only include those between the current user and the selected friend
       const filteredMessages = messagesData?.filter(
         (msg: any) =>
           (msg.sender_id === user.id && msg.receiver_id === friendId) ||
           (msg.sender_id === friendId && msg.receiver_id === user.id)
-      );
+      ).map((msg: any) => ({
+        ...msg,
+        sender_profile: profilesMap[msg.sender_id]
+      }));
       
       setMessages(filteredMessages || []);
       
@@ -167,6 +187,23 @@ const Messages = () => {
     setSending(true);
     
     try {
+      // Create a temporary optimistic message for UI feedback
+      const optimisticMessage: Message = {
+        id: `temp-${Date.now()}`,
+        content: newMessage,
+        sender_id: user.id,
+        receiver_id: friendId,
+        created_at: new Date().toISOString(),
+        sender_profile: {
+          username: user.username,
+          display_name: user.displayName,
+          avatar_url: user.avatar || ''
+        }
+      };
+      
+      // Update UI optimistically
+      setMessages(prevMessages => [...prevMessages, optimisticMessage]);
+      
       // Send the new message
       const { data: newMessageData, error: newMessageError } = await supabase
         .from('messages')
@@ -176,28 +213,18 @@ const Messages = () => {
             sender_id: user.id,
             receiver_id: friendId,
           },
-        ])
-        .select(`
-          id,
-          content,
-          sender_id,
-          receiver_id,
-          created_at,
-          sender_profile:sender_id (
-            username,
-            display_name,
-            avatar_url
-          )
-        `)
-        .single();
+        ]);
         
       if (newMessageError) {
         console.error("Error sending message:", newMessageError);
+        
+        // Remove optimistic message on error
+        setMessages(prevMessages => 
+          prevMessages.filter(msg => msg.id !== optimisticMessage.id)
+        );
+        
         throw newMessageError;
       }
-      
-      // Add the new message to the local state
-      setMessages(prevMessages => [...prevMessages, newMessageData]);
       
       // Clear the input field
       setNewMessage('');

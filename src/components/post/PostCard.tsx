@@ -9,7 +9,7 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Post, usePost } from "@/context/PostContext";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth";
 import CommentSection from "./CommentSection";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";

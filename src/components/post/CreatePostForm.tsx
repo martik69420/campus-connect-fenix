@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Image as ImageIcon, X, Loader2, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth';
 import { usePost } from '@/context/PostContext';
 import { supabase } from '@/integrations/supabase/client';
 
