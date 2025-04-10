@@ -1,443 +1,323 @@
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
-import { useLanguage } from '@/context/LanguageContext';
 import AppLayout from '@/components/layout/AppLayout';
-import ReportModal from '@/components/ReportModal';
-import { useMessages } from '@/hooks/use-messages';  // Import the useMessages hook
-import MessageInput from '@/components/messaging/MessageInput';
-import MessagesList from '@/components/messaging/MessagesList';
-import ChatHeader from '@/components/messaging/ChatHeader';
-import ContactsList from '@/components/messaging/ContactsList';
-import { Send, MessageSquare } from 'lucide-react';
+import { Send, User, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
-interface Contact {
+interface Message {
   id: string;
-  username: string;
-  displayName: string;
-  avatar: string | null;
-  lastMessage?: string;
-  lastMessageTime?: string;
-  unreadCount?: number;
+  content: string;
+  sender_id: string;
+  receiver_id: string;
+  created_at: string;
+  sender_profile?: {
+    username: string;
+    display_name: string;
+    avatar_url: string;
+  };
 }
 
 const Messages = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const { t } = useLanguage();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  const location = window.location;
+  const { user, isAuthenticated, isLoading } = useAuth();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState('');
+  const [friendProfile, setFriendProfile] = useState<any | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const [activeContactId, setActiveContactId] = useState<string>('');
-  const [activeContact, setActiveContact] = useState<Contact | null>(null);
-  const [contacts, setContacts] = useState<Contact[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [loadingContacts, setLoadingContacts] = useState(true);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const userIdFromParams = searchParams.get('userId');
+  const [friendId, setFriendId] = useState(userIdFromParams || '');
   
-  // Use the messages hook
-  const { 
-    messages, 
-    optimisticMessages, 
-    isLoading: loadingMessages, 
-    sendMessage: sendMessageHook, 
-    markMessagesAsRead 
-  } = useMessages(activeContactId, user?.id || null);
-  
-  // Check for user ID in URL params and set active contact
   useEffect(() => {
-    if (user && !activeContactId) {
-      const urlParams = new URLSearchParams(location.search);
-      const userIdFromUrl = urlParams.get('user');
-      
-      if (userIdFromUrl) {
-        setActiveContactId(userIdFromUrl);
+    if (!isAuthenticated && !isLoading) {
+      navigate('/login');
+      return;
+    }
+    
+    if (user) {
+      if (userIdFromParams) {
+        setFriendId(userIdFromParams);
       }
+      fetchMessages();
     }
-  }, [user, location, activeContactId]);
+  }, [user, isAuthenticated, isLoading, navigate, userIdFromParams]);
   
-  // Redirect if not authenticated
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/auth');
+    if (friendId) {
+      fetchFriendProfile();
     }
-  }, [isAuthenticated, authLoading, navigate]);
-
-  // Memoized function to fetch contacts to avoid unnecessary re-renders
-  const fetchContacts = useCallback(async () => {
-    if (!user) return;
+  }, [friendId]);
+  
+  useEffect(() => {
+    // Scroll to bottom when messages change
+    scrollToBottom();
+  }, [messages]);
+  
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+  
+  const fetchMessages = async () => {
+    if (!user || !friendId) {
+      console.log("Cannot fetch messages: User is not authenticated or friendId is missing");
+      setLoading(false);
+      return;
+    }
+    
+    setLoading(true);
     
     try {
-      setLoadingContacts(true);
-      
-      // Get all messages to and from the current user
+      // Fetch messages between the current user and the selected friend
       const { data: messagesData, error: messagesError } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          id,
+          content,
+          sender_id,
+          receiver_id,
+          created_at,
+          sender_profile:sender_id (
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
         .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
-        .order('created_at', { ascending: false });
-      
+        .or(`sender_id.eq.${friendId},receiver_id.eq.${friendId}`)
+        .order('created_at', { ascending: true });
+        
       if (messagesError) {
-        console.error('Error fetching messages:', messagesError);
-        return;
+        console.error("Error fetching messages:", messagesError);
+        throw messagesError;
       }
       
-      // Extract unique contact IDs
-      const contactIds = new Set<string>();
+      // Filter messages to only include those between the current user and the selected friend
+      const filteredMessages = messagesData?.filter(
+        (msg: any) =>
+          (msg.sender_id === user.id && msg.receiver_id === friendId) ||
+          (msg.sender_id === friendId && msg.receiver_id === user.id)
+      );
       
-      messagesData?.forEach(message => {
-        if (message.sender_id === user.id) {
-          contactIds.add(message.receiver_id);
-        } else {
-          contactIds.add(message.sender_id);
-        }
-      });
+      setMessages(filteredMessages || []);
       
-      // Add the user ID from URL if it exists
-      const urlParams = new URLSearchParams(location.search);
-      const userIdFromUrl = urlParams.get('user');
-      if (userIdFromUrl && userIdFromUrl !== user.id) {
-        contactIds.add(userIdFromUrl);
-      }
-      
-      // If no contacts, end loading state early
-      if (contactIds.size === 0) {
-        setLoadingContacts(false);
-        return;
-      }
-      
-      // Get contact profiles
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, avatar_url')
-        .in('id', Array.from(contactIds));
-      
-      if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        setLoadingContacts(false);
-        return;
-      }
-      
-      // Create contacts with last message
-      const contactsMap = new Map<string, Contact>();
-      
-      profiles?.forEach(profile => {
-        contactsMap.set(profile.id, {
-          id: profile.id,
-          username: profile.username,
-          displayName: profile.display_name,
-          avatar: profile.avatar_url,
-          unreadCount: 0,
-        });
-      });
-      
-      // Process messages to get last message and unread count
-      const processedContactIds = new Set<string>();
-      
-      messagesData?.forEach(message => {
-        const contactId = message.sender_id === user.id ? message.receiver_id : message.sender_id;
-        const contact = contactsMap.get(contactId);
-        
-        if (contact) {
-          // Only set last message for first occurrence (most recent)
-          if (!processedContactIds.has(contactId)) {
-            contact.lastMessage = message.content;
-            contact.lastMessageTime = message.created_at;
-            processedContactIds.add(contactId);
-          }
-          
-          // Count unread messages
-          if (message.sender_id !== user.id && !message.is_read) {
-            contact.unreadCount = (contact.unreadCount || 0) + 1;
-          }
-        }
-      });
-      
-      const contactsList = Array.from(contactsMap.values());
-      
-      // Sort by last message time
-      contactsList.sort((a, b) => {
-        if (!a.lastMessageTime) return 1;
-        if (!b.lastMessageTime) return -1;
-        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
-      });
-      
-      setContacts(contactsList);
-      
-      // If there's a contact and no active contact, set the first one as active, or if we have a user ID from URL
-      if (contactsList.length > 0) {
-        const urlParams = new URLSearchParams(location.search);
-        const userIdFromUrl = urlParams.get('user');
-        
-        if (userIdFromUrl) {
-          const contactFromUrl = contactsList.find(c => c.id === userIdFromUrl);
-          if (contactFromUrl) {
-            setActiveContactId(userIdFromUrl);
-            setActiveContact(contactFromUrl);
-          } else if (!activeContactId) {
-            setActiveContactId(contactsList[0].id);
-            setActiveContact(contactsList[0]);
-          }
-        } else if (!activeContactId) {
-          setActiveContactId(contactsList[0].id);
-          setActiveContact(contactsList[0]);
-        }
-      }
-    } catch (error) {
-      console.error('Failed to fetch contacts:', error);
-    } finally {
-      setLoadingContacts(false);
-    }
-  }, [user, location, activeContactId]);
-  
-  // Fetch contacts initially and on dependency changes
-  useEffect(() => {
-    fetchContacts();
-  }, [fetchContacts]);
-  
-  // Add realtime subscription for new messages
-  useEffect(() => {
-    if (!user) return;
-    
-    const channel = supabase
-      .channel('new-messages-channel')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `receiver_id=eq.${user.id}`,
-        },
-        async (payload) => {
-          console.log('New message received:', payload);
-          const newMessage = payload.new as { id: string; sender_id: string; content: string; created_at: string };
-          
-          // Update contacts list
-          setContacts(prev => {
-            const updated = [...prev];
-            const contactIndex = updated.findIndex(c => c.id === newMessage.sender_id);
-            
-            if (contactIndex >= 0) {
-              const contact = { ...updated[contactIndex] };
-              contact.lastMessage = newMessage.content;
-              contact.lastMessageTime = newMessage.created_at;
-              
-              // Only increment unread count if it's not the active contact
-              if (newMessage.sender_id !== activeContactId) {
-                contact.unreadCount = (contact.unreadCount || 0) + 1;
-              }
-              
-              // Move this contact to the top
-              updated.splice(contactIndex, 1);
-              updated.unshift(contact);
-            } else {
-              // It's a new contact, fetch their profile
-              supabase
-                .from('profiles')
-                .select('id, username, display_name, avatar_url')
-                .eq('id', newMessage.sender_id)
-                .single()
-                .then(({ data, error }) => {
-                  if (error || !data) {
-                    console.error('Error fetching new contact:', error);
-                    return;
-                  }
-                  
-                  const newContact: Contact = {
-                    id: data.id,
-                    username: data.username,
-                    displayName: data.display_name,
-                    avatar: data.avatar_url,
-                    lastMessage: newMessage.content,
-                    lastMessageTime: newMessage.created_at,
-                    unreadCount: 1,
-                  };
-                  
-                  setContacts(prev => [newContact, ...prev]);
-                });
-            }
-            
-            return updated;
-          });
-          
-          // Show a toast notification if it's not from the active contact
-          if (newMessage.sender_id !== activeContactId) {
-            // Find the sender
-            const sender = contacts.find(c => c.id === newMessage.sender_id);
-            
-            if (sender) {
-              toast({
-                title: t('messages.newMessage'),
-                description: `${sender.displayName || sender.username}: ${newMessage.content}`,
-                action: (
-                  <button 
-                    className="bg-primary/10 hover:bg-primary/20 text-primary text-xs py-1 px-2 rounded"
-                    onClick={() => {
-                      setActiveContactId(sender.id);
-                      setActiveContact(sender);
-                      
-                      // Update URL without reloading
-                      const url = new URL(window.location.href);
-                      url.searchParams.set('user', sender.id);
-                      window.history.pushState({}, '', url);
-                    }}
-                  >
-                    {t('messages.view')}
-                  </button>
-                ),
-              });
-            }
-          }
-        }
-      )
-      .subscribe();
-    
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, activeContactId, contacts, toast, t]);
-  
-  // Mark messages as read when active contact changes or when messages are loaded
-  useEffect(() => {
-    if (activeContactId && messages.length > 0) {
-      markMessagesAsRead();
-      
-      // Also update the unread count in the contacts list
-      setContacts(prev => {
-        const updated = [...prev];
-        const contactIndex = updated.findIndex(c => c.id === activeContactId);
-        
-        if (contactIndex >= 0) {
-          updated[contactIndex] = {
-            ...updated[contactIndex],
-            unreadCount: 0,
-          };
-        }
-        
-        return updated;
-      });
-    }
-  }, [activeContactId, messages, markMessagesAsRead]);
-  
-  // Update active contact when changing contacts
-  useEffect(() => {
-    if (activeContactId) {
-      const contact = contacts.find(c => c.id === activeContactId);
-      if (contact) {
-        setActiveContact(contact);
-      }
-    }
-  }, [activeContactId, contacts]);
-
-  const handleSendMessage = async (content: string) => {
-    if (!user || !activeContactId || !content.trim()) return;
-    try {
-      setIsSendingMessage(true);
-      await sendMessageHook(content);
-    } catch (error) {
-      console.error('Failed to send message:', error);
+    } catch (error: any) {
+      console.error('Error fetching messages:', error);
       toast({
-        title: t('common.error'),
-        description: t('messages.sendError'),
-        variant: "destructive",
+        title: "Failed to load messages",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
       });
     } finally {
-      setIsSendingMessage(false);
+      setLoading(false);
     }
   };
   
-  // Filter contacts based on search
-  const filteredContacts = searchQuery
-    ? contacts.filter(
-        contact =>
-          contact.displayName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          contact.username.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : contacts;
-  
-  const handleNewChat = () => {
-    navigate('/add-friends');
+  const fetchFriendProfile = async () => {
+    if (!friendId) return;
+    
+    try {
+      const { data: friendData, error: friendError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', friendId)
+        .single();
+        
+      if (friendError) {
+        console.error("Error fetching friend profile:", friendError);
+        throw friendError;
+      }
+      
+      setFriendProfile(friendData || null);
+      
+    } catch (error: any) {
+      console.error('Error fetching friend profile:', error);
+      toast({
+        title: "Failed to load friend profile",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+    }
   };
   
-  if (authLoading) {
-    return null;
-  }
+  const handleSendMessage = async () => {
+    if (!user || !friendId) {
+      toast({
+        title: "Error",
+        description: "Could not send message. Please ensure you are logged in and have a recipient selected.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!newMessage.trim()) return;
+    
+    setSending(true);
+    
+    try {
+      // Send the new message
+      const { data: newMessageData, error: newMessageError } = await supabase
+        .from('messages')
+        .insert([
+          {
+            content: newMessage,
+            sender_id: user.id,
+            receiver_id: friendId,
+          },
+        ])
+        .select(`
+          id,
+          content,
+          sender_id,
+          receiver_id,
+          created_at,
+          sender_profile:sender_id (
+            username,
+            display_name,
+            avatar_url
+          )
+        `)
+        .single();
+        
+      if (newMessageError) {
+        console.error("Error sending message:", newMessageError);
+        throw newMessageError;
+      }
+      
+      // Add the new message to the local state
+      setMessages(prevMessages => [...prevMessages, newMessageData]);
+      
+      // Clear the input field
+      setNewMessage('');
+      
+      // Scroll to bottom after sending
+      scrollToBottom();
+      
+    } catch (error: any) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Failed to send message",
+        description: error.message || "An unexpected error occurred",
+        variant: "destructive"
+      });
+    } finally {
+      setSending(false);
+    }
+  };
   
   return (
     <AppLayout>
-      <div className="container mx-auto p-4 h-[calc(100vh-4rem)] overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
-          {/* Contacts List */}
-          <div className="md:col-span-1 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col dark:border-gray-800">
-            <ContactsList
-              contacts={filteredContacts}
-              activeContactId={activeContactId}
-              setActiveContact={(contact) => {
-                setActiveContactId(contact.id);
-                setActiveContact(contact);
-                // Update URL without reloading
-                const url = new URL(window.location.href);
-                url.searchParams.set('user', contact.id);
-                window.history.pushState({}, '', url);
-              }}
-              isLoading={loadingContacts}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onNewChat={handleNewChat}
-            />
-          </div>
-          
-          {/* Messages View */}
-          <div className="md:col-span-2 border rounded-lg overflow-hidden shadow-sm h-full flex flex-col dark:border-gray-800">
-            {activeContact ? (
-              <>
-                <ChatHeader
-                  contact={activeContact}
-                  onOpenUserActions={() => setShowReportModal(true)}
-                />
-                
-                <MessagesList
-                  messages={messages}
-                  optimisticMessages={optimisticMessages}
-                  currentUserId={user?.id || ''}
-                  isLoading={loadingMessages}
-                />
-                
-                <MessageInput
-                  onSendMessage={handleSendMessage}
-                  isSending={isSendingMessage}
-                />
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full p-4 text-center">
-                <div className="mb-4 p-6 rounded-full bg-muted/40">
-                  <MessageSquare className="h-12 w-12 text-muted-foreground" />
+      <div className="container mx-auto py-6">
+        {friendProfile ? (
+          <Card className="max-w-2xl mx-auto">
+            <CardContent className="p-4">
+              <div className="flex items-center space-x-4 mb-4">
+                <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                  ←
+                </Button>
+                <Avatar>
+                  <AvatarImage src={friendProfile.avatar_url || "/placeholder.svg"} alt={friendProfile.display_name} />
+                  <AvatarFallback>{friendProfile.display_name?.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h2 className="text-lg font-semibold">{friendProfile.display_name}</h2>
+                  <p className="text-sm text-muted-foreground">@{friendProfile.username}</p>
                 </div>
-                <h3 className="text-xl font-medium mb-2">{t('messages.selectContact')}</h3>
-                <p className="text-muted-foreground max-w-md">
-                  {t('messages.selectContactDescription')}
-                </p>
               </div>
-            )}
+              
+              <div className="space-y-4">
+                {loading ? (
+                  <div className="flex justify-center p-4">
+                    <div className="w-8 h-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+                  </div>
+                ) : messages.length > 0 ? (
+                  messages.map((message) => (
+                    <motion.div
+                      key={message.id}
+                      className={`flex flex-col ${message.sender_id === user?.id ? 'items-end' : 'items-start'}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.1 }}
+                    >
+                      <div className={cn(
+                        "px-4 py-2 rounded-xl shadow-sm max-w-[75%] break-words",
+                        message.sender_id === user?.id
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-secondary text-secondary-foreground"
+                      )}>
+                        {message.content}
+                      </div>
+                      <span className="text-xs text-muted-foreground mt-1">
+                        {formatDistanceToNow(new Date(message.created_at), { addSuffix: true })}
+                      </span>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="text-center py-10">
+                    <User className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-medium">No messages yet</h3>
+                    <p className="text-muted-foreground mt-1">
+                      Start the conversation!
+                    </p>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+              
+              <div className="mt-4">
+                <div className="flex items-center space-x-2">
+                  <Input
+                    type="text"
+                    placeholder="Type your message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                  />
+                  <Button onClick={handleSendMessage} disabled={sending}>
+                    {sending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending
+                      </>
+                    ) : (
+                      <>
+                        Send
+                        <Send className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="text-center py-10">
+            <User className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">Select a friend to start messaging</h3>
+            <p className="text-muted-foreground mt-1">
+              Go to the Friends page to connect with people
+            </p>
+            <Button onClick={() => navigate('/friends')}>Go to Friends</Button>
           </div>
-        </div>
+        )}
       </div>
-      
-      {/* Report Modal */}
-      {showReportModal && activeContact && (
-        <ReportModal
-          open={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          type="user"
-          targetId={activeContact.id}
-          targetName={activeContact.displayName || activeContact.username}
-        />
-      )}
     </AppLayout>
   );
 };

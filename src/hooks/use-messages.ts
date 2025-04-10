@@ -1,255 +1,124 @@
-
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from './use-toast';
-import { useAuth } from '@/context/AuthContext';
+// Update import path for useAuth
+import { useAuth } from '@/context/auth';
 
 interface Message {
   id: string;
+  created_at: string;
   sender_id: string;
   receiver_id: string;
   content: string;
-  created_at: string;
   is_read: boolean;
 }
 
-export const useMessages = (chatPartnerId: string | null, userId: string | null) => {
+interface UseMessagesResult {
+  messages: Message[];
+  sendMessage: (receiverId: string, content: string) => Promise<void>;
+  markAsRead: (messageId: string) => Promise<void>;
+  loading: boolean;
+  error: string | null;
+}
+
+const useMessages = (userId: string | undefined): UseMessagesResult => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [optimisticMessages, setOptimisticMessages] = useState<Message[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
-
-  // Clear optimistic messages when chat partner changes
-  useEffect(() => {
-    setOptimisticMessages([]);
-  }, [chatPartnerId]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    if (!chatPartnerId || !userId || !isAuthenticated) {
-      setIsLoading(false);
-      return;
-    }
+    if (!userId) return;
 
     const fetchMessages = async () => {
+      setLoading(true);
+      setError(null);
+
       try {
-        setIsLoading(true);
-        console.log(`Fetching messages between ${userId} and ${chatPartnerId}`);
-        
-        // Modified query to properly get conversation between two users
         const { data, error } = await supabase
           .from('messages')
           .select('*')
-          .or(`and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`)
+          .or(`sender_id.eq.${user?.id},sender_id.eq.${userId}`)
+          .or(`receiver_id.eq.${user?.id},receiver_id.eq.${userId}`)
           .order('created_at', { ascending: true });
 
         if (error) {
-          console.error('Error fetching messages:', error);
-          toast({
-            title: 'Error loading messages',
-            description: error.message,
-            variant: 'destructive'
-          });
-          return;
+          setError(error.message);
+        } else {
+          setMessages(data || []);
         }
-
-        console.log('Fetched messages:', data);
-        setMessages(data || []);
-        
-        // Mark received messages as read
-        const unreadMessages = data?.filter(msg => 
-          msg.sender_id === chatPartnerId && 
-          msg.receiver_id === userId && 
-          !msg.is_read
-        ) || [];
-        
-        if (unreadMessages.length > 0) {
-          await Promise.all(
-            unreadMessages.map(msg => 
-              markMessageAsRead(msg.id)
-            )
-          );
-        }
-      } catch (error: any) {
-        console.error('Error in fetchMessages:', error);
-        toast({
-          title: 'Error loading messages',
-          description: error.message,
-          variant: 'destructive'
-        });
+      } catch (err: any) {
+        setError(err.message);
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
     fetchMessages();
 
-    // Set up Realtime subscription for messages with improved filter
-    const channel = supabase
-      .channel(`messages-channel-${chatPartnerId}-${userId}`)
+    // Set up a real-time subscription to listen for new messages
+    const messagesSubscription = supabase
+      .channel('custom-all-messages')
       .on(
         'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'messages',
-          filter: `or(and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId}))`,
-        },
+        { event: '*', schema: 'public', table: 'messages' },
         (payload) => {
-          console.log('Realtime message update:', payload);
-          if (payload.eventType === 'INSERT') {
-            // Add new message to the list
-            setMessages((current) => {
-              // Check if message already exists
-              if (current.some(msg => msg.id === payload.new.id)) {
-                return current;
+          if (payload.new) {
+            // Optimistically update the messages array
+            setMessages((prevMessages) => {
+              // Check if the new message involves the current user and the target user
+              if (
+                (payload.new.sender_id === user?.id && payload.new.receiver_id === userId) ||
+                (payload.new.sender_id === userId && payload.new.receiver_id === user?.id)
+              ) {
+                return [...prevMessages, payload.new];
               }
-              return [...current, payload.new as Message];
+              return prevMessages;
             });
-            
-            // Remove any optimistic message that might match this one
-            setOptimisticMessages(current => 
-              current.filter(msg => !msg.id.startsWith('temp-'))
-            );
-            
-            // Mark as read if we're the receiver
-            if (payload.new.receiver_id === userId) {
-              markMessageAsRead(payload.new.id);
-            }
-          } else if (payload.eventType === 'UPDATE') {
-            // Update existing message
-            setMessages((current) => 
-              current.map(msg => 
-                msg.id === payload.new.id ? payload.new as Message : msg
-              )
-            );
           }
         }
       )
-      .subscribe((status) => {
-        console.log('Subscription status:', status);
-      });
+      .subscribe();
 
-    console.log('Subscribed to messages channel for', chatPartnerId);
-
+    // Unsubscribe when the component unmounts
     return () => {
-      console.log('Unsubscribing from messages channel');
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesSubscription);
     };
-  }, [chatPartnerId, userId, toast, isAuthenticated]);
+  }, [userId, user?.id]);
 
-  const sendMessage = async (content: string) => {
-    if (!chatPartnerId || !userId || !content.trim() || !isAuthenticated) {
-      console.error('Cannot send message: missing required data or not authenticated');
-      return null;
-    }
-
+  const sendMessage = async (receiverId: string, content: string) => {
+    setError(null);
     try {
-      const trimmedContent = content.trim();
-      
-      // Create optimistic message with unique ID
-      const tempId = `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const optimisticMessage: Message = {
-        id: tempId,
-        sender_id: userId,
-        receiver_id: chatPartnerId,
-        content: trimmedContent,
-        created_at: new Date().toISOString(),
-        is_read: false
-      };
-      
-      // Add optimistic message immediately
-      setOptimisticMessages(prev => [...prev, optimisticMessage]);
-      
-      // Send actual message
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('messages')
-        .insert({
-          sender_id: userId,
-          receiver_id: chatPartnerId,
-          content: trimmedContent
-        })
-        .select();
+        .insert([
+          { sender_id: user?.id, receiver_id: receiverId, content: content },
+        ]);
 
       if (error) {
-        console.error('Error sending message:', error);
-        // Remove optimistic message on error
-        setOptimisticMessages(prev => prev.filter(msg => msg.id !== tempId));
-        toast({
-          title: 'Error sending message',
-          description: error.message,
-          variant: 'destructive'
-        });
-        return null;
+        setError(error.message);
       }
-      
-      // Remove the optimistic message once real message is confirmed
-      setOptimisticMessages(prev => prev.filter(msg => msg.id !== tempId));
-      
-      return data?.[0] || null;
-    } catch (error: any) {
-      console.error('Error in sendMessage:', error);
-      toast({
-        title: 'Error sending message',
-        description: error.message,
-        variant: 'destructive'
-      });
-      return null;
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
-  const markMessageAsRead = async (messageId: string) => {
-    if (!isAuthenticated) {
-      console.error('Cannot mark message as read: not authenticated');
-      return;
-    }
-    
+  const markAsRead = async (messageId: string) => {
+    setError(null);
     try {
-      console.log('Marking message as read:', messageId);
       const { error } = await supabase
         .from('messages')
         .update({ is_read: true })
         .eq('id', messageId);
-        
+
       if (error) {
-        console.error('Error marking message as read:', error);
+        setError(error.message);
       }
-    } catch (error) {
-      console.error('Error in markMessageAsRead:', error);
+    } catch (err: any) {
+      setError(err.message);
     }
   };
 
-  const markMessagesAsRead = async () => {
-    if (!chatPartnerId || !userId || !isAuthenticated) {
-      console.error('Cannot mark messages as read: missing required data or not authenticated');
-      return;
-    }
-    
-    try {
-      console.log('Marking all messages from', chatPartnerId, 'as read');
-      const { error } = await supabase
-        .from('messages')
-        .update({ is_read: true })
-        .eq('sender_id', chatPartnerId)
-        .eq('receiver_id', userId)
-        .eq('is_read', false);
-        
-      if (error) {
-        console.error('Error marking messages as read:', error);
-      } else {
-        // Update local messages state
-        setMessages(prev => 
-          prev.map(msg => 
-            msg.sender_id === chatPartnerId && msg.receiver_id === userId && !msg.is_read
-              ? { ...msg, is_read: true }
-              : msg
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Error in markMessagesAsRead:', error);
-    }
-  };
-
-  return { messages, optimisticMessages, isLoading, sendMessage, markMessagesAsRead };
+  return { messages, sendMessage, markAsRead, loading, error };
 };
+
+export default useMessages;
