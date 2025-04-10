@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,54 +22,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [sessionChecked, setSessionChecked] = React.useState(false);
 
-  // Set up auth state listener
-  const setupAuthListener = React.useCallback(() => {
-    // Don't run this until after initial session check
-    if (!sessionChecked) return undefined;
-    
-    console.log("Setting up auth listener");
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log("Auth state changed:", event);
-        
-        // Skip processing for the initial session event since we already handled it
-        if (event === "INITIAL_SESSION") {
-          return;
-        }
-        
-        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
-          try {
-            const currentUser = await getCurrentUser();
-            if (currentUser) {
-              setUser(currentUser);
-              setIsAuthenticated(true);
-              updateOnlineStatus(currentUser.id, true);
-            } else {
-              // User signed in but profile not found
-              console.error("User signed in but profile not found");
-              await supabase.auth.signOut();
-              setUser(null);
-              setIsAuthenticated(false);
-              setAuthError("User profile not found. Please contact support.");
-            }
-          } catch (error) {
-            console.error("Error getting user:", error);
-            setAuthError("Error retrieving user profile");
-          }
-        } else if (event === "SIGNED_OUT") {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      }
-    );
-    
-    return authListener.subscription;
-  }, [sessionChecked]);
-
+  // Check for existing session first
   React.useEffect(() => {
-    let authListenerSubscription: { unsubscribe: () => void } | undefined;
-    
-    // Check for existing session first, then set up listener
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
@@ -108,26 +61,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     initializeAuth();
-    
-    return () => {
-      if (authListenerSubscription) {
-        authListenerSubscription.unsubscribe();
-      }
-    };
   }, []);
   
-  // Set up auth listener in a separate effect that depends on sessionChecked
+  // Set up auth listener in a separate effect
   React.useEffect(() => {
-    const subscription = setupAuthListener();
-    return () => {
-      if (subscription) {
-        subscription.unsubscribe();
+    console.log("Setting up auth listener");
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log("Auth state changed:", event);
+        
+        // Skip processing for the initial session event since we already handled it
+        if (event === "INITIAL_SESSION") {
+          return;
+        }
+        
+        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+          try {
+            const currentUser = await getCurrentUser();
+            if (currentUser) {
+              setUser(currentUser);
+              setIsAuthenticated(true);
+              updateOnlineStatus(currentUser.id, true);
+            } else {
+              // User signed in but profile not found
+              console.error("User signed in but profile not found");
+              await supabase.auth.signOut();
+              setUser(null);
+              setIsAuthenticated(false);
+              setAuthError("User profile not found. Please contact support.");
+            }
+          } catch (error) {
+            console.error("Error getting user:", error);
+            setAuthError("Error retrieving user profile");
+          }
+        } else if (event === "SIGNED_OUT") {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
       }
+    );
+    
+    return () => {
+      authListener.subscription.unsubscribe();
     };
-  }, [setupAuthListener]);
+  }, []);
 
   // Update online status when window focus changes
   React.useEffect(() => {
+    if (!user) return;
+    
     const handleVisibilityChange = () => {
       if (user && document.visibilityState === "visible") {
         updateOnlineStatus(user.id, true);
@@ -136,7 +119,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Use the Navigator's sendBeacon API instead of synchronous XHR for beforeunload
+    // Use the Navigator's sendBeacon API for beforeunload
     const handleBeforeUnload = () => {
       if (user) {
         // Using Navigator.sendBeacon which is designed for this exact scenario
@@ -202,7 +185,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Keep the rest of the file unchanged
   const register = async (
     email: string,
     password: string,
