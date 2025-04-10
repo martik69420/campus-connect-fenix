@@ -30,7 +30,7 @@ const Table = lazy(() => import('./pages/Table'));
 
 function App() {
   return (
-    <ThemeProvider defaultTheme="system" storageKey="ui-theme">
+    <ThemeProvider>
       <LanguageProvider>
         <AuthProvider>
           <NotificationProvider>
