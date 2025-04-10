@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { UserPlus, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { FriendRequest } from './useFriends';
 
 interface SentRequestsTabProps {
-  requests: any[];
+  requests: FriendRequest[];
   loading: boolean;
   onCancel: (requestId: string) => Promise<void>;
 }
