@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import SavePostButton from './SavePostButton';
 import ReportModal from '@/components/ReportModal';
-import ShareModal from './ShareModal';
+import { ShareButton, ShareModal } from './ShareModal';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -184,7 +184,7 @@ const PostActions: React.FC<PostActionsProps> = ({
       {/* Share Modal */}
       <ShareModal
         open={showShareModal}
-        onClose={() => setShowShareModal(false)}
+        onOpenChange={setShowShareModal}
         postId={postId}
         postTitle={postTitle}
       />
