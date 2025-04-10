@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -384,37 +385,3 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
-
-// Define the setupAuthListener function that was referenced above but not defined
-function setupAuthListener() {
-  const { data: authListener } = supabase.auth.onAuthStateChange(
-    async (event, session) => {
-      console.log("Auth state changed:", event);
-      if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
-        try {
-          const currentUser = await getCurrentUser();
-          if (currentUser) {
-            setUser(currentUser);
-            setIsAuthenticated(true);
-            updateOnlineStatus(currentUser.id, true);
-          } else {
-            // User signed in but profile not found
-            console.error("User signed in but profile not found");
-            await supabase.auth.signOut();
-            setUser(null);
-            setIsAuthenticated(false);
-            setAuthError("User profile not found. Please contact support.");
-          }
-        } catch (error) {
-          console.error("Error getting user:", error);
-          setAuthError("Error retrieving user profile");
-        }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        setIsAuthenticated(false);
-      }
-    }
-  );
-  
-  return authListener;
-}

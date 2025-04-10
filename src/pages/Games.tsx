@@ -17,10 +17,30 @@ const Games = () => {
   const { toast } = useToast();
   const { bestScores, gameScores, gameState, isLoading } = useGame();
 
+  // Fallback translations to prevent warnings
+  const translations = {
+    title: t('games.title') || 'Games',
+    subtitle: t('games.subtitle') || 'Play and earn coins',
+    yourGames: t('games.yourGames') || 'Games Played',
+    trivia: t('games.trivia') || 'Trivia',
+    triviaDescription: t('games.triviaDescription') || 'Test your knowledge',
+    snake: t('games.snake') || 'Snake',
+    snakeDescription: t('games.snakeDescription') || 'Classic snake game',
+    progress: t('games.progress') || 'Progress',
+    played: t('games.played') || 'games played',
+    playNow: t('games.playNow') || 'Play Now',
+    comingSoon: t('games.comingSoon') || 'Coming Soon',
+    comingSoonDescription: t('games.comingSoonDescription') || 'New game arriving soon',
+    new: t('games.new') || 'New',
+    development: t('games.development') || 'In development',
+    coming: t('games.coming') || 'Coming Soon',
+    comingSoon: t('games.comingSoon') || 'Coming Soon'
+  };
+
   const handleGameClick = () => {
     toast({
-      title: t('games.coming'),
-      description: t('games.comingSoon')
+      title: translations.coming,
+      description: translations.comingSoon
     });
   };
 
@@ -29,13 +49,13 @@ const Games = () => {
       <div className="container mx-auto py-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold">{t('games.title')}</h1>
-            <p className="text-muted-foreground">{t('games.subtitle')}</p>
+            <h1 className="text-2xl font-bold">{translations.title}</h1>
+            <p className="text-muted-foreground">{translations.subtitle}</p>
           </div>
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-yellow-500" />
             <span className="font-medium">
-              {t('games.yourGames')}: {gameState.progress.snake.gamesPlayed + gameState.progress.tetris.gamesPlayed + gameState.progress.trivia.gamesPlayed}
+              {translations.yourGames}: {gameState.progress.snake.gamesPlayed + gameState.progress.tetris.gamesPlayed + gameState.progress.trivia.gamesPlayed}
             </span>
           </div>
         </div>
@@ -48,9 +68,9 @@ const Games = () => {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2">
                     <BrainCircuit className="w-5 h-5 text-indigo-500" />
-                    {t('games.trivia')}
+                    {translations.trivia}
                   </CardTitle>
-                  <CardDescription>{t('games.triviaDescription')}</CardDescription>
+                  <CardDescription>{translations.triviaDescription}</CardDescription>
                 </div>
                 <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-500/30">
                   <Crown className="w-3 h-3 mr-1" />
@@ -61,14 +81,14 @@ const Games = () => {
             <CardContent className="pb-2">
               <div className="space-y-3">
                 <div className="flex justify-between text-xs">
-                  <span>{t('games.progress')}</span>
-                  <span>{gameState.progress.trivia.gamesPlayed} {t('games.played')}</span>
+                  <span>{translations.progress}</span>
+                  <span>{gameState.progress.trivia.gamesPlayed} {translations.played}</span>
                 </div>
                 <Progress value={Math.min(gameState.progress.trivia.gamesPlayed * 10, 100)} className="h-2" />
               </div>
             </CardContent>
             <CardFooter className="pt-2">
-              <Button onClick={() => navigate('/trivia')} className="w-full bg-indigo-500 hover:bg-indigo-600">{t('games.playNow')}</Button>
+              <Button onClick={() => navigate('/trivia')} className="w-full bg-indigo-500 hover:bg-indigo-600">{translations.playNow}</Button>
             </CardFooter>
           </Card>
 
@@ -79,9 +99,9 @@ const Games = () => {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2">
                     <Terminal className="w-5 h-5 text-green-500" />
-                    {t('games.snake')}
+                    {translations.snake}
                   </CardTitle>
-                  <CardDescription>{t('games.snakeDescription')}</CardDescription>
+                  <CardDescription>{translations.snakeDescription}</CardDescription>
                 </div>
                 <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
                   <Crown className="w-3 h-3 mr-1" />
@@ -92,14 +112,14 @@ const Games = () => {
             <CardContent className="pb-2">
               <div className="space-y-3">
                 <div className="flex justify-between text-xs">
-                  <span>{t('games.progress')}</span>
-                  <span>{gameState.progress.snake.gamesPlayed} {t('games.played')}</span>
+                  <span>{translations.progress}</span>
+                  <span>{gameState.progress.snake.gamesPlayed} {translations.played}</span>
                 </div>
                 <Progress value={Math.min(gameState.progress.snake.gamesPlayed * 10, 100)} className="h-2" />
               </div>
             </CardContent>
             <CardFooter className="pt-2">
-              <Button onClick={() => navigate('/snake')} className="w-full bg-green-500 hover:bg-green-600">{t('games.playNow')}</Button>
+              <Button onClick={() => navigate('/snake')} className="w-full bg-green-500 hover:bg-green-600">{translations.playNow}</Button>
             </CardFooter>
           </Card>
 
@@ -110,27 +130,27 @@ const Games = () => {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2">
                     <Gamepad className="w-5 h-5 text-gray-500" />
-                    {t('games.comingSoon')}
+                    {translations.comingSoon}
                   </CardTitle>
-                  <CardDescription>{t('games.comingSoonDescription')}</CardDescription>
+                  <CardDescription>{translations.comingSoonDescription}</CardDescription>
                 </div>
                 <Badge variant="outline" className="bg-gray-500/10 text-gray-500 border-gray-500/30">
                   <Rocket className="w-3.5 h-3.5 mr-1" />
-                  {t('games.new')}
+                  {translations.new}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="pb-2">
               <div className="space-y-3">
                 <div className="flex justify-between text-xs">
-                  <span>{t('games.development')}</span>
+                  <span>{translations.development}</span>
                   <span>75%</span>
                 </div>
                 <Progress value={75} className="h-2" />
               </div>
             </CardContent>
             <CardFooter className="pt-2">
-              <Button onClick={handleGameClick} disabled className="w-full">{t('games.playNow')}</Button>
+              <Button onClick={handleGameClick} disabled className="w-full">{translations.playNow}</Button>
             </CardFooter>
           </Card>
         </div>
