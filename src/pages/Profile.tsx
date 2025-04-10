@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -105,9 +104,9 @@ const Profile = () => {
       
       setFriendsCount(friendsCountData || 0);
       
-      // Fetch games played count
+      // Fetch games played count - FIXED: Using game_history instead of game_sessions
       const { count: gamesPlayedData } = await supabase
-        .from('game_sessions')
+        .from('game_history')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user?.id);
       

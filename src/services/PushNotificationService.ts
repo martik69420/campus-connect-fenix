@@ -1,4 +1,3 @@
-
 import type { Notification as AppNotification } from '@/context/NotificationContext';
 
 class PushNotificationService {
@@ -91,7 +90,6 @@ class PushNotificationService {
       const notification = new window.Notification(title, {
         icon: '/favicon.ico',
         badge: '/favicon.ico',
-        vibrate: [100, 50, 100],
         ...options
       });
 
