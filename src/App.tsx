@@ -32,12 +32,12 @@ function App() {
   return (
     <ThemeProvider>
       <LanguageProvider>
-        <AuthProvider>
-          <NotificationProvider>
-            <PostProvider>
-              <GameProvider>
-                <TooltipProvider>
-                  <BrowserRouter>
+        <BrowserRouter>
+          <AuthProvider>
+            <NotificationProvider>
+              <PostProvider>
+                <GameProvider>
+                  <TooltipProvider>
                     <Suspense fallback={
                       <div className="flex items-center justify-center h-screen">
                         <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
@@ -62,13 +62,13 @@ function App() {
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Suspense>
-                  </BrowserRouter>
-                  <Toaster />
-                </TooltipProvider>
-              </GameProvider>
-            </PostProvider>
-          </NotificationProvider>
-        </AuthProvider>
+                    <Toaster />
+                  </TooltipProvider>
+                </GameProvider>
+              </PostProvider>
+            </NotificationProvider>
+          </AuthProvider>
+        </BrowserRouter>
       </LanguageProvider>
     </ThemeProvider>
   );
