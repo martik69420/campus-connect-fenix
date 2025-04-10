@@ -30,6 +30,18 @@ export function DatePicker({
   disabled,
   initialFocus,
 }: DatePickerProps) {
+  // Function to handle the calendar's onSelect based on the mode
+  const handleSelect = (value: Date | Date[] | undefined) => {
+    if (onSelect) {
+      onSelect(value);
+    } else if (setDate) {
+      // For single mode, we know value is a Date or undefined
+      if (mode === "single") {
+        setDate(value as Date | undefined);
+      }
+    }
+  };
+
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -46,13 +58,36 @@ export function DatePicker({
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0">
-        <Calendar
-          mode={mode}
-          selected={selected || date}
-          onSelect={onSelect || setDate}
-          initialFocus={initialFocus}
-          disabled={disabled}
-        />
+        {mode === "single" && (
+          <Calendar
+            mode="single"
+            selected={selected as Date || date}
+            onSelect={handleSelect}
+            initialFocus={initialFocus}
+            disabled={disabled}
+            className="pointer-events-auto"
+          />
+        )}
+        {mode === "range" && (
+          <Calendar
+            mode="range"
+            selected={selected as Date[] || (date ? [date] : undefined)}
+            onSelect={handleSelect}
+            initialFocus={initialFocus}
+            disabled={disabled}
+            className="pointer-events-auto"
+          />
+        )}
+        {mode === "multiple" && (
+          <Calendar
+            mode="multiple"
+            selected={selected as Date[] || (date ? [date] : undefined)}
+            onSelect={handleSelect}
+            initialFocus={initialFocus}
+            disabled={disabled}
+            className="pointer-events-auto"
+          />
+        )}
       </PopoverContent>
     </Popover>
   )

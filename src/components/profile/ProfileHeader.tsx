@@ -13,11 +13,11 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth"; // Fixed import path
 import { useLanguage } from "@/context/LanguageContext";
 import OnlineStatus from "@/components/OnlineStatus";
 import ReportModal from "@/components/ReportModal";
-import type { User } from "@/context/AuthContext";
+import type { User } from "@/context/auth"; // Fixed import path
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 

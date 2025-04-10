@@ -331,6 +331,7 @@ const Profile = () => {
                               mode="single"
                               selected={field.value}
                               onSelect={field.onChange}
+                              setDate={field.onChange} // Add the missing setDate prop
                               disabled={false}
                               initialFocus
                             />
