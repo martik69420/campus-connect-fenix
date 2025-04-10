@@ -13,7 +13,7 @@ import { useAuth } from '@/context/auth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 
-// Form schema for login - updated to only use username
+// Form schema for login - only using username
 const loginSchema = z.object({
   username: z.string().min(2, { message: "Username is required" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),

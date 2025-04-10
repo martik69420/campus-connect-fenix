@@ -66,11 +66,11 @@ export const loginUser = async (username: string, password: string): Promise<Use
       .from('profiles')
       .select('email')
       .eq('username', username)
-      .single();
+      .maybeSingle();
         
     if (userError) {
       console.error("Error finding user by username:", userError);
-      throw new Error("No account found with that username");
+      throw new Error("Error looking up user account");
     }
     
     if (!userData || !userData.email) {
