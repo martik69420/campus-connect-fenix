@@ -1,7 +1,8 @@
+
 import React, { useState, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Search, Bell, User, Menu, Home, MessageSquare, Users, Gamepad2, Award, BarChart3, LogOut, Sun, Moon } from "lucide-react";
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/context/auth";
 import { useNotification } from "@/context/NotificationContext";
 import { useTheme } from "@/context/ThemeContext";
 import { useLanguage } from "@/context/LanguageContext";

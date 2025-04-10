@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { useForm } from 'react-hook-form';
@@ -6,7 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast'; // Use the hook since this is a component
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth';
 import {
   Dialog,
   DialogContent,

@@ -13,6 +13,3 @@ export function useAuth() {
   }
   return context;
 }
-
-// Re-export types
-export type { User, ProfileUpdateData } from './types';

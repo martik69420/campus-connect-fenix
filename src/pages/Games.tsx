@@ -29,18 +29,17 @@ const Games = () => {
     progress: t('games.progress') || 'Progress',
     played: t('games.played') || 'games played',
     playNow: t('games.playNow') || 'Play Now',
-    comingSoon: t('games.comingSoon') || 'Coming Soon',
+    comingSoonTitle: t('games.comingSoon') || 'Coming Soon',
     comingSoonDescription: t('games.comingSoonDescription') || 'New game arriving soon',
     new: t('games.new') || 'New',
     development: t('games.development') || 'In development',
-    coming: t('games.coming') || 'Coming Soon',
-    comingSoon: t('games.comingSoon') || 'Coming Soon'
+    coming: t('games.coming') || 'Coming Soon'
   };
 
   const handleGameClick = () => {
     toast({
       title: translations.coming,
-      description: translations.comingSoon
+      description: translations.comingSoonTitle
     });
   };
 
@@ -130,7 +129,7 @@ const Games = () => {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2">
                     <Gamepad className="w-5 h-5 text-gray-500" />
-                    {translations.comingSoon}
+                    {translations.comingSoonTitle}
                   </CardTitle>
                   <CardDescription>{translations.comingSoonDescription}</CardDescription>
                 </div>

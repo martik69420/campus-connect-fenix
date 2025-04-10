@@ -1,9 +1,8 @@
-
 import React, { useEffect } from 'react';
 import SnakeGame from './SnakeGame';
 import { useGame } from '@/context/GameContext';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth';
 
 const SnakeGameWrapper: React.FC = () => {
   const { toast } = useToast();

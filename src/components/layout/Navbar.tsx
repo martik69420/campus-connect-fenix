@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/context/auth';
 import { useNotification } from '@/context/NotificationContext';
 import { cn } from '@/lib/utils';
 import NotificationMenu from '../notifications/NotificationMenu';
