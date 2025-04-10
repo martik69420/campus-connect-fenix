@@ -11,9 +11,11 @@ import AppLayout from '@/components/layout/AppLayout';
 import PostForm from '@/components/posts/PostForm';
 import PostList from '@/components/posts/PostList';
 import UserSuggestions from '@/components/users/UserSuggestions';
-import TrendingTopics from '@/components/posts/TrendingTopics';
-import { Loader2 } from 'lucide-react';
+import FriendsForYou from '@/components/users/FriendsForYou';
+import { Loader2, RefreshCw } from 'lucide-react';
 import AdBanner from '@/components/ads/AdBanner';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 // Add window.adsbygoogle type declaration if not already defined
 declare global {
@@ -27,6 +29,9 @@ const Index = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { posts, isLoading: postsLoading, fetchPosts } = usePost();
   const [activeTab, setActiveTab] = useState('for-you');
+  const [forYouPosts, setForYouPosts] = useState([]);
+  const [latestPosts, setLatestPosts] = useState([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -40,8 +45,35 @@ const Index = () => {
     }
   }, [isAuthenticated, user, activeTab, fetchPosts]);
 
+  // Process posts when they're loaded
+  useEffect(() => {
+    if (!postsLoading && posts) {
+      if (activeTab === 'for-you') {
+        // For "For You" tab, we might prioritize posts from friends or with more engagement
+        const sortedPosts = [...posts].sort((a, b) => 
+          (b.likes.length + b.comments.length * 2) - (a.likes.length + a.comments.length * 2)
+        );
+        setForYouPosts(sortedPosts);
+      } else {
+        // For "Latest" tab, we simply sort by date
+        const sortedPosts = [...posts].sort((a, b) => 
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setLatestPosts(sortedPosts);
+      }
+    }
+  }, [posts, postsLoading, activeTab]);
+
   const handleTabChange = (value: string) => {
     setActiveTab(value);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 600);
   };
 
   if (authLoading) {
@@ -52,18 +84,20 @@ const Index = () => {
     );
   }
 
+  const displayedPosts = activeTab === 'for-you' ? forYouPosts : latestPosts;
+  const emptyMessage = activeTab === 'for-you' 
+    ? "Your personalized feed is empty" 
+    : "No recent posts found";
+
   return (
     <AppLayout>
       <div className="container mx-auto py-8">
-        {/* AdSense banner */}
-        <AdBanner adSlot="5082313008" />
-        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Left sidebar */}
           <div className="hidden md:block">
             <Card className="sticky top-20">
               <CardContent className="p-4">
-                <TrendingTopics />
+                <FriendsForYou />
               </CardContent>
             </Card>
           </div>
@@ -71,7 +105,7 @@ const Index = () => {
           {/* Main content */}
           <div className="md:col-span-2">
             {user && (
-              <Card className="mb-6">
+              <Card className="mb-6 shadow-md border-primary/10 overflow-hidden">
                 <CardContent className="p-4">
                   <PostForm />
                 </CardContent>
@@ -80,24 +114,44 @@ const Index = () => {
 
             <Tabs defaultValue="for-you" onValueChange={handleTabChange}>
               <div className="flex items-center justify-between mb-4">
-                <TabsList>
-                  <TabsTrigger value="for-you">For You</TabsTrigger>
-                  <TabsTrigger value="latest">Latest</TabsTrigger>
+                <TabsList className="grid grid-cols-2 w-[300px]">
+                  <TabsTrigger value="for-you" className="text-sm">
+                    For You
+                  </TabsTrigger>
+                  <TabsTrigger value="latest" className="text-sm">
+                    Latest
+                  </TabsTrigger>
                 </TabsList>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest')}
-                >
-                  Refresh
-                </Button>
+                <motion.div whileTap={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={cn("gap-2", isRefreshing && "opacity-70")}
+                  >
+                    <RefreshCw className={cn(
+                      "h-4 w-4", 
+                      isRefreshing && "animate-spin"
+                    )} />
+                    Refresh
+                  </Button>
+                </motion.div>
               </div>
               <Separator className="mb-4" />
-              <TabsContent value="for-you">
-                <PostList posts={posts} isLoading={postsLoading} />
+              <TabsContent value="for-you" className="focus-visible:outline-none">
+                <PostList 
+                  posts={displayedPosts} 
+                  isLoading={postsLoading || isRefreshing} 
+                  emptyMessage={emptyMessage}
+                />
               </TabsContent>
-              <TabsContent value="latest">
-                <PostList posts={posts} isLoading={postsLoading} />
+              <TabsContent value="latest" className="focus-visible:outline-none">
+                <PostList 
+                  posts={displayedPosts} 
+                  isLoading={postsLoading || isRefreshing} 
+                  emptyMessage={emptyMessage}
+                />
               </TabsContent>
             </Tabs>
           </div>
@@ -112,7 +166,7 @@ const Index = () => {
           </div>
         </div>
         
-        {/* Second AdSense banner */}
+        {/* AdSense banner */}
         <AdBanner adSlot="2813542194" className="mt-8" />
       </div>
     </AppLayout>

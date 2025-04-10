@@ -1,8 +1,7 @@
-
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, Share2, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -15,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client';
 import SavePostButton from "./SavePostButton";
+import { ShareButton } from "./ShareModal";
 
 // Helper function to safely format dates
 const safeFormatDate = (date: Date | string | null | undefined) => {
@@ -78,7 +78,7 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
-  const { likePost, commentOnPost, sharePost, deletePost } = usePost();
+  const { likePost, unlikePost, commentOnPost, sharePost, deletePost } = usePost();
   const { user } = useAuth();
   const [showComments, setShowComments] = useState(false);
   const [newComment, setNewComment] = useState("");
@@ -106,7 +106,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
   const isLiked = user ? post.likes.includes(user.id) : false;
   
   const handleLike = () => {
-    likePost(post.id);
+    if (isLiked) {
+      unlikePost(post.id);
+    } else {
+      likePost(post.id);
+    }
     if (onAction) onAction();
   };
   
@@ -114,11 +118,15 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
     e.preventDefault();
     if (newComment.trim() && !isSubmitting) {
       setIsSubmitting(true);
-      commentOnPost(post.id, newComment);
-      setNewComment("");
-      setShowComments(true);
-      setIsSubmitting(false);
-      if (onAction) onAction();
+      commentOnPost(post.id, newComment)
+        .then(() => {
+          setNewComment("");
+          setShowComments(true);
+          if (onAction) onAction();
+        })
+        .finally(() => {
+          setIsSubmitting(false);
+        });
     }
   };
   
@@ -242,15 +250,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
               <span>{post.comments.length}</span>
             </Button>
             
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="gap-2 font-normal rounded-full transition-colors hover:bg-secondary"
-              onClick={handleShare}
-            >
-              <Share2 className="h-4 w-4" />
-              <span>{post.shares}</span>
-            </Button>
+            <ShareButton postId={post.id} postTitle={post.content.substring(0, 30)} />
             
             <SavePostButton postId={post.id} />
           </div>
