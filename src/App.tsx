@@ -1,6 +1,6 @@
 
 import * as React from 'react';
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { Route, Routes, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/auth';
 import { ThemeProvider } from './context/ThemeContext';
@@ -40,7 +40,7 @@ function App() {
   const location = useLocation();
 
   // Preload priority pages based on current location
-  React.useEffect(() => {
+  useEffect(() => {
     // Preload critical pages that might be navigated to next
     if (location.pathname === '/') {
       // If on home, preload messages and profile
@@ -57,10 +57,21 @@ function App() {
     }
   }, [location.pathname]);
 
-  // Initialize AdSense
-  React.useEffect(() => {
+  // Initialize AdSense once at app level
+  useEffect(() => {
+    // Add AdSense script if it doesn't exist
+    if (!document.getElementById('adsense-script')) {
+      const script = document.createElement('script');
+      script.id = 'adsense-script';
+      script.async = true;
+      script.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3116464894083582';
+      script.crossOrigin = 'anonymous';
+      document.head.appendChild(script);
+    }
+    
+    // Initialize window.adsbygoogle if not already initialized
     try {
-      (window.adsbygoogle = window.adsbygoogle || []).push({});
+      (window.adsbygoogle = window.adsbygoogle || []);
     } catch (e) {
       console.error('AdSense initialization error:', e);
     }

@@ -12,6 +12,7 @@ import ChatHeader from '@/components/messaging/ChatHeader';
 import MessageInput from '@/components/messaging/MessageInput';
 import { Loader2, UserX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import AdBanner from '@/components/ads/AdBanner';
 
 interface Message {
   id: string;
@@ -347,15 +348,7 @@ const Messages = () => {
     <AppLayout>
       <div className="container max-w-6xl mx-auto py-4 px-0 md:px-4">
         {/* AdSense Ad at the top of Messages */}
-        <div className="w-full overflow-hidden mb-4">
-          <ins className="adsbygoogle w-full"
-               style={{ display: 'block' }}
-               data-ad-client="ca-pub-3116464894083582"
-               data-ad-slot="5082313008"
-               data-ad-format="auto"
-               data-full-width-responsive="true">
-          </ins>
-        </div>
+        <AdBanner adSlot="5082313008" />
       
         <Card className="flex flex-col md:flex-row h-[calc(100vh-200px)]">
           {/* Left side: Contacts */}
@@ -411,15 +404,7 @@ const Messages = () => {
         </Card>
         
         {/* AdSense Ad at the bottom of Messages */}
-        <div className="w-full overflow-hidden mt-4">
-          <ins className="adsbygoogle w-full"
-               style={{ display: 'block' }}
-               data-ad-client="ca-pub-3116464894083582"
-               data-ad-slot="2813542194"
-               data-ad-format="auto"
-               data-full-width-responsive="true">
-          </ins>
-        </div>
+        <AdBanner adSlot="2813542194" />
       </div>
     </AppLayout>
   );
