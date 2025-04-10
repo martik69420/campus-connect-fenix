@@ -30,9 +30,9 @@ const Table = lazy(() => import('./pages/Table'));
 
 function App() {
   return (
-    <ThemeProvider>
-      <LanguageProvider>
-        <BrowserRouter>
+    <BrowserRouter>
+      <ThemeProvider>
+        <LanguageProvider>
           <AuthProvider>
             <NotificationProvider>
               <PostProvider>
@@ -68,9 +68,9 @@ function App() {
               </PostProvider>
             </NotificationProvider>
           </AuthProvider>
-        </BrowserRouter>
-      </LanguageProvider>
-    </ThemeProvider>
+        </LanguageProvider>
+      </ThemeProvider>
+    </BrowserRouter>
   );
 }
 

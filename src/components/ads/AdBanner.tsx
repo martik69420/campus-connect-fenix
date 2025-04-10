@@ -20,29 +20,37 @@ const AdBanner: React.FC<AdBannerProps> = ({
   className = 'w-full overflow-hidden my-4'
 }) => {
   const adRef = useRef<HTMLDivElement>(null);
-  const adInitialized = useRef(false);
   const adKey = useRef(`ad-${Math.random().toString(36).substring(2, 9)}`);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    // Only initialize this ad if it hasn't been initialized yet
-    if (adRef.current && !adInitialized.current && window.adsbygoogle) {
+    // Only initialize once and when the ref is available
+    if (adRef.current && !initialized.current && window.adsbygoogle) {
       try {
-        // Use a random key for each ad instance to avoid duplication issues
-        adRef.current.dataset.adKey = adKey.current;
+        // Add a unique key to prevent duplicate initialization
+        adRef.current.setAttribute('data-ad-key', adKey.current);
         
-        // Push the ad
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-        adInitialized.current = true;
+        // Push the ad with a slight delay to ensure DOM is ready
+        const timer = setTimeout(() => {
+          try {
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
+            initialized.current = true;
+          } catch (error) {
+            console.error("AdSense delayed initialization error:", error);
+          }
+        }, 100);
+        
+        return () => clearTimeout(timer);
       } catch (error) {
         console.error("AdSense initialization error:", error);
       }
     }
     
     return () => {
-      // Clean up on unmount
-      adInitialized.current = false;
+      // Reset on unmount
+      initialized.current = false;
     };
-  }, []);
+  }, [adSlot]);
 
   return (
     <div className={className}>
@@ -53,7 +61,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive="true"
-        ref={adRef as any}
+        ref={adRef}
         key={adKey.current}
       />
     </div>
