@@ -9,6 +9,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { GameProvider } from './context/GameContext';
 import { Toaster } from '@/components/ui/toaster';
 import NotificationPermissionBanner from '@/components/notifications/NotificationPermissionBanner';
+import { AnimatePresence } from 'framer-motion';
 
 import Login from './pages/Login';
 import Index from './pages/Index';
@@ -35,22 +36,24 @@ function App() {
               <GameProvider>
                 <div className="app dark:bg-background">
                   <NotificationPermissionBanner />
-                  <Routes>
-                    <Route path="/" element={<Index />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/profile/:username" element={<Profile />} />
-                    <Route path="/messages" element={<Messages />} />
-                    <Route path="/games" element={<Games />} />
-                    <Route path="/snake" element={<Snake />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/notifications" element={<Notifications />} />
-                    <Route path="/leaderboard" element={<Leaderboard />} />
-                    <Route path="/friends" element={<Friends />} />
-                    <Route path="/add-friends" element={<AddFriends />} />
-                    <Route path="/earn" element={<Earn />} />
-                    <Route path="/search" element={<Search />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <Routes>
+                      <Route path="/" element={<Index />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/profile/:username" element={<Profile />} />
+                      <Route path="/messages" element={<Messages />} />
+                      <Route path="/games" element={<Games />} />
+                      <Route path="/snake" element={<Snake />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/leaderboard" element={<Leaderboard />} />
+                      <Route path="/friends" element={<Friends />} />
+                      <Route path="/add-friends" element={<AddFriends />} />
+                      <Route path="/earn" element={<Earn />} />
+                      <Route path="/search" element={<Search />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </AnimatePresence>
                   <Toaster />
                 </div>
               </GameProvider>
