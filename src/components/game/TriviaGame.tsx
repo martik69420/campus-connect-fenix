@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect } from "react";
 import { Award, Timer, ArrowRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+import { CustomProgress } from "@/components/ui/custom-progress";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useGame } from "@/context/GameContext";
@@ -202,7 +201,7 @@ const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
                 </div>
               </div>
               
-              <Progress value={gameProgress} className="mb-6" />
+              <CustomProgress value={gameProgress} className="mb-6" />
               
               <div className="mb-6">
                 <h3 className="text-lg font-medium mb-4">{currentQuestion.question}</h3>

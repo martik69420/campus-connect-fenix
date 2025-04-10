@@ -17,6 +17,7 @@ import Profile from './pages/Profile';
 import Messages from './pages/Messages';
 import Games from './pages/Games';
 import Snake from './pages/Snake';
+import Trivia from './pages/Trivia';
 import Settings from './pages/Settings';
 import Notifications from './pages/Notifications';
 import Leaderboard from './pages/Leaderboard';
@@ -44,6 +45,7 @@ function App() {
                       <Route path="/messages" element={<Messages />} />
                       <Route path="/games" element={<Games />} />
                       <Route path="/snake" element={<Snake />} />
+                      <Route path="/trivia" element={<Trivia />} />
                       <Route path="/settings" element={<Settings />} />
                       <Route path="/notifications" element={<Notifications />} />
                       <Route path="/leaderboard" element={<Leaderboard />} />

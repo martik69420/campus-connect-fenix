@@ -10,6 +10,7 @@ import { useGame } from '@/context/GameContext';
 import { BrainCircuit, Terminal, Gamepad, Crown, Trophy, Rocket, Star, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { cn } from '@/lib/utils';
 
 const Games = () => {
   const navigate = useNavigate();
@@ -90,7 +91,7 @@ const Games = () => {
                   <span className="font-medium">{translations.progress}</span>
                   <span className="font-semibold">{gameState.progress.trivia.gamesPlayed} {translations.played}</span>
                 </div>
-                <Progress value={Math.min(gameState.progress.trivia.gamesPlayed * 10, 100)} className="h-2.5 bg-background/50" indicatorClassName="bg-indigo-500" />
+                <Progress value={Math.min(gameState.progress.trivia.gamesPlayed * 10, 100)} className="h-2.5 bg-background/50" />
               </div>
             </CardContent>
             <CardFooter className="pt-2 relative z-10">
@@ -126,7 +127,7 @@ const Games = () => {
                   <span className="font-medium">{translations.progress}</span>
                   <span className="font-semibold">{gameState.progress.snake.gamesPlayed} {translations.played}</span>
                 </div>
-                <Progress value={Math.min(gameState.progress.snake.gamesPlayed * 10, 100)} className="h-2.5 bg-background/50" indicatorClassName="bg-emerald-500" />
+                <Progress value={Math.min(gameState.progress.snake.gamesPlayed * 10, 100)} className="h-2.5 bg-background/50" />
               </div>
             </CardContent>
             <CardFooter className="pt-2 relative z-10">
@@ -162,7 +163,7 @@ const Games = () => {
                   <span className="font-medium">{translations.development}</span>
                   <span className="font-semibold">75%</span>
                 </div>
-                <Progress value={75} className="h-2.5 bg-background/50" indicatorClassName="bg-amber-500" />
+                <Progress value={75} className="h-2.5 bg-background/50" />
               </div>
             </CardContent>
             <CardFooter className="pt-2 relative z-10">
