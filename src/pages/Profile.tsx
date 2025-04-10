@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, Mail, MapPin, Globe, Briefcase, Users, Heart, BookmarkIcon, GamepadIcon, HashIcon } from 'lucide-react';
@@ -14,6 +14,7 @@ import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileUpdateForm from '@/components/profile/ProfileUpdateForm';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AdBanner from '@/components/ads/AdBanner';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 const Profile = () => {
   const { username } = useParams();
@@ -29,6 +30,8 @@ const Profile = () => {
   const [friendsCount, setFriendsCount] = useState(0);
   const [gamesPlayed, setGamesPlayed] = useState(0);
   const [profileStatsLoading, setProfileStatsLoading] = useState(true);
+  const [friends, setFriends] = useState([]);
+  const [loadingFriends, setLoadingFriends] = useState(false);
   
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
@@ -42,6 +45,7 @@ const Profile = () => {
         checkFriendStatus(username);
         if (user.username === username) {
           fetchUserStats();
+          fetchFriends();
         }
       }
     }
@@ -104,7 +108,7 @@ const Profile = () => {
       
       setFriendsCount(friendsCountData || 0);
       
-      // Fetch games played count - FIXED: Using game_history instead of game_sessions
+      // Fetch games played count
       const { count: gamesPlayedData } = await supabase
         .from('game_history')
         .select('*', { count: 'exact', head: true })
@@ -116,6 +120,58 @@ const Profile = () => {
       console.error("Error fetching user stats:", error);
     } finally {
       setProfileStatsLoading(false);
+    }
+  };
+  
+  const fetchFriends = async () => {
+    if (!user?.id) return;
+    
+    setLoadingFriends(true);
+    try {
+      // Get friends where user is the requester
+      const { data: userFriends } = await supabase
+        .from('friends')
+        .select(`
+          id, 
+          friend_id,
+          profiles:friend_id(id, username, display_name, avatar_url)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'friends');
+      
+      // Get friends where user is the recipient
+      const { data: friendsOfUser } = await supabase
+        .from('friends')
+        .select(`
+          id, 
+          user_id,
+          profiles:user_id(id, username, display_name, avatar_url)
+        `)
+        .eq('friend_id', user.id)
+        .eq('status', 'friends');
+      
+      const combinedFriends = [
+        ...(userFriends || []).map(f => ({ 
+          id: f.id, 
+          friendId: f.friend_id, 
+          username: f.profiles.username,
+          displayName: f.profiles.display_name,
+          avatar: f.profiles.avatar_url 
+        })),
+        ...(friendsOfUser || []).map(f => ({ 
+          id: f.id, 
+          friendId: f.user_id,
+          username: f.profiles.username,
+          displayName: f.profiles.display_name,
+          avatar: f.profiles.avatar_url 
+        }))
+      ];
+      
+      setFriends(combinedFriends);
+    } catch (error) {
+      console.error("Error fetching friends:", error);
+    } finally {
+      setLoadingFriends(false);
     }
   };
   
@@ -247,7 +303,7 @@ const Profile = () => {
 
   return (
     <AppLayout>
-      <div className="container max-w-5xl mx-auto px-4 py-6 space-y-8">
+      <div className="container max-w-5xl mx-auto px-4 py-6 space-y-6">
         {/* Ad Banner at the top */}
         <AdBanner adSlot="5082313008" />
         
@@ -269,15 +325,15 @@ const Profile = () => {
           </motion.div>
         )}
         
-        {/* Profile Stats */}
+        {/* Profile Stats - Only show on own profile */}
         {isOwnProfile && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+            className="grid grid-cols-2 md:grid-cols-4 gap-4"
           >
-            <Card>
+            <Card className="overflow-hidden border-2 hover:border-primary transition-all duration-200">
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <div className="rounded-full bg-primary/10 p-3 mb-2">
                   <Heart className="h-6 w-6 text-primary" />
@@ -287,7 +343,7 @@ const Profile = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="overflow-hidden border-2 hover:border-primary transition-all duration-200">
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <div className="rounded-full bg-primary/10 p-3 mb-2">
                   <BookmarkIcon className="h-6 w-6 text-primary" />
@@ -297,7 +353,7 @@ const Profile = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="overflow-hidden border-2 hover:border-primary transition-all duration-200">
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <div className="rounded-full bg-primary/10 p-3 mb-2">
                   <Users className="h-6 w-6 text-primary" />
@@ -307,7 +363,7 @@ const Profile = () => {
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="overflow-hidden border-2 hover:border-primary transition-all duration-200">
               <CardContent className="p-4 flex flex-col items-center justify-center">
                 <div className="rounded-full bg-primary/10 p-3 mb-2">
                   <GamepadIcon className="h-6 w-6 text-primary" />
@@ -351,12 +407,14 @@ const Profile = () => {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <Card>
-                    <CardContent className="p-6 space-y-4">
-                      <h3 className="text-xl font-semibold flex items-center">
+                  <Card className="overflow-hidden border-2 hover:shadow-md transition-all duration-300">
+                    <CardHeader className="bg-secondary/5 pb-2">
+                      <CardTitle className="flex items-center text-xl">
                         <Users className="mr-2 h-5 w-5" />
                         About
-                      </h3>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-4">
                       <Separator />
                       
                       <div className="space-y-3">
@@ -366,44 +424,46 @@ const Profile = () => {
                           <p className="text-muted-foreground italic">No bio provided</p>
                         )}
                         
-                        {profile?.school && (
-                          <div className="flex items-center gap-2">
-                            <Briefcase className="h-4 w-4 text-muted-foreground" />
-                            <span>{profile.school}</span>
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+                          {profile?.school && (
+                            <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/5">
+                              <Briefcase className="h-4 w-4 text-primary" />
+                              <span>{profile.school}</span>
+                            </div>
+                          )}
+                          
+                          {profile?.location && (
+                            <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/5">
+                              <MapPin className="h-4 w-4 text-primary" />
+                              <span>{profile.location}</span>
+                            </div>
+                          )}
+                          
+                          {profile?.website && (
+                            <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/5">
+                              <Globe className="h-4 w-4 text-primary" />
+                              <a 
+                                href={profile.website} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-primary hover:underline"
+                              >
+                                {profile.website}
+                              </a>
+                            </div>
+                          )}
+                          
+                          {profile?.birthday && (
+                            <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/5">
+                              <CalendarIcon className="h-4 w-4 text-primary" />
+                              <span>{new Date(profile.birthday).toLocaleDateString()}</span>
+                            </div>
+                          )}
+                          
+                          <div className="flex items-center gap-2 p-2 rounded-md bg-secondary/5">
+                            <Mail className="h-4 w-4 text-primary" />
+                            <span>{profile?.email}</span>
                           </div>
-                        )}
-                        
-                        {profile?.location && (
-                          <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{profile.location}</span>
-                          </div>
-                        )}
-                        
-                        {profile?.website && (
-                          <div className="flex items-center gap-2">
-                            <Globe className="h-4 w-4 text-muted-foreground" />
-                            <a 
-                              href={profile.website} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-primary hover:underline"
-                            >
-                              {profile.website}
-                            </a>
-                          </div>
-                        )}
-                        
-                        {profile?.birthday && (
-                          <div className="flex items-center gap-2">
-                            <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                            <span>{new Date(profile.birthday).toLocaleDateString()}</span>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          <span>{profile?.email}</span>
                         </div>
                       </div>
                     </CardContent>
@@ -416,15 +476,17 @@ const Profile = () => {
                   animate={{ opacity: 1 }}
                   transition={{ delay: 0.3 }}
                 >
-                  <Card>
+                  <Card className="overflow-hidden border-2 hover:shadow-md transition-all duration-300">
+                    <CardHeader className="bg-secondary/5 pb-2">
+                      <CardTitle className="text-xl">Interests</CardTitle>
+                    </CardHeader>
                     <CardContent className="p-6 space-y-4">
-                      <h3 className="text-xl font-semibold">Interests</h3>
                       <Separator />
                       
                       <div className="flex flex-wrap gap-2">
                         {profile?.interests ? (
                           (Array.isArray(profile.interests) ? profile.interests : []).map((interest: string, index: number) => (
-                            <Badge key={index} variant="secondary" className="px-3 py-1.5">
+                            <Badge key={index} variant="secondary" className="px-3 py-1.5 hover:bg-secondary/80 transition-colors">
                               {interest}
                             </Badge>
                           ))
@@ -440,18 +502,22 @@ const Profile = () => {
           </TabsContent>
           
           <TabsContent value="posts" className="mt-6">
-            <Card>
+            <Card className="overflow-hidden border-2 hover:shadow-md transition-all duration-300">
+              <CardHeader className="bg-secondary/5 pb-2">
+                <CardTitle className="text-xl">Posts</CardTitle>
+              </CardHeader>
               <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Posts</h3>
                 <p className="text-muted-foreground">No posts to show yet.</p>
               </CardContent>
             </Card>
           </TabsContent>
           
           <TabsContent value="likes" className="mt-6">
-            <Card>
+            <Card className="overflow-hidden border-2 hover:shadow-md transition-all duration-300">
+              <CardHeader className="bg-secondary/5 pb-2">
+                <CardTitle className="text-xl">Liked Posts</CardTitle>
+              </CardHeader>
               <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Liked Posts</h3>
                 {isOwnProfile && likedPosts.length === 0 ? (
                   <p className="text-muted-foreground">You haven't liked any posts yet.</p>
                 ) : !isOwnProfile ? (
@@ -464,10 +530,37 @@ const Profile = () => {
           </TabsContent>
           
           <TabsContent value="friends" className="mt-6">
-            <Card>
+            <Card className="overflow-hidden border-2 hover:shadow-md transition-all duration-300">
+              <CardHeader className="bg-secondary/5 pb-2">
+                <CardTitle className="text-xl">Friends</CardTitle>
+              </CardHeader>
               <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Friends</h3>
-                <p className="text-muted-foreground">Coming soon!</p>
+                {loadingFriends ? (
+                  <div className="flex justify-center p-4">
+                    <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin"></div>
+                  </div>
+                ) : friends.length > 0 ? (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                    {friends.map((friend) => (
+                      <div 
+                        key={friend.id} 
+                        className="flex flex-col items-center text-center p-2 hover:bg-secondary/10 rounded-lg transition-colors cursor-pointer"
+                        onClick={() => navigate(`/profile/${friend.username}`)}
+                      >
+                        <Avatar className="w-16 h-16 mb-2">
+                          <AvatarImage src={friend.avatar || "/placeholder.svg"} />
+                          <AvatarFallback>
+                            {friend.displayName?.charAt(0) || friend.username?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <p className="font-medium line-clamp-1">{friend.displayName}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-1">@{friend.username}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground">No friends to display.</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

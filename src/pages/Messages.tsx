@@ -1,18 +1,22 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/components/layout/AppLayout';
 import ContactsList from '@/components/messaging/ContactsList';
 import MessagesList from '@/components/messaging/MessagesList';
 import ChatHeader from '@/components/messaging/ChatHeader';
 import MessageInput from '@/components/messaging/MessageInput';
-import { Loader2, UserX } from 'lucide-react';
+import { Loader2, UserX, Users, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AdBanner from '@/components/ads/AdBanner';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
+import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import useMessages from '@/hooks/use-messages';
 
 interface Message {
@@ -41,6 +45,14 @@ interface FriendProfile {
   avatar_url: string | null;
 }
 
+interface Friend {
+  id: string;
+  friendId: string;
+  username: string;
+  displayName: string;
+  avatar: string | null;
+}
+
 const Messages = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -56,6 +68,9 @@ const Messages = () => {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [messageSending, setMessageSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [allFriends, setAllFriends] = useState<Friend[]>([]);
+  const [friendsLoading, setFriendsLoading] = useState(false);
+  const [friendsSearchQuery, setFriendsSearchQuery] = useState('');
   
   const userIdFromParams = searchParams.get('userId');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -71,6 +86,7 @@ const Messages = () => {
   useEffect(() => {
     if (isAuthenticated && user) {
       fetchContacts();
+      fetchAllFriends();
     }
   }, [isAuthenticated, user]);
   
@@ -115,6 +131,15 @@ const Messages = () => {
             .update({ is_read: true })
             .eq('id', newMsg.id);
             
+          // Update unread count in contacts list
+          setContacts(prev => 
+            prev.map(contact => 
+              contact.id === activeContact.id
+                ? { ...contact, unreadCount: 0 }
+                : contact
+            )
+          );
+          
           // Scroll to bottom on new message
           scrollToBottom();
         }
@@ -130,6 +155,65 @@ const Messages = () => {
     setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 100);
+  };
+  
+  const fetchAllFriends = async () => {
+    if (!user?.id) return;
+    
+    setFriendsLoading(true);
+    try {
+      // First get all friend relationships where user is the requester
+      const { data: friendsData, error: friendsError } = await supabase
+        .from('friends')
+        .select(`
+          id,
+          status,
+          friend_id,
+          profiles!friend_id(id, username, display_name, avatar_url)
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'friends');
+      
+      if (friendsError) throw friendsError;
+      
+      // Also get reverse relationships where user is the recipient
+      const { data: reverseData, error: reverseError } = await supabase
+        .from('friends')
+        .select(`
+          id,
+          status,
+          user_id,
+          profiles!user_id(id, username, display_name, avatar_url)
+        `)
+        .eq('friend_id', user.id)
+        .eq('status', 'friends');
+      
+      if (reverseError) throw reverseError;
+      
+      // Process friends data with correct relationship names
+      const friends = [
+        ...(friendsData || []).map(item => ({
+          id: item.id,
+          friendId: item.friend_id,
+          username: item.profiles.username,
+          displayName: item.profiles.display_name,
+          avatar: item.profiles.avatar_url
+        })),
+        ...(reverseData || []).map(item => ({
+          id: item.id,
+          friendId: item.user_id,
+          username: item.profiles.username,
+          displayName: item.profiles.display_name,
+          avatar: item.profiles.avatar_url
+        }))
+      ];
+      
+      setAllFriends(friends);
+    } catch (error) {
+      console.error("Error fetching friends:", error);
+    } finally {
+      setFriendsLoading(false);
+    }
   };
   
   const fetchContacts = async () => {
@@ -386,68 +470,240 @@ const Messages = () => {
     console.log('Open user actions for:', activeContact?.username);
   };
   
+  const startNewChat = (friend: Friend) => {
+    // Check if contact already exists in the contacts list
+    const existingContact = contacts.find(contact => contact.id === friend.friendId);
+    
+    // If it exists, just select it
+    if (existingContact) {
+      setActiveContact(existingContact);
+      return;
+    }
+    
+    // Otherwise create a new contact and add it to the list
+    const newContact: Contact = {
+      id: friend.friendId,
+      username: friend.username,
+      displayName: friend.displayName,
+      avatar: friend.avatar
+    };
+    
+    setContacts(prev => [...prev, newContact]);
+    setActiveContact(newContact);
+  };
+  
+  // Filter friends based on search
+  const filteredFriends = allFriends.filter(friend => {
+    if (!friendsSearchQuery) return true;
+    
+    return friend.displayName.toLowerCase().includes(friendsSearchQuery.toLowerCase()) ||
+           friend.username.toLowerCase().includes(friendsSearchQuery.toLowerCase());
+  });
+
   return (
     <AppLayout>
       <div className="container max-w-6xl mx-auto py-4 px-0 md:px-4">
         {/* AdSense Ad at the top of Messages */}
         <AdBanner adSlot="5082313008" />
       
-        <Card className="flex flex-col md:flex-row h-[calc(100vh-200px)]">
-          {/* Left side: Contacts */}
-          <div className="flex-none w-full md:w-80 md:border-r flex flex-col overflow-hidden">
-            <ContactsList
-              contacts={contacts}
-              activeContactId={activeContact?.id || ''}
-              setActiveContact={setActiveContact}
-              isLoading={contactsLoading}
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              onNewChat={handleOpenNewChat}
-            />
-          </div>
-          
-          {/* Right side: Messages */}
-          <div className="flex-1 flex flex-col">
-            {activeContact ? (
-              <>
-                <ChatHeader 
-                  contact={activeContact} 
-                  onOpenUserActions={handleOpenUserActions} 
+        <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mt-4">
+          {/* Friends list panel */}
+          <Card className="w-full md:w-80 md:max-w-xs">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-xl flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                All Friends
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <div className="relative mb-4">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="Search friends..."
+                  className="pl-8"
+                  value={friendsSearchQuery}
+                  onChange={(e) => setFriendsSearchQuery(e.target.value)}
                 />
-                <div className="flex-1 overflow-y-auto" id="messages-container">
-                  <MessagesList
-                    messages={messages}
-                    optimisticMessages={optimisticMessages}
-                    currentUserId={user?.id || ''}
-                    isLoading={messagesLoading}
-                  />
-                  <div ref={messagesEndRef} />
-                </div>
-                <div className="p-3 border-t">
-                  <MessageInput 
-                    onSendMessage={handleSendMessage} 
-                    isSending={messageSending}
-                    disabled={!activeContact}
-                  />
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full">
-                <UserX className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-medium">No conversation selected</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Select a friend from the list or add new friends
-                </p>
-                <Button onClick={handleOpenNewChat}>
-                  Find Friends
-                </Button>
               </div>
-            )}
-          </div>
-        </Card>
+              
+              <Separator className="mb-4" />
+              
+              <ScrollArea className="h-[400px] pr-4">
+                {friendsLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : filteredFriends.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Users className="h-12 w-12 text-muted-foreground mb-2" />
+                    <p className="text-muted-foreground">No friends found</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="mt-4"
+                      onClick={() => navigate('/add-friends')}
+                    >
+                      Find Friends
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-2">
+                    {filteredFriends.map(friend => (
+                      <button
+                        key={friend.id}
+                        className="flex items-center space-x-3 p-2 hover:bg-secondary/10 rounded-md transition-colors text-left w-full"
+                        onClick={() => startNewChat(friend)}
+                      >
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={friend.avatar || "/placeholder.svg"} alt={friend.displayName} />
+                          <AvatarFallback>
+                            {friend.displayName?.charAt(0) || friend.username.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium truncate">{friend.displayName}</p>
+                          <p className="text-xs text-muted-foreground truncate">@{friend.username}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+      
+          {/* Main Chat Panel */}
+          <Card className="flex-1 flex flex-col h-[calc(100vh-250px)]">
+            <Tabs defaultValue="chats" className="w-full">
+              <TabsList className="mx-4 mt-2">
+                <TabsTrigger value="chats" className="flex-1">Active Chats</TabsTrigger>
+                <TabsTrigger value="new" className="flex-1">New Message</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="chats" className="flex flex-col flex-1 overflow-hidden mt-0">
+                <div className="flex flex-col md:flex-row h-full">
+                  {/* Left side: Contacts */}
+                  <div className="flex-none w-full md:w-80 md:border-r flex flex-col overflow-hidden max-h-[300px] md:max-h-none">
+                    <ContactsList
+                      contacts={contacts}
+                      activeContactId={activeContact?.id || ''}
+                      setActiveContact={setActiveContact}
+                      isLoading={contactsLoading}
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
+                      onNewChat={handleOpenNewChat}
+                    />
+                  </div>
+                  
+                  {/* Right side: Messages */}
+                  <div className="flex-1 flex flex-col">
+                    {activeContact ? (
+                      <>
+                        <ChatHeader 
+                          contact={activeContact} 
+                          onOpenUserActions={handleOpenUserActions} 
+                        />
+                        <div className="flex-1 overflow-y-auto" id="messages-container">
+                          <MessagesList
+                            messages={messages}
+                            optimisticMessages={optimisticMessages}
+                            currentUserId={user?.id || ''}
+                            isLoading={messagesLoading}
+                          />
+                          <div ref={messagesEndRef} />
+                        </div>
+                        <div className="p-3 border-t">
+                          <MessageInput 
+                            onSendMessage={handleSendMessage} 
+                            isSending={messageSending}
+                            disabled={!activeContact}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full">
+                        <UserX className="h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-medium">No conversation selected</h3>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          Select a friend from the list or add new friends
+                        </p>
+                        <Button onClick={handleOpenNewChat}>
+                          Find Friends
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="new" className="p-4 h-full">
+                <Card className="border-2 h-full">
+                  <CardHeader>
+                    <CardTitle>Start a New Conversation</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="relative mb-4">
+                      <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        placeholder="Search friends..."
+                        className="pl-8"
+                        value={friendsSearchQuery}
+                        onChange={(e) => setFriendsSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="mt-4">
+                      <h3 className="font-medium mb-2">Select a friend:</h3>
+                      <ScrollArea className="h-[400px] pr-4">
+                        {friendsLoading ? (
+                          <div className="flex justify-center py-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : filteredFriends.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center py-8 text-center">
+                            <Users className="h-12 w-12 text-muted-foreground mb-2" />
+                            <p className="text-muted-foreground">No friends found</p>
+                            <Button 
+                              variant="outline" 
+                              className="mt-4"
+                              onClick={() => navigate('/add-friends')}
+                            >
+                              Find Friends
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2 gap-2">
+                            {filteredFriends.map(friend => (
+                              <button
+                                key={friend.id}
+                                className="flex items-center space-x-3 p-3 hover:bg-secondary/10 rounded-md transition-colors text-left w-full border border-muted"
+                                onClick={() => startNewChat(friend)}
+                              >
+                                <Avatar className="h-12 w-12">
+                                  <AvatarImage src={friend.avatar || "/placeholder.svg"} alt={friend.displayName} />
+                                  <AvatarFallback>
+                                    {friend.displayName?.charAt(0) || friend.username.charAt(0)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-medium">{friend.displayName}</p>
+                                  <p className="text-sm text-muted-foreground">@{friend.username}</p>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </ScrollArea>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </Card>
+        </div>
         
         {/* AdSense Ad at the bottom of Messages */}
-        <AdBanner adSlot="2813542194" />
+        <AdBanner adSlot="2813542194" className="mt-4" />
       </div>
     </AppLayout>
   );
