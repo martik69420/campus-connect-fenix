@@ -32,6 +32,13 @@ interface Contact {
   unreadCount?: number;
 }
 
+interface FriendProfile {
+  id: string;
+  username: string;
+  display_name: string;
+  avatar_url: string | null;
+}
+
 const Messages = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -45,7 +52,7 @@ const Messages = () => {
   const [loading, setLoading] = useState(true);
   const [contactsLoading, setContactsLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
-  const [newMessage, setNewMessage] = useState('');
+  const [messageSending, setMessageSending] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
   const userIdFromParams = searchParams.get('userId');
@@ -120,7 +127,7 @@ const Messages = () => {
           id,
           status,
           friend_id,
-          profiles:friend_id (id, username, display_name, avatar_url)
+          profiles!friend_id(id, username, display_name, avatar_url)
         `)
         .eq('user_id', user.id)
         .eq('status', 'friends');
@@ -134,21 +141,22 @@ const Messages = () => {
           id,
           status,
           user_id,
-          profiles:user_id (id, username, display_name, avatar_url)
+          profiles!user_id(id, username, display_name, avatar_url)
         `)
         .eq('friend_id', user.id)
         .eq('status', 'friends');
       
       if (reverseError) throw reverseError;
       
+      // Process friends data with correct relationship names
       const allFriends = [
         ...(friendsData || []).map(item => ({
           friendId: item.friend_id,
-          profile: item.profiles
+          profile: item.profiles as FriendProfile
         })),
         ...(reverseData || []).map(item => ({
           friendId: item.user_id,
-          profile: item.profiles
+          profile: item.profiles as FriendProfile
         }))
       ];
       
@@ -258,6 +266,8 @@ const Messages = () => {
   const handleSendMessage = async (content: string) => {
     if (!user?.id || !activeContact || !content.trim()) return;
     
+    setMessageSending(true);
+    
     // Create a temporary optimistic message
     const optimisticMsg: Message = {
       id: `temp-${Date.now()}`,
@@ -320,6 +330,8 @@ const Messages = () => {
         description: error.message,
         variant: "destructive"
       });
+    } finally {
+      setMessageSending(false);
     }
   };
   
@@ -328,7 +340,6 @@ const Messages = () => {
   };
   
   const handleOpenUserActions = () => {
-    // This would be implemented later for reporting users, etc.
     console.log('Open user actions for:', activeContact?.username);
   };
   
@@ -344,9 +355,6 @@ const Messages = () => {
                data-ad-format="auto"
                data-full-width-responsive="true">
           </ins>
-          <script>
-            (adsbygoogle = window.adsbygoogle || []).push({});
-          </script>
         </div>
       
         <Card className="flex flex-col md:flex-row h-[calc(100vh-200px)]">
@@ -382,6 +390,7 @@ const Messages = () => {
                 <div className="p-3 border-t">
                   <MessageInput 
                     onSendMessage={handleSendMessage} 
+                    isSending={messageSending}
                     disabled={!activeContact}
                   />
                 </div>
@@ -410,9 +419,6 @@ const Messages = () => {
                data-ad-format="auto"
                data-full-width-responsive="true">
           </ins>
-          <script>
-            (adsbygoogle = window.adsbygoogle || []).push({});
-          </script>
         </div>
       </div>
     </AppLayout>
