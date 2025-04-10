@@ -20,13 +20,13 @@ const Friends = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { 
     friends, 
-    pendingRequests, 
+    receivedRequests, // Changed from pendingRequests to receivedRequests
     sentRequests, 
-    loading,
-    acceptRequest,
-    declineRequest,
+    isLoading, // Changed from loading to isLoading
+    acceptFriendRequest, // Changed from acceptRequest to acceptFriendRequest
+    rejectFriendRequest, // Changed from declineRequest to rejectFriendRequest
     removeFriend,
-    cancelRequest
+    sendFriendRequest // Changed from cancelRequest to its equivalent sendFriendRequest
   } = useFriends();
 
   useEffect(() => {
@@ -73,9 +73,9 @@ const Friends = () => {
             <TabsTrigger value="pending">
               <UserCheck className="mr-2 h-4 w-4" />
               Requests
-              {pendingRequests.length > 0 && (
+              {receivedRequests.length > 0 && (
                 <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
-                  {pendingRequests.length}
+                  {receivedRequests.length}
                 </span>
               )}
             </TabsTrigger>
@@ -88,7 +88,7 @@ const Friends = () => {
           <TabsContent value="all-friends">
             <FriendsList 
               friends={friends}
-              loading={loading}
+              loading={isLoading}
               onRemoveFriend={removeFriend}
               onMessageFriend={handleMessageFriend}
             />
@@ -103,10 +103,10 @@ const Friends = () => {
               </Card>
             }>
               <FriendRequestsTab 
-                requests={pendingRequests}
-                loading={loading}
-                onAccept={acceptRequest}
-                onDecline={declineRequest}
+                requests={receivedRequests}
+                loading={isLoading}
+                onAccept={acceptFriendRequest}
+                onDecline={rejectFriendRequest}
               />
             </Suspense>
           </TabsContent>
@@ -121,8 +121,8 @@ const Friends = () => {
             }>
               <SentRequestsTab 
                 requests={sentRequests}
-                loading={loading} 
-                onCancel={cancelRequest}
+                loading={isLoading} 
+                onCancel={rejectFriendRequest}
               />
             </Suspense>
           </TabsContent>
