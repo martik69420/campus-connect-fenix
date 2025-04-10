@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -130,14 +131,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener("visibilitychange", handleVisibilityChange);
 
-    // Set up beforeunload event to update status when user leaves
+    // Use the Navigator's sendBeacon API instead of synchronous XHR for beforeunload
     window.addEventListener("beforeunload", () => {
       if (user) {
-        // Use a synchronous method to update status before page unloads
-        const xhr = new XMLHttpRequest();
-        xhr.open("POST", "/api/update-status", false); // false makes it synchronous
-        xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.send(JSON.stringify({ userId: user.id, isOnline: false }));
+        // Using Navigator.sendBeacon which is designed for this exact scenario
+        navigator.sendBeacon(
+          "/api/update-status", 
+          JSON.stringify({ userId: user.id, isOnline: false })
+        );
+        
+        // As a fallback, also directly update status in Supabase
+        // This will execute asynchronously and might be interrupted
+        try {
+          updateOnlineStatus(user.id, false);
+        } catch (e) {
+          console.error("Error updating online status on page unload", e);
+        }
       }
     });
 

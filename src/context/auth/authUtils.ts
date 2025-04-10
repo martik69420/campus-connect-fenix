@@ -257,6 +257,9 @@ export const validateCurrentPassword = async (email: string, password: string): 
 
 export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
   try {
+    // For offline status updates during page unload, we want this to complete quickly
+    const options = isOnline ? {} : { timeout: 1000 };
+    
     // Check if user_status entry exists
     const { data: existingStatus } = await supabase
       .from('user_status')
