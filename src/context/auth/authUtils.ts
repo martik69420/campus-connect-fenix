@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import type { User, ProfileUpdateData } from './types';
 
@@ -57,55 +56,31 @@ export const getCurrentUser = async (): Promise<User | null> => {
   }
 };
 
-// Secure login function that properly validates credentials against database
-export const loginUser = async (identifier: string, password: string): Promise<User | null> => {
+// Login function that only supports username login
+export const loginUser = async (username: string, password: string): Promise<User | null> => {
   try {
-    console.log(`Attempting login for user: ${identifier}`);
+    console.log(`Attempting login for user: ${username}`);
     
-    // Check if input is email or username
-    let userEmail = identifier;
+    // Find the email associated with this username
+    const { data: userData, error: userError } = await supabase
+      .from('profiles')
+      .select('email')
+      .eq('username', username)
+      .single();
+        
+    if (userError) {
+      console.error("Error finding user by username:", userError);
+      throw new Error("No account found with that username");
+    }
     
-    // If it doesn't look like an email, find the email by username
-    if (!identifier.includes('@')) {
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('username', identifier)
-        .maybeSingle();
-        
-      if (userError) {
-        console.error("Error finding user by username:", userError);
-        throw new Error("Error looking up user account");
-      }
-      
-      if (!userData || !userData.email) {
-        console.error("User not found with username:", identifier);
-        throw new Error("No account found with that username");
-      }
-      
-      userEmail = userData.email;
-    } else {
-      // Verify the email exists in our database
-      const { data: userData, error: userError } = await supabase
-        .from('profiles')
-        .select('email')
-        .eq('email', identifier)
-        .maybeSingle();
-        
-      if (userError) {
-        console.error("Error finding user by email:", userError);
-        throw new Error("Error looking up user account");
-      }
-      
-      if (!userData || !userData.email) {
-        console.error("User not found with email:", identifier);
-        throw new Error("No account found with that email");
-      }
+    if (!userData || !userData.email) {
+      console.error("User not found with username:", username);
+      throw new Error("No account found with that username");
     }
     
     // Use signInWithPassword to securely validate credentials
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: userEmail,
+      email: userData.email,
       password: password
     });
     

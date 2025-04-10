@@ -13,9 +13,9 @@ import { useAuth } from '@/context/auth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 
-// Form schema for login
+// Form schema for login - updated to only use username
 const loginSchema = z.object({
-  identifier: z.string().min(2, { message: "Username or email is required" }),
+  username: z.string().min(2, { message: "Username is required" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
@@ -31,7 +31,7 @@ const LoginForm = () => {
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      identifier: "",
+      username: "",
       password: "",
     },
   });
@@ -41,7 +41,7 @@ const LoginForm = () => {
     setIsLoading(true);
     
     try {
-      const success = await login(data.identifier, data.password);
+      const success = await login(data.username, data.password);
       
       if (success) {
         toast({
@@ -70,15 +70,15 @@ const LoginForm = () => {
         
         <FormField
           control={form.control}
-          name="identifier"
+          name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username or Email</FormLabel>
+              <FormLabel>Username</FormLabel>
               <FormControl>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input
-                    placeholder="Enter your username or email"
+                    placeholder="Enter your username"
                     className="pl-10"
                     autoComplete="username"
                     disabled={isLoading}

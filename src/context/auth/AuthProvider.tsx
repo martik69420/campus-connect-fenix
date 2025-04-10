@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -122,20 +121,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
 
-  const login = async (identifier: string, password: string): Promise<boolean> => {
+  const login = async (username: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       setAuthError(null);
       
-      if (!identifier.trim() || !password.trim()) {
-        setAuthError("Please enter both username/email and password");
+      if (!username.trim() || !password.trim()) {
+        setAuthError("Please enter both username and password");
         return false;
       }
       
       console.log("Performing credential validation");
       
-      // Attempt to login with validation
-      const user = await loginUser(identifier, password);
+      // Attempt to login with username validation
+      const user = await loginUser(username, password);
       
       if (user) {
         setUser(user);
@@ -161,6 +160,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Keep the rest of the file unchanged
   const register = async (
     email: string,
     password: string,
