@@ -10,13 +10,14 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { DateRange } from "react-day-picker"
 
 interface DatePickerProps {
   date?: Date
   setDate: (date?: Date) => void
   mode?: "single" | "range" | "multiple"
-  selected?: Date | Date[] | undefined
-  onSelect?: (date?: Date | Date[]) => void 
+  selected?: Date | Date[] | DateRange | undefined
+  onSelect?: (date?: Date | Date[] | DateRange) => void 
   disabled?: boolean
   initialFocus?: boolean
 }
@@ -31,14 +32,23 @@ export function DatePicker({
   initialFocus,
 }: DatePickerProps) {
   // Function to handle the calendar's onSelect based on the mode
-  const handleSelect = (value: Date | Date[] | undefined) => {
+  const handleSelectSingle = (value: Date | undefined) => {
     if (onSelect) {
       onSelect(value);
     } else if (setDate) {
-      // For single mode, we know value is a Date or undefined
-      if (mode === "single") {
-        setDate(value as Date | undefined);
-      }
+      setDate(value);
+    }
+  };
+  
+  const handleSelectMultiple = (value: Date[] | undefined) => {
+    if (onSelect) {
+      onSelect(value);
+    }
+  };
+  
+  const handleSelectRange = (value: DateRange | undefined) => {
+    if (onSelect) {
+      onSelect(value);
     }
   };
 
@@ -62,7 +72,7 @@ export function DatePicker({
           <Calendar
             mode="single"
             selected={selected as Date || date}
-            onSelect={handleSelect}
+            onSelect={handleSelectSingle}
             initialFocus={initialFocus}
             disabled={disabled}
             className="pointer-events-auto"
@@ -71,8 +81,8 @@ export function DatePicker({
         {mode === "range" && (
           <Calendar
             mode="range"
-            selected={selected as Date[] || (date ? [date] : undefined)}
-            onSelect={handleSelect}
+            selected={selected as DateRange || undefined}
+            onSelect={handleSelectRange}
             initialFocus={initialFocus}
             disabled={disabled}
             className="pointer-events-auto"
@@ -82,7 +92,7 @@ export function DatePicker({
           <Calendar
             mode="multiple"
             selected={selected as Date[] || (date ? [date] : undefined)}
-            onSelect={handleSelect}
+            onSelect={handleSelectMultiple}
             initialFocus={initialFocus}
             disabled={disabled}
             className="pointer-events-auto"
