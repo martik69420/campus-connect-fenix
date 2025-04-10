@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,7 +109,7 @@ const Profile = () => {
       
       setFriendsCount(friendsCountData || 0);
       
-      // Fetch games played count
+      // Fetch games played count - fixed the table name from 'game_sessions' to 'game_history'
       const { count: gamesPlayedData } = await supabase
         .from('game_history')
         .select('*', { count: 'exact', head: true })
@@ -128,24 +129,24 @@ const Profile = () => {
     
     setLoadingFriends(true);
     try {
-      // Get friends where user is the requester
+      // Get friends where user is the requester - Fixed the relationship hint
       const { data: userFriends } = await supabase
         .from('friends')
         .select(`
           id, 
           friend_id,
-          profiles:friend_id(id, username, display_name, avatar_url)
+          profiles!friends_friend_id_fkey(id, username, display_name, avatar_url)
         `)
         .eq('user_id', user.id)
         .eq('status', 'friends');
       
-      // Get friends where user is the recipient
+      // Get friends where user is the recipient - Fixed the relationship hint
       const { data: friendsOfUser } = await supabase
         .from('friends')
         .select(`
           id, 
           user_id,
-          profiles:user_id(id, username, display_name, avatar_url)
+          profiles!friends_user_id_fkey(id, username, display_name, avatar_url)
         `)
         .eq('friend_id', user.id)
         .eq('status', 'friends');
