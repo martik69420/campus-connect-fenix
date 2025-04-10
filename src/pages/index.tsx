@@ -10,7 +10,6 @@ import { Separator } from '@/components/ui/separator';
 import AppLayout from '@/components/layout/AppLayout';
 import PostForm from '@/components/posts/PostForm';
 import PostList from '@/components/posts/PostList';
-import UserSuggestions from '@/components/users/UserSuggestions';
 import FriendsForYou from '@/components/users/FriendsForYou';
 import { Loader2, RefreshCw } from 'lucide-react';
 import AdBanner from '@/components/ads/AdBanner';
@@ -93,7 +92,7 @@ const Index = () => {
     <AppLayout>
       <div className="container mx-auto py-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Left sidebar */}
+          {/* Left sidebar - Friends For You */}
           <div className="hidden md:block">
             <Card className="sticky top-20">
               <CardContent className="p-4">
@@ -156,11 +155,28 @@ const Index = () => {
             </Tabs>
           </div>
 
-          {/* Right sidebar */}
+          {/* Right sidebar - AdBanner instead of duplicate suggestions */}
           <div className="hidden lg:block">
             <Card className="sticky top-20">
               <CardContent className="p-4">
-                <UserSuggestions />
+                <div className="mb-4">
+                  <h2 className="text-lg font-semibold">Trending Topics</h2>
+                  <p className="text-muted-foreground text-sm">What's popular right now</p>
+                </div>
+                <ul className="space-y-3">
+                  <li className="p-3 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
+                    <p className="font-medium">#StudyTips</p>
+                    <p className="text-xs text-muted-foreground">1,245 posts</p>
+                  </li>
+                  <li className="p-3 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
+                    <p className="font-medium">#CampusLife</p>
+                    <p className="text-xs text-muted-foreground">892 posts</p>
+                  </li>
+                  <li className="p-3 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
+                    <p className="font-medium">#ExamPrep</p>
+                    <p className="text-xs text-muted-foreground">654 posts</p>
+                  </li>
+                </ul>
               </CardContent>
             </Card>
           </div>
