@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import SavePostButton from './SavePostButton';
 import ReportModal from '@/components/ReportModal';
-import { ShareButton, ShareModal } from './ShareModal';
+import ShareModal, { ShareButton } from './ShareModal';
 import {
   AlertDialog,
   AlertDialogAction,
