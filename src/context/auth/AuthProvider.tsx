@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,16 +20,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [authError, setAuthError] = React.useState<string | null>(null);
-  const [authInitialized, setAuthInitialized] = React.useState(false);
+  const [sessionChecked, setSessionChecked] = React.useState(false);
 
   React.useEffect(() => {
-    // Check for existing session and set up auth state listener
+    let authListenerSubscription: { unsubscribe: () => void } | undefined;
+    
+    // Check for existing session first, then set up listener
     const initializeAuth = async () => {
       try {
         setIsLoading(true);
         
-        // Check for existing session first
+        // Check for existing session
         const { data: sessionData } = await supabase.auth.getSession();
+        
         if (sessionData.session) {
           const currentUser = await getCurrentUser();
           if (currentUser) {
@@ -48,70 +50,76 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setIsAuthenticated(false);
         }
+        
+        setSessionChecked(true);
       } catch (error) {
         console.error("Error initializing auth:", error);
         setUser(null);
         setIsAuthenticated(false);
+        setSessionChecked(true);
       } finally {
         setIsLoading(false);
-        setAuthInitialized(true);
       }
     };
 
-    // Only set up auth state listener once initialization is complete
+    // Set up auth state listener
     const setupAuthListener = () => {
-      let authListenerSubscription;
+      // Don't run this until after initial session check
+      if (!sessionChecked) return;
       
-      setTimeout(() => {
-        const { data: authListener } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log("Auth state changed:", event);
-            
-            // Avoid processing initial session event which would duplicate initialization
-            if (event === "INITIAL_SESSION") {
-              return;
-            }
-            
-            if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
-              try {
-                const currentUser = await getCurrentUser();
-                if (currentUser) {
-                  setUser(currentUser);
-                  setIsAuthenticated(true);
-                  updateOnlineStatus(currentUser.id, true);
-                } else {
-                  // User signed in but profile not found
-                  console.error("User signed in but profile not found");
-                  await supabase.auth.signOut();
-                  setUser(null);
-                  setIsAuthenticated(false);
-                  setAuthError("User profile not found. Please contact support.");
-                }
-              } catch (error) {
-                console.error("Error getting user:", error);
-                setAuthError("Error retrieving user profile");
-              }
-            } else if (event === "SIGNED_OUT") {
-              setUser(null);
-              setIsAuthenticated(false);
-            }
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+          console.log("Auth state changed:", event);
+          
+          // Skip processing for the initial session event since we already handled it
+          if (event === "INITIAL_SESSION") {
+            return;
           }
-        );
-        
-        authListenerSubscription = authListener.subscription;
-      }, 0);
+          
+          if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+            try {
+              const currentUser = await getCurrentUser();
+              if (currentUser) {
+                setUser(currentUser);
+                setIsAuthenticated(true);
+                updateOnlineStatus(currentUser.id, true);
+              } else {
+                // User signed in but profile not found
+                console.error("User signed in but profile not found");
+                await supabase.auth.signOut();
+                setUser(null);
+                setIsAuthenticated(false);
+                setAuthError("User profile not found. Please contact support.");
+              }
+            } catch (error) {
+              console.error("Error getting user:", error);
+              setAuthError("Error retrieving user profile");
+            }
+          } else if (event === "SIGNED_OUT") {
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        }
+      );
       
-      return authListenerSubscription;
+      return authListener.subscription;
     };
 
-    // Run initialization
+    // Initialize auth first
     initializeAuth();
     
-    // Only set up listener after completed initial auth check
-    let authListener;
-    if (authInitialized) {
-      authListener = setupAuthListener();
-    }
+    // Set up the listener only after we've checked the session
+    React.useEffect(() => {
+      if (sessionChecked) {
+        authListenerSubscription = setupAuthListener();
+      }
+      
+      return () => {
+        if (authListenerSubscription) {
+          authListenerSubscription.unsubscribe();
+        }
+      };
+    }, [sessionChecked]);
 
     // Update online status when window focus changes
     const handleVisibilityChange = () => {
@@ -134,12 +142,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     return () => {
-      if (authListener) {
-        authListener.unsubscribe();
+      if (authListenerSubscription) {
+        authListenerSubscription.unsubscribe();
       }
       window.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [user, authInitialized]);
+  }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
     try {

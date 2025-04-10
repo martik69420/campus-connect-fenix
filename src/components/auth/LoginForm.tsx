@@ -23,7 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, authError: contextAuthError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -50,7 +50,7 @@ const LoginForm = () => {
         });
         navigate('/', { replace: true });
       } else {
-        setLoginError("Login failed. Please check your credentials and try again.");
+        setLoginError(contextAuthError || "Login failed. Please check your credentials and try again.");
       }
     } catch (error: any) {
       setLoginError(error.message || "An error occurred during login");
