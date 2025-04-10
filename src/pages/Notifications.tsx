@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,8 +7,19 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, Check, CoinsIcon, Heart, MessageSquare, RefreshCw, UserPlus, BellOff } from 'lucide-react';
+import { Bell, Check, Heart, MessageSquare, RefreshCw, UserPlus, BellOff, Trash2, AtSign } from 'lucide-react';
 import { useNotification } from '@/context/NotificationContext';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 type Notification = {
   id: string;
@@ -69,6 +81,7 @@ const Notifications = () => {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
+        .neq('type', 'coin') // Exclude coin notifications
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -89,6 +102,41 @@ const Notifications = () => {
     setRefreshing(true);
     await fetchNotifications();
     setRefreshing(false);
+  };
+
+  const clearAllNotifications = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to manage notifications",
+          variant: "destructive"
+        });
+        return;
+      }
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', session.user.id);
+      
+      if (error) throw error;
+      
+      setNotifications([]);
+      
+      toast({
+        title: "Success",
+        description: "All notifications have been cleared",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    }
   };
 
   const markAllAsRead = async () => {
@@ -155,16 +203,22 @@ const Notifications = () => {
     }
     
     // Navigate based on notification type
-    if (notification.type === 'like' || notification.type === 'comment') {
+    if (notification.type === 'like' || notification.type === 'comment' || notification.type === 'mention') {
       // Navigate to the post
       if (notification.related_id) {
-        // In a real app, you would navigate to the specific post
-        // For now, we'll just go to the home page
+        navigate(`/posts/${notification.related_id}`);
+      } else {
         navigate('/');
       }
     } else if (notification.type === 'friend_request') {
       // Navigate to the profile page of the person who sent the request
-      // For simplicity, just go to notifications for now
+      if (notification.related_id) {
+        navigate(`/profile/${notification.related_id}`);
+      } else {
+        navigate('/friends');
+      }
+    } else if (notification.type === 'message') {
+      navigate('/messages');
     }
   };
 
@@ -175,9 +229,10 @@ const Notifications = () => {
       case 'comment':
         return <MessageSquare className="h-5 w-5 text-blue-500" />;
       case 'friend_request':
+      case 'friend':
         return <UserPlus className="h-5 w-5 text-green-500" />;
-      case 'coins':
-        return <CoinsIcon className="h-5 w-5 text-yellow-500" />;
+      case 'mention':
+        return <AtSign className="h-5 w-5 text-purple-500" />;
       default:
         return <Bell className="h-5 w-5 text-gray-500" />;
     }
@@ -254,6 +309,31 @@ const Notifications = () => {
               <Check className="h-4 w-4 mr-2" />
               Mark all as read
             </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clear All
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This action will permanently delete all your notifications. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={clearAllNotifications}>
+                    Clear All
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 

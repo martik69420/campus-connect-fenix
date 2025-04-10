@@ -9,6 +9,7 @@ import React, {
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
 import PushNotificationService from '@/services/PushNotificationService';
 
 // Define the structure of a notification
@@ -34,6 +35,7 @@ export interface NotificationContextProps {
   fetchNotifications: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   markAllAsRead: () => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
   showMessageNotifications: boolean;
   showLikeNotifications: boolean;
   showFriendNotifications: boolean;
@@ -68,14 +70,14 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   
   const pushNotificationService = PushNotificationService.getInstance();
 
-  // By default, we want to focus on coin-related notifications
+  // By default, we want to focus on friend-related notifications
   useEffect(() => {
     pushNotificationService.setAutomaticNotifications(true);
   }, []);
 
   // Calculate the number of unread and coin notifications
   const unreadCount = notifications.filter((notification) => 
-    !notification.read && (notification.type === 'coin' || notification.type === 'friend')
+    !notification.read && (notification.type === 'friend' || notification.type === 'mention')
   ).length;
 
   // Check notification permission on component mount
@@ -100,58 +102,100 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Function to fetch notifications (replace with your actual data fetching logic)
   const fetchNotifications = useCallback(async () => {
-    // Simulate fetching notifications from an API or database
-    const mockNotifications: Notification[] = [
-      {
-        id: '7',
-        type: 'coin',
-        message: 'You earned 50 coins for completing a challenge!',
-        timestamp: new Date(Date.now() - 180 * 60000).toISOString(),
-        read: false,
-      },
-      {
-        id: '8',
-        type: 'coin',
-        message: 'You earned 25 coins for daily login!',
-        timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
-        read: false,
-      },
-      {
-        id: '3',
-        type: 'friend',
-        message: 'You have a new friend request from Alice',
-        timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
-        read: false,
-        relatedId: 'user789',
-        url: '/friends',
-        sender: {
-          id: 'user789',
-          name: 'Alice Cooper',
-          avatar: 'https://i.pravatar.cc/150?u=user789',
-        }
-      },
-      {
-        id: '9',
-        type: 'coin',
-        message: 'You earned 100 coins for your first post!',
-        timestamp: new Date(Date.now() - 360 * 60000).toISOString(),
-        read: true,
-      },
-    ];
+    // Try to fetch from database if user is authenticated
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.id) {
+        const { data, error } = await supabase
+          .from('notifications')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .neq('type', 'coin') // Exclude coin notifications
+          .order('created_at', { ascending: false });
 
-    setNotifications(mockNotifications);
+        if (error) throw error;
+        
+        if (data) {
+          const formattedNotifications: Notification[] = data.map(n => ({
+            id: n.id,
+            type: n.type as any,
+            message: n.content,
+            timestamp: n.created_at,
+            read: n.is_read,
+            relatedId: n.related_id,
+            url: n.url
+          }));
+          
+          setNotifications(formattedNotifications);
+          return;
+        }
+      }
+
+      // Fallback to mock data if no authenticated user
+      const mockNotifications: Notification[] = [
+        {
+          id: '3',
+          type: 'friend',
+          message: 'You have a new friend request from Alice',
+          timestamp: new Date(Date.now() - 120 * 60000).toISOString(),
+          read: false,
+          relatedId: 'user789',
+          url: '/friends',
+          sender: {
+            id: 'user789',
+            name: 'Alice Cooper',
+            avatar: 'https://i.pravatar.cc/150?u=user789',
+          }
+        },
+        {
+          id: '4',
+          type: 'mention',
+          message: 'Alex mentioned you in a post',
+          timestamp: new Date(Date.now() - 60 * 60000).toISOString(),
+          read: false,
+          relatedId: 'post123',
+          url: '/posts/post123',
+          sender: {
+            id: 'user456',
+            name: 'Alex Johnson',
+            avatar: 'https://i.pravatar.cc/150?u=user456',
+          }
+        }
+      ];
+
+      setNotifications(mockNotifications);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      // Fall back to mock data in case of error
+      setNotifications([]);
+    }
   }, []);
 
   // Fetch notifications on component mount
   useEffect(() => {
     fetchNotifications();
 
-    // Simulate new notifications arriving every 30 seconds
-    const intervalId = setInterval(() => {
-      fetchNotifications();
-    }, 30000);
+    // Set up subscription for realtime notifications
+    const notificationsChannel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          // Refresh notifications when there's a change
+          fetchNotifications();
+        }
+      )
+      .subscribe();
 
-    return () => clearInterval(intervalId);
+    return () => {
+      supabase.removeChannel(notificationsChannel);
+    };
   }, [fetchNotifications]);
 
   // Process new notifications for push notification
@@ -159,8 +203,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     // Find unread notifications and show push notification for them
     const unreadNotifications = notifications.filter(
       notification => !notification.read && 
-        (notification.type === 'coin' || notification.type === 'friend' || 
-         (notification.type === 'message' && showMessageNotifications))
+        (notification.type === 'friend' || 
+         (notification.type === 'message' && showMessageNotifications) ||
+         (notification.type === 'mention'))
     );
     
     if (unreadNotifications.length > 0) {
@@ -169,7 +214,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       
       // Process notification based on its type and user's preferences
       const shouldShow = 
-        (latestNotification.type === 'coin') || 
+        (latestNotification.type === 'mention') || 
         (latestNotification.type === 'friend' && showFriendNotifications) ||
         (latestNotification.type === 'message' && showMessageNotifications);
         
@@ -181,32 +226,93 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Function to mark a notification as read
   const markAsRead = async (id: string) => {
-    setNotifications((prevNotifications) =>
-      prevNotifications.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
+    try {
+      // Update in database if possible
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.id) {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', id);
+      }
+      
+      // Update local state
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notification) =>
+          notification.id === id ? { ...notification, read: true } : notification
+        )
+      );
 
-    // Display a toast notification
-    const notification = notifications.find((n) => n.id === id);
-    if (notification && !notification.read) {
-      toast({
-        title: `New ${notification.type} notification`,
-        description: notification.message,
-        action: notification.url ? (
-          <ToastAction altText="View" onClick={() => navigate(notification.url || '/')}>
-            View
-          </ToastAction>
-        ) : undefined,
-      });
+      // Display a toast notification
+      const notification = notifications.find((n) => n.id === id);
+      if (notification && !notification.read) {
+        toast({
+          title: `New ${notification.type} notification`,
+          description: notification.message,
+          action: notification.url ? (
+            <ToastAction altText="View" onClick={() => navigate(notification.url || '/')}>
+              View
+            </ToastAction>
+          ) : undefined,
+        });
+      }
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
     }
   };
 
   // Function to mark all notifications as read
   const markAllAsRead = async () => {
-    setNotifications((prevNotifications) =>
-      prevNotifications.map((notification) => ({ ...notification, read: true }))
-    );
+    try {
+      // Update in database if possible
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.id) {
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('user_id', session.user.id)
+          .eq('is_read', false);
+      }
+      
+      // Update local state
+      setNotifications((prevNotifications) =>
+        prevNotifications.map((notification) => ({ ...notification, read: true }))
+      );
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+    }
+  };
+
+  // Function to clear all notifications
+  const clearAllNotifications = async () => {
+    try {
+      // Delete from database if possible
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.id) {
+        await supabase
+          .from('notifications')
+          .delete()
+          .eq('user_id', session.user.id);
+      }
+      
+      // Update local state
+      setNotifications([]);
+      
+      toast({
+        title: "Notifications cleared",
+        description: "All notifications have been removed."
+      });
+    } catch (error) {
+      console.error("Error clearing notifications:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear notifications. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   // Toggle message notifications
@@ -236,6 +342,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     fetchNotifications,
     markAsRead,
     markAllAsRead,
+    clearAllNotifications,
     showMessageNotifications,
     showLikeNotifications,
     showFriendNotifications,

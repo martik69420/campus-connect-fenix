@@ -2,14 +2,13 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, MessageSquare, Heart, Check, UserPlus, User, Megaphone, Coins, AtSign } from 'lucide-react';
+import { Bell, MessageSquare, Heart, Check, UserPlus, User, Megaphone, Trash2, AtSign } from 'lucide-react';
 import {
   DropdownMenuContent,
   DropdownMenuSeparator,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuGroup,
-  DropdownMenuShortcut,
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -18,15 +17,27 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useNotification } from '@/context/NotificationContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const NotificationMenu = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [isAlertOpen, setIsAlertOpen] = React.useState(false);
   const { 
     notifications, 
     unreadCount, 
     markAsRead, 
     markAllAsRead, 
+    clearAllNotifications,
     fetchNotifications, 
     requestNotificationPermission,
     isNotificationPermissionGranted
@@ -52,6 +63,8 @@ const NotificationMenu = () => {
       navigate(`/profile/${notification.relatedId}`);
     } else if (notification.type === 'message') {
       navigate('/messages');
+    } else if (notification.type === 'mention' && notification.relatedId) {
+      navigate(`/posts/${notification.relatedId}`);
     }
   };
   
@@ -70,6 +83,15 @@ const NotificationMenu = () => {
       });
     }
   };
+
+  const handleClearAllNotifications = () => {
+    setIsAlertOpen(true);
+  };
+
+  const confirmClearAllNotifications = async () => {
+    await clearAllNotifications();
+    setIsAlertOpen(false);
+  };
   
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -85,8 +107,6 @@ const NotificationMenu = () => {
         return <MessageSquare className="h-4 w-4 text-blue-500" />;
       case 'system':
         return <Megaphone className="h-4 w-4 text-orange-500" />;
-      case 'coin':
-        return <Coins className="h-4 w-4 text-yellow-500" />;
       default:
         return <Bell className="h-4 w-4" />;
     }
@@ -163,79 +183,107 @@ const NotificationMenu = () => {
   );
   
   return (
-    <DropdownMenuContent align="end" className="w-80">
-      <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
-        <span className="text-lg font-semibold">{t('notifications.all')}</span>
-        <div className="flex space-x-1">
-          {!isNotificationPermissionGranted && 'Notification' in window && (
+    <>
+      <DropdownMenuContent align="end" className="w-80">
+        <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
+          <span className="text-lg font-semibold">{t('notifications.all')}</span>
+          <div className="flex space-x-1">
+            {!isNotificationPermissionGranted && 'Notification' in window && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleNotificationPermission} 
+                className="h-8 text-xs"
+                title="Enable push notifications"
+              >
+                <Bell className="h-3 w-3 mr-1" />
+              </Button>
+            )}
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
+                <Check className="h-3 w-3 mr-1" />
+                {t('notifications.markAllRead')}
+              </Button>
+            )}
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="sm" 
-              onClick={handleNotificationPermission} 
+              onClick={handleClearAllNotifications} 
               className="h-8 text-xs"
-              title="Enable push notifications"
+              title="Clear all notifications"
             >
-              <Bell className="h-3 w-3 mr-1" />
+              <Trash2 className="h-3 w-3 mr-1" />
             </Button>
-          )}
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
-              <Check className="h-3 w-3 mr-1" />
-              {t('notifications.markAllRead')}
-            </Button>
-          )}
-        </div>
-      </DropdownMenuLabel>
-      
-      <ScrollArea className="h-[400px]">
-        {notifications.length > 0 ? (
-          <DropdownMenuGroup>
-            {notificationGroups.today.length > 0 && (
-              <>
-                <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
-                  Today
-                </div>
-                {notificationGroups.today.map(renderNotificationItem)}
-              </>
-            )}
-            
-            {notificationGroups.yesterday.length > 0 && (
-              <>
-                <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
-                  Yesterday
-                </div>
-                {notificationGroups.yesterday.map(renderNotificationItem)}
-              </>
-            )}
-            
-            {notificationGroups.older.length > 0 && (
-              <>
-                <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
-                  Older
-                </div>
-                {notificationGroups.older.map(renderNotificationItem)}
-              </>
-            )}
-          </DropdownMenuGroup>
-        ) : (
-          <div className="px-4 py-10 text-center">
-            <Bell className="mx-auto h-10 w-10 text-muted-foreground opacity-25 mb-3" />
-            <p className="text-sm font-medium">{t('notifications.empty')}</p>
-            <p className="text-xs text-muted-foreground mt-1">
-              You don't have any notifications yet
-            </p>
           </div>
-        )}
-      </ScrollArea>
-      
-      <DropdownMenuSeparator />
-      <DropdownMenuItem 
-        className="py-2 justify-center font-medium text-primary text-center"
-        onClick={() => navigate('/notifications')}
-      >
-        View all notifications
-      </DropdownMenuItem>
-    </DropdownMenuContent>
+        </DropdownMenuLabel>
+        
+        <ScrollArea className="h-[400px]">
+          {notifications.length > 0 ? (
+            <DropdownMenuGroup>
+              {notificationGroups.today.length > 0 && (
+                <>
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                    Today
+                  </div>
+                  {notificationGroups.today.map(renderNotificationItem)}
+                </>
+              )}
+              
+              {notificationGroups.yesterday.length > 0 && (
+                <>
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                    Yesterday
+                  </div>
+                  {notificationGroups.yesterday.map(renderNotificationItem)}
+                </>
+              )}
+              
+              {notificationGroups.older.length > 0 && (
+                <>
+                  <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
+                    Older
+                  </div>
+                  {notificationGroups.older.map(renderNotificationItem)}
+                </>
+              )}
+            </DropdownMenuGroup>
+          ) : (
+            <div className="px-4 py-10 text-center">
+              <Bell className="mx-auto h-10 w-10 text-muted-foreground opacity-25 mb-3" />
+              <p className="text-sm font-medium">{t('notifications.empty')}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                You don't have any notifications yet
+              </p>
+            </div>
+          )}
+        </ScrollArea>
+        
+        <DropdownMenuSeparator />
+        <DropdownMenuItem 
+          className="py-2 justify-center font-medium text-primary text-center"
+          onClick={() => navigate('/notifications')}
+        >
+          View all notifications
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+
+      <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will permanently delete all your notifications. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmClearAllNotifications}>
+              Clear All
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
