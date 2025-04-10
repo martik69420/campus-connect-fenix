@@ -4,7 +4,9 @@ import type { Notification as AppNotification } from '@/context/NotificationCont
 class PushNotificationService {
   private static instance: PushNotificationService;
   private isPermissionGranted = false;
-  private sendAutomaticNotifications = false; // Default to not sending automatic notifications
+  private sendAutomaticNotifications = false; 
+  private lastNotificationTime: Record<string, number> = {};
+  private notificationCooldown = 60000; // 1 minute cooldown between similar notifications
 
   private constructor() {
     this.checkPermission();
@@ -64,9 +66,32 @@ class PushNotificationService {
     }
 
     try {
+      // Create audio context for notification sound
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      
+      // Configure sound (coin sound for coin notifications)
+      if (options?.data?.type === 'coin') {
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.exponentialRampToValueAtTime(500, audioContext.currentTime + 0.2);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+      }
+      
+      // Connect nodes
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      
+      // Play sound
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.2);
+
       const notification = new window.Notification(title, {
         icon: '/favicon.ico',
         badge: '/favicon.ico',
+        vibrate: [100, 50, 100],
         ...options
       });
 
@@ -89,6 +114,16 @@ class PushNotificationService {
     if (!this.isPermissionGranted || !this.sendAutomaticNotifications) {
       return;
     }
+    
+    // Check cooldown for this notification type
+    const now = Date.now();
+    const lastShown = this.lastNotificationTime[notification.type] || 0;
+    if (now - lastShown < this.notificationCooldown) {
+      return;
+    }
+    
+    // Update last notification time
+    this.lastNotificationTime[notification.type] = now;
 
     const icon = notification.sender?.avatar || '/favicon.ico';
     const title = this.getNotificationTitle(notification);
@@ -97,6 +132,7 @@ class PushNotificationService {
     this.showNotification(title, {
       body,
       icon,
+      requireInteraction: notification.type === 'coin', // Keep coin notifications visible until user interacts
       data: {
         id: notification.id,
         type: notification.type,
@@ -121,7 +157,7 @@ class PushNotificationService {
       case 'mention':
         return `${senderName} mentioned you`;
       case 'coin':
-        return 'You earned coins!';
+        return '🎉 You earned coins!';
       case 'system':
         return 'System Notification';
       default:

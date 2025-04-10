@@ -155,31 +155,7 @@ const Index = () => {
             </Tabs>
           </div>
 
-          {/* Right sidebar - AdBanner instead of duplicate suggestions */}
-          <div className="hidden lg:block">
-            <Card className="sticky top-20">
-              <CardContent className="p-4">
-                <div className="mb-4">
-                  <h2 className="text-lg font-semibold">Trending Topics</h2>
-                  <p className="text-muted-foreground text-sm">What's popular right now</p>
-                </div>
-                <ul className="space-y-3">
-                  <li className="p-3 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                    <p className="font-medium">#StudyTips</p>
-                    <p className="text-xs text-muted-foreground">1,245 posts</p>
-                  </li>
-                  <li className="p-3 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                    <p className="font-medium">#CampusLife</p>
-                    <p className="text-xs text-muted-foreground">892 posts</p>
-                  </li>
-                  <li className="p-3 rounded-md bg-secondary/50 hover:bg-secondary/70 transition-colors">
-                    <p className="font-medium">#ExamPrep</p>
-                    <p className="text-xs text-muted-foreground">654 posts</p>
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-          </div>
+          {/* Right sidebar - Removed */}
         </div>
         
         {/* AdSense banner */}

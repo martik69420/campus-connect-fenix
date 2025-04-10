@@ -13,11 +13,11 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/context/auth"; // Fixed import path
+import { useAuth } from "@/context/auth";
 import { useLanguage } from "@/context/LanguageContext";
 import OnlineStatus from "@/components/OnlineStatus";
 import ReportModal from "@/components/ReportModal";
-import type { User } from "@/context/auth"; // Fixed import path
+import type { User } from "@/context/auth";
 import { formatDistanceToNow } from "date-fns";
 import { motion } from "framer-motion";
 
@@ -172,12 +172,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
                       {t('profile.blockProfile')}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link to="/settings" className="w-full flex items-center">
-                        <Users className="mr-2 h-4 w-4" />
-                        {t('profile.privacySettings')}
-                      </Link>
-                    </DropdownMenuItem>
+                    {/* Only show privacy settings when viewing own profile */}
+                    {isCurrentUser && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/settings" className="w-full flex items-center">
+                          <Users className="mr-2 h-4 w-4" />
+                          {t('profile.privacySettings')}
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
               )}

@@ -4,7 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, Mail, MapPin, Globe, Briefcase, Users } from 'lucide-react';
+import { CalendarIcon, Mail, MapPin, Globe, Briefcase, Users, Heart, BookmarkIcon, GamepadIcon, HashIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
@@ -25,6 +25,11 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [friendStatus, setFriendStatus] = useState<'none' | 'pending' | 'friends'>('none');
   const [friendActionLoading, setFriendActionLoading] = useState(false);
+  const [savedPosts, setSavedPosts] = useState([]);
+  const [likedPosts, setLikedPosts] = useState([]);
+  const [friendsCount, setFriendsCount] = useState(0);
+  const [gamesPlayed, setGamesPlayed] = useState(0);
+  const [profileStatsLoading, setProfileStatsLoading] = useState(true);
   
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
@@ -36,6 +41,9 @@ const Profile = () => {
       fetchProfile(username);
       if (user) {
         checkFriendStatus(username);
+        if (user.username === username) {
+          fetchUserStats();
+        }
       }
     }
   }, [username, isAuthenticated, isLoading, navigate, user]);
@@ -66,6 +74,49 @@ const Profile = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchUserStats = async () => {
+    setProfileStatsLoading(true);
+    try {
+      // Fetch saved posts count
+      const { data: savedData } = await supabase
+        .from('saved_posts')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user?.id);
+      
+      setSavedPosts(savedData || []);
+      
+      // Fetch liked posts count
+      const { data: likedData } = await supabase
+        .from('likes')
+        .select('*', { count: 'exact' })
+        .eq('user_id', user?.id);
+      
+      setLikedPosts(likedData || []);
+      
+      // Fetch friends count
+      const { count: friendsCountData } = await supabase
+        .from('friends')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'friends')
+        .or(`user_id.eq.${user?.id},friend_id.eq.${user?.id}`);
+      
+      setFriendsCount(friendsCountData || 0);
+      
+      // Fetch games played count
+      const { count: gamesPlayedData } = await supabase
+        .from('game_sessions')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', user?.id);
+      
+      setGamesPlayed(gamesPlayedData || 0);
+      
+    } catch (error) {
+      console.error("Error fetching user stats:", error);
+    } finally {
+      setProfileStatsLoading(false);
     }
   };
   
@@ -219,16 +270,70 @@ const Profile = () => {
           </motion.div>
         )}
         
+        {/* Profile Stats */}
+        {isOwnProfile && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="grid grid-cols-2 sm:grid-cols-4 gap-4"
+          >
+            <Card>
+              <CardContent className="p-4 flex flex-col items-center justify-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-2">
+                  <Heart className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-2xl font-bold">{likedPosts.length}</p>
+                <p className="text-sm text-muted-foreground">Posts Liked</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4 flex flex-col items-center justify-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-2">
+                  <BookmarkIcon className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-2xl font-bold">{savedPosts.length}</p>
+                <p className="text-sm text-muted-foreground">Posts Saved</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4 flex flex-col items-center justify-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-2">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-2xl font-bold">{friendsCount}</p>
+                <p className="text-sm text-muted-foreground">Friends</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardContent className="p-4 flex flex-col items-center justify-center">
+                <div className="rounded-full bg-primary/10 p-3 mb-2">
+                  <GamepadIcon className="h-6 w-6 text-primary" />
+                </div>
+                <p className="text-2xl font-bold">{gamesPlayed}</p>
+                <p className="text-sm text-muted-foreground">Games Played</p>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+        
         {/* Profile Tabs */}
         <Tabs defaultValue="about" className="mt-8">
-          <TabsList className="grid grid-cols-3 md:w-[400px]">
+          <TabsList className="grid grid-cols-4 md:w-[500px]">
             <TabsTrigger value="about">
               <Users className="mr-2 h-4 w-4" />
               About
             </TabsTrigger>
             <TabsTrigger value="posts">
-              <Mail className="mr-2 h-4 w-4" />
+              <HashIcon className="mr-2 h-4 w-4" />
               Posts
+            </TabsTrigger>
+            <TabsTrigger value="likes">
+              <Heart className="mr-2 h-4 w-4" />
+              Likes
             </TabsTrigger>
             <TabsTrigger value="friends">
               <Users className="mr-2 h-4 w-4" />
@@ -340,6 +445,21 @@ const Profile = () => {
               <CardContent className="p-6">
                 <h3 className="text-xl font-semibold mb-4">Posts</h3>
                 <p className="text-muted-foreground">No posts to show yet.</p>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          
+          <TabsContent value="likes" className="mt-6">
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="text-xl font-semibold mb-4">Liked Posts</h3>
+                {isOwnProfile && likedPosts.length === 0 ? (
+                  <p className="text-muted-foreground">You haven't liked any posts yet.</p>
+                ) : !isOwnProfile ? (
+                  <p className="text-muted-foreground">This section is only visible to the profile owner.</p>
+                ) : (
+                  <p className="text-muted-foreground">Loading liked posts...</p>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

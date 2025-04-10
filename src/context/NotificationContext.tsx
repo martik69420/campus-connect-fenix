@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -58,22 +59,24 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showMessageNotifications, setShowMessageNotifications] =
     useState(true);
-  const [showLikeNotifications, setShowLikeNotifications] = useState(true);
+  const [showLikeNotifications, setShowLikeNotifications] = useState(false);
   const [showFriendNotifications, setShowFriendNotifications] = useState(true);
-  const [showSystemNotifications, setShowSystemNotifications] = useState(true);
+  const [showSystemNotifications, setShowSystemNotifications] = useState(false);
   const [isNotificationPermissionGranted, setIsNotificationPermissionGranted] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
   
   const pushNotificationService = PushNotificationService.getInstance();
 
-  // By default, we don't want to send automatic notifications
+  // By default, we want to focus on coin-related notifications
   useEffect(() => {
-    pushNotificationService.setAutomaticNotifications(false);
+    pushNotificationService.setAutomaticNotifications(true);
   }, []);
 
-  // Calculate the number of unread notifications
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  // Calculate the number of unread and coin notifications
+  const unreadCount = notifications.filter((notification) => 
+    !notification.read && (notification.type === 'coin' || notification.type === 'friend')
+  ).length;
 
   // Check notification permission on component mount
   useEffect(() => {
@@ -100,17 +103,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     // Simulate fetching notifications from an API or database
     const mockNotifications: Notification[] = [
       {
-        id: '2',
-        type: 'like',
-        message: 'Your post received a like from Jane Smith',
-        timestamp: new Date(Date.now() - 60 * 60000).toISOString(),
+        id: '7',
+        type: 'coin',
+        message: 'You earned 50 coins for completing a challenge!',
+        timestamp: new Date(Date.now() - 180 * 60000).toISOString(),
         read: false,
-        relatedId: 'post456',
-        sender: {
-          id: 'user456',
-          name: 'Jane Smith',
-          avatar: 'https://i.pravatar.cc/150?u=user456',
-        }
+      },
+      {
+        id: '8',
+        type: 'coin',
+        message: 'You earned 25 coins for daily login!',
+        timestamp: new Date(Date.now() - 30 * 60000).toISOString(),
+        read: false,
       },
       {
         id: '3',
@@ -127,44 +131,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       },
       {
-        id: '4',
-        type: 'system',
-        message: 'Welcome to our platform!',
-        timestamp: new Date(Date.now() - 24 * 60 * 60000).toISOString(),
-        read: true,
-      },
-      {
-        id: '5',
-        type: 'comment',
-        message: 'Bob commented on your post',
-        timestamp: new Date(Date.now() - 45 * 60000).toISOString(),
-        read: false,
-        relatedId: 'post789',
-        sender: {
-          id: 'user555',
-          name: 'Bob Wilson',
-          avatar: 'https://i.pravatar.cc/150?u=user555',
-        }
-      },
-      {
-        id: '6',
-        type: 'mention',
-        message: 'Emily mentioned you in a comment',
-        timestamp: new Date(Date.now() - 90 * 60000).toISOString(),
-        read: false,
-        relatedId: 'post123',
-        sender: {
-          id: 'user666',
-          name: 'Emily Davis',
-          avatar: 'https://i.pravatar.cc/150?u=user666',
-        }
-      },
-      {
-        id: '7',
+        id: '9',
         type: 'coin',
-        message: 'You earned 50 coins for completing a challenge!',
-        timestamp: new Date(Date.now() - 180 * 60000).toISOString(),
-        read: false,
+        message: 'You earned 100 coins for your first post!',
+        timestamp: new Date(Date.now() - 360 * 60000).toISOString(),
+        read: true,
       },
     ];
 
@@ -186,7 +157,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   // Process new notifications for push notification
   useEffect(() => {
     // Find unread notifications and show push notification for them
-    const unreadNotifications = notifications.filter(notification => !notification.read);
+    const unreadNotifications = notifications.filter(
+      notification => !notification.read && 
+        (notification.type === 'coin' || notification.type === 'friend' || 
+         (notification.type === 'message' && showMessageNotifications))
+    );
     
     if (unreadNotifications.length > 0) {
       // Only show the most recent unread notification as a push notification
@@ -194,19 +169,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       
       // Process notification based on its type and user's preferences
       const shouldShow = 
-        (latestNotification.type === 'message' && showMessageNotifications) || 
-        (latestNotification.type === 'like' && showLikeNotifications) || 
-        (latestNotification.type === 'friend' && showFriendNotifications) || 
-        (latestNotification.type === 'system' && showSystemNotifications) ||
-        latestNotification.type === 'comment' || 
-        latestNotification.type === 'mention' || 
-        latestNotification.type === 'coin';
+        (latestNotification.type === 'coin') || 
+        (latestNotification.type === 'friend' && showFriendNotifications) ||
+        (latestNotification.type === 'message' && showMessageNotifications);
         
       if (shouldShow) {
         pushNotificationService.processNotification(latestNotification);
       }
     }
-  }, [notifications, showMessageNotifications, showLikeNotifications, showFriendNotifications, showSystemNotifications]);
+  }, [notifications, showMessageNotifications, showFriendNotifications]);
 
   // Function to mark a notification as read
   const markAsRead = async (id: string) => {
