@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User } from "./auth/types";
 import { supabase } from '@/integrations/supabase/client';
@@ -27,14 +26,15 @@ export type Post = {
 };
 
 // Define the context type
-type PostContextType = {
+export type PostContextType = {
   posts: Post[];
   addPost: (content: string) => Promise<void>;
   likePost: (postId: string) => Promise<void>;
   unlikePost: (postId: string) => Promise<void>;
   deletePost: (postId: string) => Promise<void>;
-  fetchPosts: () => Promise<void>;
+  fetchPosts: (type?: string) => Promise<void>;
   loading: boolean;
+  isLoading: boolean; // Add this line to fix the error
   createPost: (content: string, images?: string[]) => Promise<void>;
   commentOnPost: (postId: string, content: string) => Promise<void>;
   likeComment: (postId: string, commentId: string) => Promise<void>;
@@ -516,6 +516,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
       deletePost, 
       fetchPosts, 
       loading,
+      isLoading: loading, // Add this line to fix the error
       createPost,
       commentOnPost,
       likeComment,

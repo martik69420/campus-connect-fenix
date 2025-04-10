@@ -1,6 +1,13 @@
 
 import React, { useEffect, useRef } from 'react';
 
+// Add window.adsbygoogle type declaration
+declare global {
+  interface Window {
+    adsbygoogle: any[];
+  }
+}
+
 interface AdBannerProps {
   adSlot: string;
   adFormat?: string;
@@ -41,7 +48,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive="true"
-        ref={adRef as React.RefObject<HTMLModElement>}
+        ref={adRef as any}
       />
     </div>
   );

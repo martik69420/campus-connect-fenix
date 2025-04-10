@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
@@ -13,6 +14,13 @@ import UserSuggestions from '@/components/users/UserSuggestions';
 import TrendingTopics from '@/components/posts/TrendingTopics';
 import { Loader2 } from 'lucide-react';
 import AdBanner from '@/components/ads/AdBanner';
+
+// Add window.adsbygoogle type declaration if not already defined
+declare global {
+  interface Window {
+    adsbygoogle: any[];
+  }
+}
 
 const Index = () => {
   const navigate = useNavigate();
@@ -47,7 +55,7 @@ const Index = () => {
   return (
     <AppLayout>
       <div className="container mx-auto py-8">
-        {/* Update AdSense banner */}
+        {/* AdSense banner */}
         <AdBanner adSlot="5082313008" />
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -76,7 +84,11 @@ const Index = () => {
                   <TabsTrigger value="for-you">For You</TabsTrigger>
                   <TabsTrigger value="latest">Latest</TabsTrigger>
                 </TabsList>
-                <Button variant="outline" size="sm" onClick={() => fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest')}>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest')}
+                >
                   Refresh
                 </Button>
               </div>
@@ -100,7 +112,7 @@ const Index = () => {
           </div>
         </div>
         
-        {/* Update AdSense banner */}
+        {/* Second AdSense banner */}
         <AdBanner adSlot="2813542194" className="mt-8" />
       </div>
     </AppLayout>

@@ -13,6 +13,13 @@ import NotificationPermissionBanner from '@/components/notifications/Notificatio
 import { AnimatePresence } from 'framer-motion';
 import Login from './pages/Login';
 
+// Add window.adsbygoogle type declaration if not already defined
+declare global {
+  interface Window {
+    adsbygoogle: any[];
+  }
+}
+
 // Lazy load components to optimize initial load time
 const Index = lazy(() => import('./pages/Index'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -71,7 +78,7 @@ function App() {
     
     // Initialize window.adsbygoogle if not already initialized
     try {
-      (window.adsbygoogle = window.adsbygoogle || []);
+      window.adsbygoogle = window.adsbygoogle || [];
     } catch (e) {
       console.error('AdSense initialization error:', e);
     }
