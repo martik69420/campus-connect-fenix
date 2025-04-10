@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
@@ -15,7 +14,7 @@ import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, Coins, Gift, Award, Share2, Clock, Calendar, Sparkles, UserPlus, PenSquare, ThumbsUp, Star, Trophy, EyeOff, MessageCircle } from 'lucide-react';
 
 const Earn = () => {
-  const { user, updateUserData } = useAuth();
+  const { user, updateUser } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -130,7 +129,8 @@ const Earn = () => {
       
       // Update user's coins
       const updatedCoins = (user.coins || 0) + coinsToAward;
-      await updateUserData({ coins: updatedCoins });
+      // Changed from updateUserData to updateUser
+      await updateUser({ coins: updatedCoins });
       
       // Update state
       setDailyRewardClaimed(true);
@@ -570,7 +570,7 @@ const Earn = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <Badge variant="outline">100 coins</Badge>
-                            <Badge variant={dailyStreak >= 7 ? "success" : "secondary"}>
+                            <Badge variant={dailyStreak >= 7 ? "secondary" : "outline"}>
                               {dailyStreak}/7 days
                             </Badge>
                           </div>
