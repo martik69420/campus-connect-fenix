@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { useOnlineStatus } from '@/hooks/use-online-status';
+import useOnlineStatus from '@/hooks/use-online-status';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLanguage } from '@/context/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
