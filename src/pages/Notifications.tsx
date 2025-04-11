@@ -7,7 +7,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, Check, Heart, MessageSquare, RefreshCw, UserPlus, BellOff, Trash2, AtSign, X } from 'lucide-react';
+import { Bell, Check, Heart, MessageSquare, RefreshCw, UserPlus, BellOff, Trash2, AtSign, X, Loader2 } from 'lucide-react';
 import { useNotification } from '@/context/NotificationContext';
 import {
   AlertDialog,
