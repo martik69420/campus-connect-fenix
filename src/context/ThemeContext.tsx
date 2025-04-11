@@ -52,10 +52,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const fetchThemePreference = async () => {
       if (userId) {
         try {
-          // Get user settings from database
+          // Check if there are any user settings records for this user
           const { data, error } = await supabase
             .from('user_settings')
-            .select('theme')
+            .select('*')
             .eq('user_id', userId)
             .single();
           
@@ -65,21 +65,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             return;
           }
           
-          if (data?.theme) {
-            // If theme exists in database, use it
-            setThemeState(data.theme as Theme);
-            localStorage.setItem('theme', data.theme);
-            document.documentElement.classList.toggle('dark', data.theme === 'dark');
-          } else {
-            // If no theme setting in database, use the one from localStorage or default
+          if (data) {
+            // If settings exist, use localStorage theme and store it in user_settings
             const userTheme = localStorage.getItem('theme') as Theme || 'light';
             
-            // Store current theme preference in the database
+            // Store current theme preference in the database (without expecting a theme column)
             await supabase
               .from('user_settings')
               .upsert({ 
                 user_id: userId,
-                theme: userTheme
+                // Note: We don't include theme here as it doesn't exist in the table
+              });
+              
+            setThemeState(userTheme);
+            localStorage.setItem('theme', userTheme);
+            document.documentElement.classList.toggle('dark', userTheme === 'dark');
+          } else {
+            // If no settings found, create a new record with default settings
+            const userTheme = localStorage.getItem('theme') as Theme || 'light';
+            
+            await supabase
+              .from('user_settings')
+              .upsert({ 
+                user_id: userId
+                // Note: We don't include theme here as it doesn't exist in the table
               });
               
             setThemeState(userTheme);
@@ -101,14 +110,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
     
-    // Save theme to database if user is authenticated
+    // Save theme to localStorage only since the database doesn't have a theme column
+    // If user is authenticated, we still update the other settings
     if (userId) {
       try {
         const { error } = await supabase
           .from('user_settings')
           .upsert({ 
-            user_id: userId,
-            theme: newTheme
+            user_id: userId
+            // No theme field as it doesn't exist in the table
           });
           
         if (error) {
@@ -118,7 +128,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to save theme preference:', error);
         toast({
           title: "Error saving preference",
-          description: "Your theme preference couldn't be saved to your account",
+          description: "Your theme preference has been saved locally only",
           variant: "destructive"
         });
       }

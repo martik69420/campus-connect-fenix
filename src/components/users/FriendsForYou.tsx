@@ -44,10 +44,10 @@ const FriendsForYou: React.FC = () => {
           
         if (error) throw error;
         
-        // Filter out bots (if profile has a bot attribute)
-        let filteredUsers = users?.filter(u => !u.is_bot) || [];
+        // No need to filter bots since there's no is_bot field
+        let filteredUsers = users || [];
         
-        // If no real users found, fetch more with increased offset
+        // If no users found, fetch more with increased offset
         if (filteredUsers.length === 0 && users?.length) {
           setOffset(prev => prev + users.length);
           return; // Will trigger another fetch through the dependency change
