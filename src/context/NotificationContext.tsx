@@ -47,12 +47,8 @@ export interface NotificationContextProps {
   isNotificationPermissionGranted: boolean;
   enableAutomaticNotifications: (enable: boolean) => void;
   deleteNotification: (id: string) => Promise<void>;
+  isLoading: boolean; // Add the missing property
 }
-
-// Create the context with a default value
-const NotificationContext = createContext<NotificationContextProps | undefined>(
-  undefined
-);
 
 // Mock users for sender data to make it look more real
 const mockUsers = [
@@ -74,6 +70,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [showFriendNotifications, setShowFriendNotifications] = useState(true);
   const [showSystemNotifications, setShowSystemNotifications] = useState(false);
   const [isNotificationPermissionGranted, setIsNotificationPermissionGranted] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Add isLoading state
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -153,6 +150,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Function to fetch notifications (replace with your actual data fetching logic)
   const fetchNotifications = useCallback(async () => {
+    // Set loading state to true when fetching starts
+    setIsLoading(true);
+    
     // Try to fetch from database if user is authenticated
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -201,6 +201,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           }));
           
           setNotifications(formattedNotifications);
+          setIsLoading(false); // Set loading to false after data is processed
           return;
         }
       }
@@ -223,6 +224,9 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         generateRandomNotification(`error-fallback-${i}`)
       );
       setNotifications(mockNotifications);
+    } finally {
+      // Ensure loading state is set to false regardless of success or failure
+      setIsLoading(false);
     }
   }, []);
 
@@ -428,7 +432,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       requestNotificationPermission,
       isNotificationPermissionGranted,
       enableAutomaticNotifications,
-      deleteNotification
+      deleteNotification,
+      isLoading // Add isLoading to the context value
     }}>
       {children}
     </NotificationContext.Provider>
