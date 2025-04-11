@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface FriendSuggestion {
   id: string;
@@ -43,6 +44,15 @@ const FriendsForYou: React.FC = () => {
           
         if (error) throw error;
         
+        // Filter out bots (if profile has a bot attribute)
+        let filteredUsers = users?.filter(u => !u.is_bot) || [];
+        
+        // If no real users found, fetch more with increased offset
+        if (filteredUsers.length === 0 && users?.length) {
+          setOffset(prev => prev + users.length);
+          return; // Will trigger another fetch through the dependency change
+        }
+        
         // Filter out users that are already friends
         const { data: friends } = await supabase
           .from('friends')
@@ -59,13 +69,13 @@ const FriendsForYou: React.FC = () => {
           ...(friendRequests?.map(f => f.user_id) || [])
         ]);
         
-        // Add mutual friends count (simulated for now)
-        const enhancedUsers = users
-          ?.filter(u => !friendIds.has(u.id))
+        // Add mutual friends count
+        const enhancedUsers = filteredUsers
+          .filter(u => !friendIds.has(u.id))
           .map(user => ({
             ...user,
             mutual_friends: Math.floor(Math.random() * 5) + 1, // Simulate 1-5 mutual friends
-          })) || [];
+          }));
           
         setFriendSuggestions(enhancedUsers);
       } catch (error) {
@@ -130,34 +140,6 @@ const FriendsForYou: React.FC = () => {
     navigate(`/profile/${username}`);
   };
 
-  // Fallback data in case there are no suggestions from the database
-  const fallbackFriends = [
-    {
-      id: '1',
-      username: 'sarahparker',
-      display_name: 'Sarah Parker',
-      avatar_url: 'https://i.pravatar.cc/150?img=23',
-      mutual_friends: 3,
-    },
-    {
-      id: '2',
-      username: 'mikejohnson',
-      display_name: 'Mike Johnson',
-      avatar_url: 'https://i.pravatar.cc/150?img=33',
-      mutual_friends: 2,
-    },
-    {
-      id: '3',
-      username: 'annawilson',
-      display_name: 'Anna Wilson',
-      avatar_url: 'https://i.pravatar.cc/150?img=9',
-      mutual_friends: 4,
-    },
-  ];
-
-  // Use fallback data if no suggestions from database
-  const displayFriends = friendSuggestions.length > 0 ? friendSuggestions : fallbackFriends;
-
   return (
     <>
       <div className="flex items-center justify-between mb-4">
@@ -171,6 +153,8 @@ const FriendsForYou: React.FC = () => {
           onClick={fetchNewSuggestions}
           disabled={isLoading}
           className="p-1 h-8 w-8 rounded-full"
+          aria-label="Refresh suggestions"
+          title="Find new suggestions"
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
           <span className="sr-only">Refresh suggestions</span>
@@ -182,49 +166,67 @@ const FriendsForYou: React.FC = () => {
           {[1, 2, 3].map((_, index) => (
             <div key={index} className="flex justify-between items-center animate-pulse">
               <div className="flex items-center gap-2">
-                <div className="h-10 w-10 rounded-full bg-muted"></div>
+                <Skeleton className="h-10 w-10 rounded-full" />
                 <div>
-                  <div className="h-4 w-24 bg-muted rounded"></div>
-                  <div className="h-3 w-16 bg-muted rounded mt-2"></div>
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-16 mt-2" />
                 </div>
               </div>
-              <div className="h-8 w-16 bg-muted rounded"></div>
+              <Skeleton className="h-8 w-16" />
             </div>
           ))}
         </div>
       ) : (
-        <div className="space-y-4">
-          {displayFriends.map((friend, index) => (
-            <motion.div
-              key={friend.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="flex justify-between items-center"
-            >
-              <div 
-                className="flex items-center gap-2 cursor-pointer" 
-                onClick={() => handleViewProfile(friend.username)}
+        <>
+          {friendSuggestions.length > 0 ? (
+            <div className="space-y-4">
+              {friendSuggestions.map((friend, index) => (
+                <motion.div
+                  key={friend.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex justify-between items-center"
+                >
+                  <div 
+                    className="flex items-center gap-2 cursor-pointer" 
+                    onClick={() => handleViewProfile(friend.username)}
+                  >
+                    <Avatar>
+                      <AvatarImage src={friend.avatar_url || undefined} />
+                      <AvatarFallback>{friend.display_name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-sm">{friend.display_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {friend.mutual_friends} mutual friends
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <Button variant="outline" size="sm" onClick={() => handleFollow(friend.id)}>
+                    <UserPlus className="h-3.5 w-3.5 mr-1" />
+                    Connect
+                  </Button>
+                </motion.div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <Users className="h-12 w-12 text-muted-foreground mb-2 opacity-50" />
+              <p className="text-muted-foreground font-medium">No friend suggestions</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={fetchNewSuggestions}
               >
-                <Avatar>
-                  <AvatarImage src={friend.avatar_url || undefined} />
-                  <AvatarFallback>{friend.display_name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <p className="font-medium text-sm">{friend.display_name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {friend.mutual_friends} mutual friends
-                  </p>
-                </div>
-              </div>
-              
-              <Button variant="outline" size="sm" onClick={() => handleFollow(friend.id)}>
-                <UserPlus className="h-3.5 w-3.5 mr-1" />
-                Connect
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Find new suggestions
               </Button>
-            </motion.div>
-          ))}
-        </div>
+            </div>
+          )}
+        </>
       )}
       
       <div className="mt-6 text-center">

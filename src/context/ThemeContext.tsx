@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 type Theme = 'light' | 'dark';
 
@@ -19,6 +20,7 @@ const ThemeContext = createContext<ThemeContextType>({
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>('light');
   const [userId, setUserId] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Load theme from localStorage first
   useEffect(() => {
@@ -50,14 +52,42 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const fetchThemePreference = async () => {
       if (userId) {
         try {
-          // We use a local variable instead of directly accessing theme property
-          // since it doesn't exist in the database yet
-          let userTheme = localStorage.getItem('theme') as Theme || 'light';
-          setThemeState(userTheme);
-          localStorage.setItem('theme', userTheme);
-          document.documentElement.classList.toggle('dark', userTheme === 'dark');
+          // Get user settings from database
+          const { data, error } = await supabase
+            .from('user_settings')
+            .select('theme')
+            .eq('user_id', userId)
+            .single();
+          
+          if (error && error.code !== 'PGRST116') {
+            // PGRST116 is code for "no rows returned", so we'll create a new settings row below
+            console.error('Error fetching theme settings:', error);
+            return;
+          }
+          
+          if (data?.theme) {
+            // If theme exists in database, use it
+            setThemeState(data.theme as Theme);
+            localStorage.setItem('theme', data.theme);
+            document.documentElement.classList.toggle('dark', data.theme === 'dark');
+          } else {
+            // If no theme setting in database, use the one from localStorage or default
+            const userTheme = localStorage.getItem('theme') as Theme || 'light';
+            
+            // Store current theme preference in the database
+            await supabase
+              .from('user_settings')
+              .upsert({ 
+                user_id: userId,
+                theme: userTheme
+              });
+              
+            setThemeState(userTheme);
+            localStorage.setItem('theme', userTheme);
+            document.documentElement.classList.toggle('dark', userTheme === 'dark');
+          }
         } catch (error) {
-          console.error('Failed to fetch theme settings:', error);
+          console.error('Failed to fetch or store theme settings:', error);
         }
       }
     };
@@ -71,9 +101,28 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem('theme', newTheme);
     document.documentElement.classList.toggle('dark', newTheme === 'dark');
     
-    // Since the theme column doesn't exist yet in user_settings,
-    // we'll just use localStorage for now
-    // In a production app, you would alter the database to add this column
+    // Save theme to database if user is authenticated
+    if (userId) {
+      try {
+        const { error } = await supabase
+          .from('user_settings')
+          .upsert({ 
+            user_id: userId,
+            theme: newTheme
+          });
+          
+        if (error) {
+          throw error;
+        }
+      } catch (error) {
+        console.error('Failed to save theme preference:', error);
+        toast({
+          title: "Error saving preference",
+          description: "Your theme preference couldn't be saved to your account",
+          variant: "destructive"
+        });
+      }
+    }
   };
 
   const toggleTheme = async () => {

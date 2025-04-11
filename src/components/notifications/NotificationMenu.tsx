@@ -52,7 +52,20 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
     isNotificationPermissionGranted
   } = useNotification();
   
-  const { t } = useLanguage();
+  // Define fallback texts for missing translation keys
+  const notificationTexts = {
+    all: "All Notifications",
+    unread: "New",
+    empty: "No notifications",
+    markAllRead: "Mark all as read",
+    clearAll: "Clear all",
+    enable: "Enable",
+    viewAll: "View all notifications",
+    today: "Today", 
+    yesterday: "Yesterday",
+    older: "Older",
+    emptyDesc: "You don't have any notifications yet"
+  };
   
   // Refresh notifications when menu opens
   useEffect(() => {
@@ -227,7 +240,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
           {!notification.read && (
             <div className="mr-2">
               <Badge variant="secondary" className="ml-auto">
-                {t('notifications.unread')}
+                {notificationTexts.unread}
               </Badge>
             </div>
           )}
@@ -252,9 +265,9 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
   
   return (
     <>
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-[320px] sm:w-[350px]">
         <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
-          <span className="text-lg font-semibold">{t('notifications.all')}</span>
+          <span className="text-lg font-semibold">{notificationTexts.all}</span>
           <div className="flex space-x-2">
             {!isNotificationPermissionGranted && 'Notification' in window && (
               <Button 
@@ -265,13 +278,13 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
                 title="Enable push notifications"
               >
                 <Bell className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Enable</span>
+                <span className="hidden sm:inline">{notificationTexts.enable}</span>
               </Button>
             )}
             {unreadCount > 0 && (
               <Button variant="outline" size="sm" onClick={markAllAsRead} className="h-8 px-2 text-xs">
                 <Check className="h-3 w-3 mr-1" />
-                <span className="hidden sm:inline">Read All</span>
+                <span className="hidden sm:inline">{notificationTexts.markAllRead}</span>
               </Button>
             )}
             <Button 
@@ -289,7 +302,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
               ) : (
                 <Trash2 className="h-3 w-3 mr-1" />
               )}
-              <span className="hidden sm:inline">Clear</span>
+              <span className="hidden sm:inline">{notificationTexts.clearAll}</span>
             </Button>
           </div>
         </DropdownMenuLabel>
@@ -300,7 +313,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
               {notificationGroups.today.length > 0 && (
                 <>
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
-                    Today
+                    {notificationTexts.today}
                   </div>
                   {notificationGroups.today.map(renderNotificationItem)}
                 </>
@@ -309,7 +322,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
               {notificationGroups.yesterday.length > 0 && (
                 <>
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
-                    Yesterday
+                    {notificationTexts.yesterday}
                   </div>
                   {notificationGroups.yesterday.map(renderNotificationItem)}
                 </>
@@ -318,7 +331,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
               {notificationGroups.older.length > 0 && (
                 <>
                   <div className="px-3 py-2 text-xs font-medium text-muted-foreground bg-muted/30">
-                    Older
+                    {notificationTexts.older}
                   </div>
                   {notificationGroups.older.map(renderNotificationItem)}
                 </>
@@ -327,9 +340,9 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
           ) : (
             <div className="px-4 py-10 text-center">
               <Bell className="mx-auto h-10 w-10 text-muted-foreground opacity-25 mb-3" />
-              <p className="text-sm font-medium">{t('notifications.empty')}</p>
+              <p className="text-sm font-medium">{notificationTexts.empty}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                You don't have any notifications yet
+                {notificationTexts.emptyDesc}
               </p>
             </div>
           )}
@@ -343,7 +356,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
             if (onClose) onClose();
           }}
         >
-          View all notifications
+          {notificationTexts.viewAll}
         </DropdownMenuItem>
       </DropdownMenuContent>
 
