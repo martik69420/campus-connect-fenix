@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -254,30 +255,33 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuLabel className="flex justify-between items-center p-4 border-b">
           <span className="text-lg font-semibold">{t('notifications.all')}</span>
-          <div className="flex space-x-1">
+          <div className="flex space-x-2">
             {!isNotificationPermissionGranted && 'Notification' in window && (
               <Button 
                 variant="outline" 
                 size="sm" 
                 onClick={handleNotificationPermission} 
-                className="h-8 text-xs"
+                className="h-8 px-2 text-xs"
                 title="Enable push notifications"
               >
                 <Bell className="h-3 w-3 mr-1" />
+                <span className="hidden sm:inline">Enable</span>
               </Button>
             )}
             {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" onClick={markAllAsRead} className="h-8 text-xs">
+              <Button variant="outline" size="sm" onClick={markAllAsRead} className="h-8 px-2 text-xs">
                 <Check className="h-3 w-3 mr-1" />
-                {t('notifications.markAllRead')}
+                <span className="hidden sm:inline">Read All</span>
               </Button>
             )}
             <Button 
-              variant="ghost" 
+              variant="outline" 
               size="sm" 
               onClick={handleClearAllNotifications} 
-              className="h-8 text-xs"
-              title="Clear all notifications"
+              className={cn(
+                "h-8 px-2 text-xs",
+                notifications.length === 0 ? "opacity-50 cursor-not-allowed" : ""
+              )}
               disabled={isDeleting || notifications.length === 0}
             >
               {isDeleting ? (
@@ -285,6 +289,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
               ) : (
                 <Trash2 className="h-3 w-3 mr-1" />
               )}
+              <span className="hidden sm:inline">Clear</span>
             </Button>
           </div>
         </DropdownMenuLabel>
@@ -355,6 +360,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
             <AlertDialogAction 
               onClick={confirmClearAllNotifications}
               disabled={isDeleting}
+              className="bg-red-600 hover:bg-red-700"
             >
               {isDeleting ? (
                 <>

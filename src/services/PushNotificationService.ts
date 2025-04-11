@@ -31,6 +31,17 @@ class PushNotificationService {
     try {
       const permission = await Notification.requestPermission();
       this.isPermissionGranted = permission === 'granted';
+      
+      // If permission granted and service worker supported, register it
+      if (this.isPermissionGranted && 'serviceWorker' in navigator) {
+        try {
+          const registration = await navigator.serviceWorker.register('/service-worker.js');
+          console.log('Service Worker registered with scope:', registration.scope);
+        } catch (error) {
+          console.error('Service Worker registration failed:', error);
+        }
+      }
+      
       return this.isPermissionGranted;
     } catch (error) {
       console.error('Error requesting notification permission:', error);
@@ -47,6 +58,17 @@ class PushNotificationService {
     }
     
     this.isPermissionGranted = Notification.permission === 'granted';
+    
+    // Register service worker if permission is already granted
+    if (this.isPermissionGranted && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/service-worker.js')
+        .then(registration => {
+          console.log('Service Worker registered with scope:', registration.scope);
+        })
+        .catch(error => {
+          console.error('Service Worker registration failed:', error);
+        });
+    }
   }
 
   /**
@@ -127,19 +149,32 @@ class PushNotificationService {
         this.playNotificationSound(options.data.type as string);
       }
 
-      const notification = new window.Notification(title, {
-        icon: '/favicon.ico',
-        badge: '/favicon.ico',
-        ...options
-      });
+      // Try to use service worker for notification if available
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready.then(registration => {
+          registration.showNotification(title, {
+            icon: '/favicon.ico',
+            badge: '/favicon.ico',
+            vibrate: [200, 100, 200],
+            ...options
+          });
+        });
+      } else {
+        // Fallback to standard notification
+        const notification = new window.Notification(title, {
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          ...options
+        });
 
-      notification.onclick = () => {
-        window.focus();
-        notification.close();
-        if (options?.data?.url) {
-          window.location.href = options.data.url;
-        }
-      };
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+          if (options?.data?.url) {
+            window.location.href = options.data.url;
+          }
+        };
+      }
     } catch (error) {
       console.error('Error showing notification:', error);
     }
@@ -167,19 +202,31 @@ class PushNotificationService {
     const title = this.getNotificationTitle(notification);
     const body = notification.message;
     
-    this.showNotification(title, {
+    // Enhanced notification options
+    const notificationOptions: NotificationOptions = {
       body,
       icon,
-      requireInteraction: notification.type === 'mention', // Keep mention notifications visible until user interacts
+      tag: `${notification.type}-${notification.id}`, // Group similar notifications
+      requireInteraction: notification.type === 'mention' || notification.type === 'friend', // Keep important notifications visible
+      vibrate: [200, 100, 200], // Vibration pattern for mobile devices
+      badge: '/favicon.ico',
+      timestamp: Date.now(),
+      actions: this.getNotificationActions(notification),
       data: {
         id: notification.id,
         type: notification.type,
-        url: notification.url,
-        relatedId: notification.relatedId
+        url: notification.url || this.getNotificationUrl(notification),
+        relatedId: notification.relatedId,
+        timestamp: notification.timestamp
       }
-    });
+    };
+    
+    this.showNotification(title, notificationOptions);
   }
 
+  /**
+   * Get appropriate notification title based on type
+   */
   private getNotificationTitle(notification: AppNotification): string {
     const senderName = notification.sender?.name || 'Campus Connect';
     
@@ -196,8 +243,63 @@ class PushNotificationService {
         return `${senderName} mentioned you`;
       case 'system':
         return 'System Notification';
+      case 'coin':
+        return 'Coins Awarded! 🪙';
       default:
         return 'New notification';
+    }
+  }
+
+  /**
+   * Get URL based on notification type
+   */
+  private getNotificationUrl(notification: AppNotification): string {
+    switch (notification.type) {
+      case 'like':
+      case 'comment':
+        return notification.relatedId ? `/posts/${notification.relatedId}` : '/';
+      case 'friend':
+        return notification.sender?.id ? `/profile/${notification.sender.id}` : '/friends';
+      case 'message':
+        return '/messages';
+      case 'mention':
+        return notification.relatedId ? `/posts/${notification.relatedId}` : '/';
+      case 'coin':
+        return '/earn';
+      default:
+        return '/notifications';
+    }
+  }
+
+  /**
+   * Get action buttons for notifications based on type
+   */
+  private getNotificationActions(notification: AppNotification): NotificationAction[] {
+    switch (notification.type) {
+      case 'friend':
+        return [
+          {
+            action: 'accept',
+            title: 'Accept'
+          },
+          {
+            action: 'decline',
+            title: 'Decline'
+          }
+        ];
+      case 'message':
+        return [
+          {
+            action: 'reply',
+            title: 'Reply'
+          },
+          {
+            action: 'dismiss',
+            title: 'Dismiss'
+          }
+        ];
+      default:
+        return [];
     }
   }
 }

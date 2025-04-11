@@ -105,7 +105,16 @@ const Navbar = () => {
               <>
                 <DropdownMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen}>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="relative">
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="relative"
+                      onClick={() => {
+                        if (isMobile) {
+                          navigate('/notifications');
+                        }
+                      }}
+                    >
                       <Bell className="h-5 w-5" />
                       {isLoading ? (
                         <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full border-2 border-t-transparent border-primary animate-spin" />
@@ -119,7 +128,7 @@ const Navbar = () => {
                       ) : null}
                     </Button>
                   </DropdownMenuTrigger>
-                  <NotificationMenu onClose={() => setNotificationMenuOpen(false)} />
+                  {!isMobile && <NotificationMenu onClose={() => setNotificationMenuOpen(false)} />}
                 </DropdownMenu>
                 
                 <DropdownMenu>

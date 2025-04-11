@@ -100,20 +100,27 @@ self.addEventListener('push', (event) => {
     }
   }
   
+  // Improved notification styling
   const title = data.title || 'Campus Connect';
   const options = {
     body: data.body || 'You have a new notification',
     icon: data.icon || '/favicon.ico',
     badge: '/favicon.ico',
+    vibrate: [200, 100, 200], // Vibration pattern for mobile
+    tag: data.tag || 'default', // Group similar notifications
+    requireInteraction: data.requireInteraction || false, // Keep notification visible until user interacts
+    actions: data.actions || [], // Add action buttons
     data: {
       url: data.url || '/',
+      timeStamp: new Date().getTime(),
     },
+    silent: data.silent || false // Control sound
   };
   
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
-// Notification click event
+// Notification click event - improved handling
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
@@ -136,4 +143,10 @@ self.addEventListener('notificationclick', (event) => {
         }
       })
   );
+});
+
+// Handle notification close event
+self.addEventListener('notificationclose', (event) => {
+  // Analytics or logging could be added here
+  console.log('Notification closed without being clicked');
 });

@@ -14,14 +14,16 @@ import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger 
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import NotificationMenu from "@/components/notifications/NotificationMenu";
 
 const TopBar: React.FC = () => {
   const { user, logout, updateUser } = useAuth();
-  const { unreadCount } = useNotification();
+  const { unreadCount, fetchNotifications, isLoading } = useNotification();
   const { theme, toggleTheme } = useTheme();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchValue, setSearchValue] = useState("");
+  const [notificationMenuOpen, setNotificationMenuOpen] = useState(false);
 
   // Fetch user's coin balance from the database
   useEffect(() => {
@@ -56,6 +58,24 @@ const TopBar: React.FC = () => {
     
     return () => clearInterval(interval);
   }, [user?.id, user?.coins, updateUser]);
+
+  // Fetch notifications periodically
+  useEffect(() => {
+    fetchNotifications();
+    
+    const intervalId = setInterval(() => {
+      fetchNotifications();
+    }, 30000); // Every 30 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [fetchNotifications]);
+
+  // Refresh notifications when menu opens
+  useEffect(() => {
+    if (notificationMenuOpen) {
+      fetchNotifications();
+    }
+  }, [notificationMenuOpen, fetchNotifications]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -163,16 +183,36 @@ const TopBar: React.FC = () => {
           </Button>
 
           {/* Notifications */}
-          <NavLink to="/notifications" className="relative">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              {unreadCount > 0 && (
-                <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-primary text-primary-foreground">
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </Badge>
-              )}
-            </Button>
-          </NavLink>
+          <div className="relative">
+            <DropdownMenu open={notificationMenuOpen} onOpenChange={setNotificationMenuOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className={cn(
+                    "relative transition-all", 
+                    unreadCount > 0 ? "animate-pulse" : ""
+                  )}
+                >
+                  <Bell className={cn(
+                    "h-5 w-5 transition-colors",
+                    unreadCount > 0 ? "text-primary" : ""
+                  )} />
+                  {isLoading ? (
+                    <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full border-2 border-t-transparent border-primary animate-spin" />
+                  ) : unreadCount > 0 ? (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 flex items-center justify-center animate-in fade-in"
+                    >
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </Badge>
+                  ) : null}
+                </Button>
+              </DropdownMenuTrigger>
+              <NotificationMenu onClose={() => setNotificationMenuOpen(false)} />
+            </DropdownMenu>
+          </div>
 
           {/* Coins display */}
           <NavLink to="/earn" className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full hover:bg-secondary/80 transition-colors">
