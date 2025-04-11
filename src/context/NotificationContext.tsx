@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useState,
@@ -49,6 +50,11 @@ export interface NotificationContextProps {
   deleteNotification: (id: string) => Promise<void>;
   isLoading: boolean; // Add the missing property
 }
+
+// Create the context with a default value
+const NotificationContext = createContext<NotificationContextProps | undefined>(
+  undefined
+);
 
 // Mock users for sender data to make it look more real
 const mockUsers = [
