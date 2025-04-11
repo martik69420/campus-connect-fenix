@@ -60,7 +60,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [showMessageNotifications, setShowMessageNotifications] =
+  const [showMessageNotifications, setShowMessageNotifications] = 
     useState(true);
   const [showLikeNotifications, setShowLikeNotifications] = useState(false);
   const [showFriendNotifications, setShowFriendNotifications] = useState(true);
@@ -309,7 +309,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         title: "Notification deleted",
         description: "The notification has been permanently removed."
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error deleting notification:", error);
       toast({
         title: "Error",
