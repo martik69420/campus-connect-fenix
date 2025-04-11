@@ -138,10 +138,9 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
       
       // Create post - ensure we get a return value with an id
       const postData = await createPost(content, uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined);
-      const postId = postData?.id; // safely access id if it exists
       
-      // Send notifications to mentioned users
-      if (mentionedUserIds.length > 0 && user) {
+      // Send notifications to mentioned users only if post was created successfully
+      if (postData && mentionedUserIds.length > 0 && user) {
         // Create notification for each mentioned user
         for (const userId of mentionedUserIds) {
           if (userId !== user.id) { // Don't notify yourself
@@ -149,7 +148,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
               user_id: userId,
               type: 'mention',
               content: `${user.displayName || user.username} mentioned you in a post`,
-              related_id: postId, // Use the post ID if available
+              related_id: postData.id,
               is_read: false
             });
           }

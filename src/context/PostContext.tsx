@@ -35,7 +35,7 @@ export type PostContextType = {
   fetchPosts: (type?: string) => Promise<void>;
   loading: boolean;
   isLoading: boolean; // Add this line to fix the error
-  createPost: (content: string, images?: string[]) => Promise<void>;
+  createPost: (content: string, images?: string[]) => Promise<Post | null>;
   commentOnPost: (postId: string, content: string) => Promise<void>;
   likeComment: (postId: string, commentId: string) => Promise<void>;
   sharePost: (postId: string) => Promise<void>;
@@ -175,14 +175,14 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   // Function to create a post with optional images
-  const createPost = useCallback(async (content: string, images?: string[]) => {
+  const createPost = useCallback(async (content: string, images?: string[]): Promise<Post | null> => {
     if (!currentUser) {
       toast({
         title: "Not authenticated",
         description: "You must be logged in to add a post.",
         variant: "destructive",
       });
-      return;
+      return null;
     }
 
     try {
@@ -230,6 +230,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         title: "Post added",
         description: "Your post has been added successfully.",
       });
+      
+      return newPost;
     } catch (error: any) {
       console.error("Error adding post:", error.message);
       toast({
@@ -237,6 +239,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: error.message,
         variant: "destructive",
       });
+      return null;
     }
   }, [currentUser]);
 

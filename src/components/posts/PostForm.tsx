@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { usePost } from '@/context/PostContext';
@@ -54,17 +53,16 @@ const PostForm: React.FC = () => {
       
       // Create post and get the post data with ID
       const postData = await createPost(content);
-      const postId = postData?.id;
       
-      // Send notifications to mentioned users
-      if (mentionedUserIds.length > 0 && user) {
+      // Send notifications to mentioned users only if post was created successfully
+      if (postData && mentionedUserIds.length > 0 && user) {
         for (const userId of mentionedUserIds) {
           if (userId !== user.id) { // Don't notify yourself
             await supabase.from('notifications').insert({
               user_id: userId,
               type: 'mention',
               content: `${user.displayName || user.username} mentioned you in a post`,
-              related_id: postId,
+              related_id: postData.id,
               is_read: false
             });
           }
