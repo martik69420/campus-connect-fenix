@@ -3,6 +3,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Check, AtSign } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface MentionInputProps {
   value: string;
@@ -36,6 +38,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
   const popoverRef = useRef<HTMLDivElement>(null);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mentionStart, setMentionStart] = useState(0);
+  const [recentMentions, setRecentMentions] = useState<UserSuggestion[]>([]);
 
   // Get the current cursor position and text before cursor
   const getCurrentMentionQuery = () => {
@@ -63,10 +66,34 @@ const MentionInput: React.FC<MentionInputProps> = ({
     return null;
   };
 
+  // Load recent mentions from local storage
+  useEffect(() => {
+    const savedMentions = localStorage.getItem('recentMentions');
+    if (savedMentions) {
+      try {
+        setRecentMentions(JSON.parse(savedMentions));
+      } catch (e) {
+        console.error('Error parsing recent mentions:', e);
+      }
+    }
+  }, []);
+
+  // Save recent mentions to local storage
+  const saveRecentMention = (user: UserSuggestion) => {
+    const updatedMentions = [
+      user,
+      ...recentMentions.filter(m => m.id !== user.id)
+    ].slice(0, 5); // Keep only the 5 most recent mentions
+    
+    setRecentMentions(updatedMentions);
+    localStorage.setItem('recentMentions', JSON.stringify(updatedMentions));
+  };
+
   // Fetch users for suggestions
   const fetchSuggestions = async (query: string) => {
     if (query.length < 1) {
-      setSuggestions([]);
+      // Show recent mentions if query is empty
+      setSuggestions(recentMentions);
       return;
     }
     
@@ -79,7 +106,20 @@ const MentionInput: React.FC<MentionInputProps> = ({
         
       if (error) throw error;
       
-      setSuggestions(data || []);
+      // If we have results, return them
+      if (data && data.length > 0) {
+        setSuggestions(data);
+        return;
+      }
+      
+      // If no exact matches, try a more lenient search
+      const { data: fuzzyData } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
+        .limit(5);
+      
+      setSuggestions(fuzzyData || []);
     } catch (error) {
       console.error('Error fetching user suggestions:', error);
       setSuggestions([]);
@@ -194,6 +234,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
     
     onChange(newValue);
     setShowSuggestions(false);
+    saveRecentMention(user);
     
     // Set focus back to input
     setTimeout(() => {
@@ -242,40 +283,63 @@ const MentionInput: React.FC<MentionInputProps> = ({
         disabled={disabled}
       />
       
-      {showSuggestions && suggestions.length > 0 && (
-        <div 
-          ref={popoverRef}
-          className="absolute z-50 w-64 max-h-60 overflow-auto bg-popover text-popover-foreground shadow-md rounded-md border border-border"
-          style={{ 
-            top: `${position.top}px`, 
-            left: `${position.left}px`,
-          }}
-        >
-          <div className="p-1">
-            {suggestions.map((user, index) => (
-              <div
-                key={user.id}
-                className={`flex items-center space-x-2 p-2 rounded cursor-pointer ${
-                  index === selectedIndex ? 'bg-muted' : ''
-                }`}
-                onClick={() => insertMention(user)}
-                onMouseEnter={() => setSelectedIndex(index)}
-              >
-                <Avatar className="h-6 w-6">
-                  <AvatarImage src={user.avatar_url || ''} alt={user.display_name} />
-                  <AvatarFallback>
-                    {user.display_name.charAt(0)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 overflow-hidden">
-                  <p className="text-sm font-medium truncate">{user.display_name}</p>
-                  <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
-                </div>
+      <AnimatePresence>
+        {showSuggestions && suggestions.length > 0 && (
+          <motion.div 
+            ref={popoverRef}
+            initial={{ opacity: 0, y: -5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.15 }}
+            className="absolute z-50 w-64 max-h-60 overflow-auto bg-popover text-popover-foreground shadow-md rounded-md border border-border"
+            style={{ 
+              top: `${position.top}px`, 
+              left: `${position.left}px`,
+            }}
+          >
+            <div className="p-1">
+              {/* Header for the suggestion panel */}
+              <div className="px-2 py-1 text-xs font-medium text-muted-foreground flex items-center border-b mb-1">
+                <AtSign className="h-3 w-3 mr-1" />
+                {query ? `Matching "${query}"` : "Recent mentions"}
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+              
+              {suggestions.map((user, index) => (
+                <motion.div
+                  key={user.id}
+                  initial={{ backgroundColor: "transparent" }}
+                  animate={{ 
+                    backgroundColor: index === selectedIndex ? "hsl(var(--muted))" : "transparent"
+                  }}
+                  className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-muted`}
+                  onClick={() => insertMention(user)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                >
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage src={user.avatar_url || ''} alt={user.display_name} />
+                    <AvatarFallback>
+                      {user.display_name.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 overflow-hidden">
+                    <p className="text-sm font-medium truncate flex items-center justify-between">
+                      <span>{user.display_name}</span>
+                      {index === selectedIndex && <Check className="h-3 w-3 text-primary" />}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                  </div>
+                </motion.div>
+              ))}
+              
+              {suggestions.length === 0 && query && (
+                <div className="p-2 text-center text-sm text-muted-foreground">
+                  No users found matching "{query}"
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

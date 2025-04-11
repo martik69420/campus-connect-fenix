@@ -33,22 +33,16 @@ const Index = () => {
   const [latestPosts, setLatestPosts] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [loadAttempts, setLoadAttempts] = useState(0);
   const { toast } = useToast();
 
-  // Authentication check with recovery mechanism
+  // Authentication check - simplified to prevent potential loops
   useEffect(() => {
-    if (!authLoading) {
-      if (!isAuthenticated) {
-        console.log('User not authenticated, redirecting to login');
-        navigate('/login');
-      } else {
-        console.log('User authenticated:', user?.username);
-      }
+    if (!authLoading && !isAuthenticated) {
+      navigate('/login');
     }
-  }, [isAuthenticated, authLoading, navigate, user]);
+  }, [isAuthenticated, authLoading, navigate]);
 
-  // Fetch posts with error handling and retry mechanism
+  // Fetch posts with error handling - simplified to prevent recursive patterns
   const loadPosts = useCallback(async () => {
     if (isAuthenticated && user) {
       setLoadError(null);
@@ -59,7 +53,6 @@ const Index = () => {
         console.error("Error fetching posts:", error);
         setLoadError("Failed to load posts. Please try refreshing.");
         
-        // Show toast for error visibility
         toast({
           title: "Failed to load posts",
           description: "We couldn't retrieve your posts. Please try refreshing.",
@@ -69,23 +62,22 @@ const Index = () => {
     }
   }, [isAuthenticated, user, activeTab, fetchPosts, toast]);
   
-  // Initial posts loading
+  // Initial posts loading - added safety check to prevent infinite fetch
   useEffect(() => {
-    let isMounted = true;
+    let mounted = true;
     
-    if (isAuthenticated && user && !postsLoading && loadAttempts < 3) {
-      setLoadAttempts(prev => prev + 1);
+    if (isAuthenticated && user && !postsLoading && !posts.length) {
       loadPosts();
     }
     
     return () => {
-      isMounted = false;
+      mounted = false;
     };
-  }, [isAuthenticated, user, loadPosts, postsLoading, loadAttempts]);
+  }, [isAuthenticated, user, loadPosts, postsLoading, posts]);
 
   // Process posts when they're loaded
   useEffect(() => {
-    if (!postsLoading && posts) {
+    if (!postsLoading && posts.length > 0) {
       if (activeTab === 'for-you') {
         // For "For You" tab, we might prioritize posts from friends or with more engagement
         const sortedPosts = [...posts].sort((a, b) => 
@@ -122,21 +114,6 @@ const Index = () => {
       }, 600);
     }
   };
-
-  // Emergency recovery for persistent loading states
-  useEffect(() => {
-    const recoveryTimer = setTimeout(() => {
-      // If we're still loading after 10 seconds, attempt recovery
-      if ((authLoading || postsLoading) && !loadError) {
-        console.error("Detected prolonged loading state, attempting recovery");
-        setLoadError("Loading is taking longer than expected");
-        // Force refresh component state
-        setLoadAttempts(0);
-      }
-    }, 10000);
-    
-    return () => clearTimeout(recoveryTimer);
-  }, [authLoading, postsLoading, loadError]);
 
   if (authLoading) {
     return (

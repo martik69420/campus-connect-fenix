@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import AppLayout from '@/components/layout/AppLayout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { Bell, Check, Heart, MessageSquare, RefreshCw, UserPlus, BellOff, Trash2, AtSign } from 'lucide-react';
+import { Bell, Check, Heart, MessageSquare, RefreshCw, UserPlus, BellOff, Trash2, AtSign, X } from 'lucide-react';
 import { useNotification } from '@/context/NotificationContext';
 import {
   AlertDialog,
@@ -33,10 +33,12 @@ type Notification = {
 const Notifications = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { requestNotificationPermission, isNotificationPermissionGranted } = useNotification();
+  const { requestNotificationPermission, isNotificationPermissionGranted, deleteNotification } = useNotification();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [deletingIds, setDeletingIds] = useState<string[]>([]);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUserAndFetchNotifications = async () => {
@@ -58,13 +60,13 @@ const Notifications = () => {
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'notifications'
         },
-        (payload) => {
-          // Add the new notification to the list
-          setNotifications(prevNotifications => [payload.new as Notification, ...prevNotifications]);
+        () => {
+          // Refresh notifications when there's any change
+          fetchNotifications();
         }
       )
       .subscribe();
@@ -128,7 +130,7 @@ const Notifications = () => {
       
       toast({
         title: "Success",
-        description: "All notifications have been cleared",
+        description: "All notifications have been permanently deleted",
       });
     } catch (error: any) {
       toast({
@@ -171,6 +173,36 @@ const Notifications = () => {
         description: error.message,
         variant: "destructive"
       });
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      setDeletingIds(prev => [...prev, id]);
+      
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setNotifications(notifications.filter(n => n.id !== id));
+      setConfirmDeleteId(null);
+      
+      toast({
+        title: "Notification deleted",
+        description: "The notification has been permanently removed"
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setDeletingIds(prev => prev.filter(itemId => itemId !== id));
     }
   };
 
@@ -323,7 +355,7 @@ const Notifications = () => {
                 <AlertDialogHeader>
                   <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    This action will permanently delete all your notifications. This cannot be undone.
+                    This action will permanently delete all your notifications from the database. This cannot be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
@@ -360,35 +392,87 @@ const Notifications = () => {
           </div>
         ) : notifications.length > 0 ? (
           <div className="space-y-4">
-            {notifications.map((notification, index) => (
-              <motion.div
-                key={notification.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                className={`
-                  flex items-start space-x-4 p-4 border rounded-lg cursor-pointer 
-                  ${notification.is_read ? 'bg-background' : 'bg-secondary'}
-                  transition-colors duration-200 hover:border-primary/30
-                `}
-                onClick={() => handleNotificationClick(notification)}
-              >
-                <div className="rounded-full bg-muted p-2">
-                  {getNotificationIcon(notification.type)}
-                </div>
-                <div className="flex-1">
-                  <p className={`${notification.is_read ? 'text-foreground' : 'text-foreground font-medium'}`}>
-                    {notification.content}
-                  </p>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {formatDate(notification.created_at)}
-                  </p>
-                </div>
-                {!notification.is_read && (
-                  <div className="w-2 h-2 rounded-full bg-primary" />
-                )}
-              </motion.div>
-            ))}
+            <AnimatePresence>
+              {notifications.map((notification) => (
+                <motion.div
+                  key={notification.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className={`
+                    flex items-start space-x-4 p-4 border rounded-lg 
+                    ${notification.is_read ? 'bg-background' : 'bg-secondary'}
+                    transition-colors duration-200 hover:border-primary/30
+                    relative group
+                  `}
+                >
+                  <div 
+                    className="flex-1 flex items-start space-x-4 cursor-pointer"
+                    onClick={() => handleNotificationClick(notification)}
+                  >
+                    <div className="rounded-full bg-muted p-2">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1">
+                      <p className={`${notification.is_read ? 'text-foreground' : 'text-foreground font-medium'}`}>
+                        {notification.content}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {formatDate(notification.created_at)}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {/* Delete button */}
+                  <div className="flex items-center space-x-2">
+                    {!notification.is_read && (
+                      <div className="w-2 h-2 rounded-full bg-primary mr-2" />
+                    )}
+                    <AlertDialog open={confirmDeleteId === notification.id} onOpenChange={(open) => {
+                      if (!open) setConfirmDeleteId(null);
+                    }}>
+                      <AlertDialogTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteId(notification.id);
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete notification?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This notification will be permanently removed from the database.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => handleDeleteNotification(notification.id)}
+                            disabled={deletingIds.includes(notification.id)}
+                          >
+                            {deletingIds.includes(notification.id) ? (
+                              <>
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                Deleting...
+                              </>
+                            ) : 'Delete'}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         ) : (
           <div className="text-center py-12">

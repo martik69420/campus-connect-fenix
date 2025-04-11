@@ -47,6 +47,7 @@ export interface NotificationContextProps {
   requestNotificationPermission: () => Promise<boolean>;
   isNotificationPermissionGranted: boolean;
   enableAutomaticNotifications: (enable: boolean) => void;
+  deleteNotification: (id: string) => Promise<void>;
 }
 
 // Create the context with a default value
@@ -111,7 +112,6 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           .from('notifications')
           .select('*')
           .eq('user_id', session.user.id)
-          .neq('type', 'coin') // Exclude coin notifications
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -167,7 +167,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       setNotifications(mockNotifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      // Fall back to mock data in case of error
+      // Fall back to empty array in case of error
       setNotifications([]);
     }
   }, []);
@@ -285,6 +285,40 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
+  // Function to delete a single notification
+  const deleteNotification = async (id: string) => {
+    try {
+      // Delete from database if possible
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user?.id) {
+        const { error } = await supabase
+          .from('notifications')
+          .delete()
+          .eq('id', id);
+          
+        if (error) throw error;
+      }
+      
+      // Update local state
+      setNotifications((prevNotifications) =>
+        prevNotifications.filter((notification) => notification.id !== id)
+      );
+      
+      toast({
+        title: "Notification deleted",
+        description: "The notification has been permanently removed."
+      });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete notification. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Function to clear all notifications
   const clearAllNotifications = async () => {
     try {
@@ -292,10 +326,12 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       const { data: { session } } = await supabase.auth.getSession();
       
       if (session?.user?.id) {
-        await supabase
+        const { error } = await supabase
           .from('notifications')
           .delete()
           .eq('user_id', session.user.id);
+          
+        if (error) throw error;
       }
       
       // Update local state
@@ -303,7 +339,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       
       toast({
         title: "Notifications cleared",
-        description: "All notifications have been removed."
+        description: "All notifications have been permanently removed."
       });
     } catch (error) {
       console.error("Error clearing notifications:", error);
@@ -353,7 +389,8 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     toggleSystemNotifications,
     requestNotificationPermission,
     isNotificationPermissionGranted,
-    enableAutomaticNotifications
+    enableAutomaticNotifications,
+    deleteNotification
   };
 
   return (

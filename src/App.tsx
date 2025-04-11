@@ -1,5 +1,5 @@
 
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './context/auth';
 import { PostProvider } from './context/PostContext';
@@ -34,52 +34,20 @@ const NavigationHandler = ({ children }: { children: React.ReactNode }) => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Handle navigation issues by tracking page loads
-  useEffect(() => {
-    let navigationTimeout: NodeJS.Timeout;
-    let isMounted = true;
+  // Clean up navigation state tracking - simplified approach to prevent timeout loops
+  useState(() => {
+    console.log(`Navigation to: ${location.pathname}`);
     
-    // Mark start of navigation
-    setIsLoading(true);
+    // If we're on the home page, make sure we don't have any navigation issues
+    if (location.pathname === '/') {
+      // Clear any stale navigation state
+      window.sessionStorage.removeItem('navigationAttempts');
+    }
     
-    // Set up navigation timeout detection with an even shorter timeout
-    navigationTimeout = setTimeout(() => {
-      if (isMounted) {
-        console.error('Navigation timeout detected, attempting recovery for path:', location.pathname);
-        
-        // Clear loading state first
-        setIsLoading(false);
-        
-        // Force refresh the current location to recover from any broken state
-        try {
-          window.history.replaceState({}, '', location.pathname);
-          navigate(location.pathname, { replace: true });
-        } catch (err) {
-          console.error('Navigation recovery failed:', err);
-          // If navigation fails completely, redirect to home as a last resort
-          navigate('/', { replace: true });
-        }
-      }
-    }, 2000); // Reduced further from 3000ms to 2000ms for faster recovery
-    
-    // Clear loading state when component updates/unmounts
-    const clearLoadingState = () => {
-      if (isMounted) {
-        setIsLoading(false);
-        clearTimeout(navigationTimeout);
-      }
-    };
-    
-    // Use a shorter timeout to mark a successful navigation
-    const successTimeout = setTimeout(clearLoadingState, 800);
-    
-    // Clean up all timeouts when component unmounts or location changes
     return () => {
-      isMounted = false;
-      clearTimeout(navigationTimeout);
-      clearTimeout(successTimeout);
+      console.log(`Navigation complete: ${location.pathname}`);
     };
-  }, [location.pathname, navigate]);
+  });
   
   return <>{children}</>;
 };

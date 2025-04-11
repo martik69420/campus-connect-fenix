@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, MessageSquare, Heart, Check, UserPlus, User, Megaphone, Trash2, AtSign } from 'lucide-react';
+import { Bell, MessageSquare, Heart, Check, UserPlus, User, Megaphone, Trash2, AtSign, X } from 'lucide-react';
 import {
   DropdownMenuContent,
   DropdownMenuSeparator,
@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { cn } from "@/lib/utils";
 
 const NotificationMenu = () => {
   const navigate = useNavigate();
@@ -38,6 +39,7 @@ const NotificationMenu = () => {
     markAsRead, 
     markAllAsRead, 
     clearAllNotifications,
+    deleteNotification,
     fetchNotifications, 
     requestNotificationPermission,
     isNotificationPermissionGranted
@@ -92,6 +94,11 @@ const NotificationMenu = () => {
     await clearAllNotifications();
     setIsAlertOpen(false);
   };
+
+  const handleDeleteNotification = async (e: React.MouseEvent, id: string) => {
+    e.stopPropagation(); // Prevent notification click event
+    await deleteNotification(id);
+  };
   
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -145,7 +152,10 @@ const NotificationMenu = () => {
   const renderNotificationItem = (notification: any) => (
     <DropdownMenuItem
       key={notification.id}
-      className={`flex items-start p-3 cursor-pointer ${!notification.read ? 'bg-muted/60' : ''}`}
+      className={cn(
+        "flex items-start p-3 cursor-pointer group", 
+        !notification.read ? 'bg-muted/60' : ''
+      )}
       onClick={() => handleNotificationClick(notification)}
     >
       <div className="flex gap-3 w-full">
@@ -171,13 +181,24 @@ const NotificationMenu = () => {
           </p>
         </div>
         
-        {!notification.read && (
-          <div className="ml-2 flex-shrink-0">
-            <Badge variant="secondary" className="ml-auto">
-              {t('notifications.unread')}
-            </Badge>
-          </div>
-        )}
+        <div className="flex items-center">
+          {!notification.read && (
+            <div className="mr-2">
+              <Badge variant="secondary" className="ml-auto">
+                {t('notifications.unread')}
+              </Badge>
+            </div>
+          )}
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+            onClick={(e) => handleDeleteNotification(e, notification.id)}
+          >
+            <X className="h-3 w-3" />
+            <span className="sr-only">Delete notification</span>
+          </Button>
+        </div>
       </div>
     </DropdownMenuItem>
   );
@@ -272,7 +293,7 @@ const NotificationMenu = () => {
           <AlertDialogHeader>
             <AlertDialogTitle>Clear all notifications?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action will permanently delete all your notifications. This cannot be undone.
+              This action will permanently delete all your notifications from the database. This cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
