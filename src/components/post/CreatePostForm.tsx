@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -137,8 +136,9 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
       // Find all mentioned users
       const mentionedUserIds = await processMentions(content);
       
-      // Create post
+      // Create post - ensure we get a return value with an id
       const postData = await createPost(content, uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined);
+      const postId = postData?.id; // safely access id if it exists
       
       // Send notifications to mentioned users
       if (mentionedUserIds.length > 0 && user) {
@@ -149,7 +149,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
               user_id: userId,
               type: 'mention',
               content: `${user.displayName || user.username} mentioned you in a post`,
-              related_id: postData?.id, // Use the post ID if available
+              related_id: postId, // Use the post ID if available
               is_read: false
             });
           }

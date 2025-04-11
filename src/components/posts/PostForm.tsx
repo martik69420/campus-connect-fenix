@@ -52,22 +52,19 @@ const PostForm: React.FC = () => {
       // Find all mentioned users
       const mentionedUserIds = await processMentions(content);
       
-      // Create post
-      await createPost(content);
+      // Create post and get the post data with ID
+      const postData = await createPost(content);
+      const postId = postData?.id;
       
       // Send notifications to mentioned users
       if (mentionedUserIds.length > 0 && user) {
-        // We'd typically get the post ID here, but for now we'll skip that
-        // In a real implementation, the createPost function would return the post ID
-        
-        // Create notification for each mentioned user
         for (const userId of mentionedUserIds) {
           if (userId !== user.id) { // Don't notify yourself
             await supabase.from('notifications').insert({
               user_id: userId,
               type: 'mention',
               content: `${user.displayName || user.username} mentioned you in a post`,
-              related_id: null, // Ideally we'd have the post ID here
+              related_id: postId,
               is_read: false
             });
           }

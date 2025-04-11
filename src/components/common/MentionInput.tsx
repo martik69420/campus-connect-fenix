@@ -298,7 +298,9 @@ const MentionInput: React.FC<MentionInputProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-64 max-h-60 overflow-auto bg-popover text-popover-foreground shadow-lg rounded-lg border border-border"
+            className={`absolute z-50 overflow-auto bg-popover text-popover-foreground shadow-lg rounded-lg border border-border max-h-60 ${
+              isMobile ? 'mention-suggestions-mobile' : 'mention-suggestions-desktop'
+            }`}
             style={{ 
               top: `${position.top}px`, 
               left: `${position.left}px`,

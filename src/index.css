@@ -58,7 +58,7 @@
     @apply bg-background text-foreground;
   }
   
-  /* Mobile specific padding adjustments */
+  /* Responsive layout adjustments */
   @media (max-width: 768px) {
     body {
       padding-bottom: 4rem; /* Add padding for mobile bottom nav */
@@ -67,13 +67,6 @@
     .container {
       padding-left: 1rem;
       padding-right: 1rem;
-    }
-    
-    /* Mentions suggestions positioning for mobile */
-    .mention-suggestions-mobile {
-      max-width: 90vw !important;
-      left: 50% !important;
-      transform: translateX(-50%) !important;
     }
   }
 }
@@ -91,5 +84,26 @@
   /* Twitter-like mention highlights */
   .mention-highlight {
     @apply text-primary font-medium;
+  }
+  
+  /* Mention suggestions positioning */
+  .mention-suggestions {
+    @apply absolute z-50 w-64 max-h-60 overflow-auto bg-popover text-popover-foreground shadow-lg rounded-lg border border-border;
+  }
+  
+  /* Mobile-specific mention suggestions */
+  @media (max-width: 768px) {
+    .mention-suggestions-mobile {
+      max-width: 90vw !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+    }
+  }
+  
+  /* Desktop-specific mention suggestions */
+  @media (min-width: 769px) {
+    .mention-suggestions-desktop {
+      min-width: 280px;
+    }
   }
 }
