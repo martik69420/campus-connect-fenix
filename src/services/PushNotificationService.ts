@@ -155,6 +155,7 @@ class PushNotificationService {
           registration.showNotification(title, {
             icon: '/favicon.ico',
             badge: '/favicon.ico',
+            // TypeScript now recognizes these properties with our extended interface
             vibrate: [200, 100, 200],
             ...options
           });
