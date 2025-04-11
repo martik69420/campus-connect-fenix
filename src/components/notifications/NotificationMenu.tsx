@@ -29,7 +29,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 
-const NotificationMenu = () => {
+interface NotificationMenuProps {
+  onClose?: () => void;
+}
+
+const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
@@ -57,16 +61,22 @@ const NotificationMenu = () => {
     // Navigate based on notification type and url
     if (notification.url) {
       navigate(notification.url);
+      if (onClose) onClose();
     } else if (notification.relatedId && notification.type === 'like') {
       navigate(`/posts/${notification.relatedId}`);
+      if (onClose) onClose();
     } else if (notification.relatedId && notification.type === 'comment') {
       navigate(`/posts/${notification.relatedId}`);
+      if (onClose) onClose();
     } else if (notification.relatedId && notification.type === 'friend') {
       navigate(`/profile/${notification.relatedId}`);
+      if (onClose) onClose();
     } else if (notification.type === 'message') {
       navigate('/messages');
+      if (onClose) onClose();
     } else if (notification.type === 'mention' && notification.relatedId) {
       navigate(`/posts/${notification.relatedId}`);
+      if (onClose) onClose();
     }
   };
   
@@ -93,11 +103,19 @@ const NotificationMenu = () => {
   const confirmClearAllNotifications = async () => {
     await clearAllNotifications();
     setIsAlertOpen(false);
+    toast({
+      title: "Success",
+      description: "All notifications cleared",
+    });
   };
 
   const handleDeleteNotification = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation(); // Prevent notification click event
     await deleteNotification(id);
+    toast({
+      title: "Success",
+      description: "Notification deleted",
+    });
   };
   
   const getNotificationIcon = (type: string) => {
@@ -282,7 +300,10 @@ const NotificationMenu = () => {
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="py-2 justify-center font-medium text-primary text-center"
-          onClick={() => navigate('/notifications')}
+          onClick={() => {
+            navigate('/notifications');
+            if (onClose) onClose();
+          }}
         >
           View all notifications
         </DropdownMenuItem>

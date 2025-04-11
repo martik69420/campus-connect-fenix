@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -30,9 +30,20 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { unreadCount } = useNotification();
+  const { unreadCount, fetchNotifications } = useNotification();
   const [notificationMenuOpen, setNotificationMenuOpen] = React.useState(false);
   const isMobile = useIsMobile();
+  
+  // Fetch notifications when navbar mounts and when notification menu opens
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
+    if (notificationMenuOpen) {
+      fetchNotifications();
+    }
+  }, [notificationMenuOpen, fetchNotifications]);
   
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Home', path: '/' },
@@ -96,7 +107,7 @@ const Navbar = () => {
                       )}
                     </Button>
                   </DropdownMenuTrigger>
-                  <NotificationMenu />
+                  <NotificationMenu onClose={() => setNotificationMenuOpen(false)} />
                 </DropdownMenu>
                 
                 <DropdownMenu>
