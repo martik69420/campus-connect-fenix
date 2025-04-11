@@ -42,20 +42,25 @@ const NavigationHandler = ({ children }: { children: React.ReactNode }) => {
     // Mark start of navigation
     setIsLoading(true);
     
-    // Set up navigation timeout detection with a shorter timeout
+    // Set up navigation timeout detection with an even shorter timeout
     navigationTimeout = setTimeout(() => {
       if (isMounted) {
-        console.log('Navigation timeout detected, attempting recovery for path:', location.pathname);
+        console.error('Navigation timeout detected, attempting recovery for path:', location.pathname);
         
         // Clear loading state first
         setIsLoading(false);
         
         // Force refresh the current location to recover from any broken state
-        // Use a more direct approach to reset the route
-        window.history.replaceState({}, '', location.pathname);
-        navigate(location.pathname, { replace: true });
+        try {
+          window.history.replaceState({}, '', location.pathname);
+          navigate(location.pathname, { replace: true });
+        } catch (err) {
+          console.error('Navigation recovery failed:', err);
+          // If navigation fails completely, redirect to home as a last resort
+          navigate('/', { replace: true });
+        }
       }
-    }, 3000); // Reduced from 5000ms to 3000ms
+    }, 2000); // Reduced further from 3000ms to 2000ms for faster recovery
     
     // Clear loading state when component updates/unmounts
     const clearLoadingState = () => {
@@ -66,7 +71,7 @@ const NavigationHandler = ({ children }: { children: React.ReactNode }) => {
     };
     
     // Use a shorter timeout to mark a successful navigation
-    const successTimeout = setTimeout(clearLoadingState, 1000);
+    const successTimeout = setTimeout(clearLoadingState, 800);
     
     // Clean up all timeouts when component unmounts or location changes
     return () => {

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
 import { usePost } from '@/context/PostContext';
@@ -11,10 +11,11 @@ import AppLayout from '@/components/layout/AppLayout';
 import PostForm from '@/components/posts/PostForm';
 import PostList from '@/components/posts/PostList';
 import FriendsForYou from '@/components/users/FriendsForYou';
-import { Loader2, RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
 import AdBanner from '@/components/ads/AdBanner';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 // Add window.adsbygoogle type declaration if not already defined
 declare global {
@@ -32,38 +33,55 @@ const Index = () => {
   const [latestPosts, setLatestPosts] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempts, setLoadAttempts] = useState(0);
+  const { toast } = useToast();
 
-  // Authentication check
+  // Authentication check with recovery mechanism
   useEffect(() => {
-    if (!authLoading && !isAuthenticated) {
-      navigate('/login');
+    if (!authLoading) {
+      if (!isAuthenticated) {
+        console.log('User not authenticated, redirecting to login');
+        navigate('/login');
+      } else {
+        console.log('User authenticated:', user?.username);
+      }
     }
-  }, [isAuthenticated, authLoading, navigate]);
+  }, [isAuthenticated, authLoading, navigate, user]);
 
-  // Fetch posts with error handling
+  // Fetch posts with error handling and retry mechanism
+  const loadPosts = useCallback(async () => {
+    if (isAuthenticated && user) {
+      setLoadError(null);
+      try {
+        console.log(`Fetching ${activeTab === 'for-you' ? 'feed' : 'latest'} posts`);
+        await fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
+      } catch (error) {
+        console.error("Error fetching posts:", error);
+        setLoadError("Failed to load posts. Please try refreshing.");
+        
+        // Show toast for error visibility
+        toast({
+          title: "Failed to load posts",
+          description: "We couldn't retrieve your posts. Please try refreshing.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [isAuthenticated, user, activeTab, fetchPosts, toast]);
+  
+  // Initial posts loading
   useEffect(() => {
     let isMounted = true;
     
-    const loadPosts = async () => {
-      if (isAuthenticated && user) {
-        setLoadError(null);
-        try {
-          await fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
-        } catch (error) {
-          console.error("Error fetching posts:", error);
-          if (isMounted) {
-            setLoadError("Failed to load posts. Please try refreshing.");
-          }
-        }
-      }
-    };
-    
-    loadPosts();
+    if (isAuthenticated && user && !postsLoading && loadAttempts < 3) {
+      setLoadAttempts(prev => prev + 1);
+      loadPosts();
+    }
     
     return () => {
       isMounted = false;
     };
-  }, [isAuthenticated, user, activeTab, fetchPosts]);
+  }, [isAuthenticated, user, loadPosts, postsLoading, loadAttempts]);
 
   // Process posts when they're loaded
   useEffect(() => {
@@ -104,6 +122,21 @@ const Index = () => {
       }, 600);
     }
   };
+
+  // Emergency recovery for persistent loading states
+  useEffect(() => {
+    const recoveryTimer = setTimeout(() => {
+      // If we're still loading after 10 seconds, attempt recovery
+      if ((authLoading || postsLoading) && !loadError) {
+        console.error("Detected prolonged loading state, attempting recovery");
+        setLoadError("Loading is taking longer than expected");
+        // Force refresh component state
+        setLoadAttempts(0);
+      }
+    }, 10000);
+    
+    return () => clearTimeout(recoveryTimer);
+  }, [authLoading, postsLoading, loadError]);
 
   if (authLoading) {
     return (
@@ -169,8 +202,9 @@ const Index = () => {
               </div>
               
               {loadError && (
-                <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
-                  {loadError}
+                <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  <span className="flex-1">{loadError}</span>
                   <Button 
                     variant="outline" 
                     size="sm" 
