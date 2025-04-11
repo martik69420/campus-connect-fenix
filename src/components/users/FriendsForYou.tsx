@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Users, UserPlus, ArrowRight } from 'lucide-react';
+import { Users, UserPlus, ArrowRight, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,8 @@ interface FriendSuggestion {
 const FriendsForYou: React.FC = () => {
   const [friendSuggestions, setFriendSuggestions] = useState<FriendSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to trigger refetches
+  const [offset, setOffset] = useState(0); // Add pagination offset for fetching new suggestions
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -31,11 +33,12 @@ const FriendsForYou: React.FC = () => {
       try {
         setIsLoading(true);
         
-        // Get friend suggestions based on mutual connections
+        // Get friend suggestions based on mutual connections with pagination
         const { data: users, error } = await supabase
           .from('profiles')
           .select('*')
           .neq('id', user.id)
+          .range(offset, offset + 4) // Fetch 5 users at a time
           .limit(5);
           
         if (error) throw error;
@@ -73,7 +76,7 @@ const FriendsForYou: React.FC = () => {
     };
     
     fetchFriendSuggestions();
-  }, [user?.id]);
+  }, [user?.id, refreshKey, offset]);
 
   const handleFollow = async (userId: string) => {
     if (!user?.id) return;
@@ -93,7 +96,13 @@ const FriendsForYou: React.FC = () => {
       });
       
       // Remove user from suggestions
-      setFriendSuggestions(prev => prev.filter(u => u.id !== userId));
+      const updatedSuggestions = friendSuggestions.filter(u => u.id !== userId);
+      setFriendSuggestions(updatedSuggestions);
+      
+      // If all friends are added, fetch new suggestions
+      if (updatedSuggestions.length === 0) {
+        fetchNewSuggestions();
+      }
     } catch (error: any) {
       toast({
         title: "Failed to send request",
@@ -101,6 +110,20 @@ const FriendsForYou: React.FC = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const fetchNewSuggestions = () => {
+    // Increase offset to get new users
+    setOffset(prev => prev + 5);
+    // Reset suggestions while loading
+    setFriendSuggestions([]);
+    // Trigger refetch
+    setRefreshKey(prev => prev + 1);
+    // Show toast
+    toast({
+      title: "Finding new friends",
+      description: "Loading new friend suggestions for you"
+    });
   };
 
   const handleViewProfile = (username: string) => {
@@ -142,6 +165,16 @@ const FriendsForYou: React.FC = () => {
           <Users className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Friends For You</h2>
         </div>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={fetchNewSuggestions}
+          disabled={isLoading}
+          className="p-1 h-8 w-8 rounded-full"
+        >
+          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          <span className="sr-only">Refresh suggestions</span>
+        </Button>
       </div>
       
       {isLoading ? (
