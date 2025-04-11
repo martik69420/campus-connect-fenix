@@ -17,6 +17,7 @@ import {
   User, 
   Settings, 
   LogOut,
+  Gamepad
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/auth';
@@ -30,7 +31,7 @@ const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
-  const { unreadCount, fetchNotifications } = useNotification();
+  const { unreadCount, fetchNotifications, isLoading } = useNotification();
   const [notificationMenuOpen, setNotificationMenuOpen] = React.useState(false);
   const isMobile = useIsMobile();
   
@@ -56,6 +57,7 @@ const Navbar = () => {
   const navItems = [
     { icon: <Home className="h-5 w-5" />, label: 'Home', path: '/' },
     { icon: <MessageSquare className="h-5 w-5" />, label: 'Messages', path: '/messages' },
+    { icon: <Gamepad className="h-5 w-5" />, label: 'Games', path: '/games' },
   ];
   
   const handleLogout = () => {
@@ -105,14 +107,16 @@ const Navbar = () => {
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="relative">
                       <Bell className="h-5 w-5" />
-                      {unreadCount > 0 && (
+                      {isLoading ? (
+                        <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full border-2 border-t-transparent border-primary animate-spin" />
+                      ) : unreadCount > 0 ? (
                         <Badge 
                           variant="destructive" 
                           className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 flex items-center justify-center"
                         >
                           {unreadCount > 9 ? '9+' : unreadCount}
                         </Badge>
-                      )}
+                      ) : null}
                     </Button>
                   </DropdownMenuTrigger>
                   <NotificationMenu onClose={() => setNotificationMenuOpen(false)} />

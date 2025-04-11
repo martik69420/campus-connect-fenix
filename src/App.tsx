@@ -86,10 +86,9 @@ function App() {
                           <Route path="/earn" element={<Earn />} />
                           <Route path="/leaderboard" element={<Leaderboard />} />
                           <Route path="/games" element={<Games />} />
-                          <Route path="/games/snake" element={<Snake />} />
-                          <Route path="/games/trivia" element={<Trivia />} />
+                          <Route path="/snake" element={<Snake />} />
+                          <Route path="/trivia" element={<Trivia />} />
                           <Route path="/table" element={<Table />} />
-                          <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>
                     </NavigationHandler>
