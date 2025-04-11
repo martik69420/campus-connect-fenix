@@ -1,4 +1,3 @@
-
 import React, {
   createContext,
   useState,
@@ -85,7 +84,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     pushNotificationService.setAutomaticNotifications(true);
   }, []);
 
-  // Calculate the number of unread notifications
+  // Calculate the number of unread notifications correctly
   const unreadCount = notifications.filter((notification) => 
     !notification.read
   ).length;
@@ -326,7 +325,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Function to delete a single notification
+  // Function to delete a single notification - updated to properly handle database deletion
   const deleteNotification = async (id: string) => {
     try {
       // Delete from database if possible
@@ -338,7 +337,10 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           .delete()
           .eq('id', id);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Database error deleting notification:", error);
+          throw error;
+        }
       }
       
       // Update local state
@@ -352,10 +354,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
         description: "Failed to delete notification. Please try again.",
         variant: "destructive"
       });
+      throw error; // Re-throw to allow handling in the component
     }
   };
 
-  // Function to clear all notifications
+  // Function to clear all notifications - updated to properly delete from database
   const clearAllNotifications = async () => {
     try {
       // Delete from database if possible
@@ -367,18 +370,22 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
           .delete()
           .eq('user_id', session.user.id);
           
-        if (error) throw error;
+        if (error) {
+          console.error("Database error clearing notifications:", error);
+          throw error;
+        }
       }
       
       // Update local state
       setNotifications([]);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error clearing notifications:", error);
       toast({
         title: "Error",
         description: "Failed to clear notifications. Please try again.",
         variant: "destructive"
       });
+      throw error; // Re-throw to allow handling in the component
     }
   };
 
@@ -402,30 +409,27 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     setShowSystemNotifications((prev) => !prev);
   };
 
-  // Provide the context value
-  const value: NotificationContextProps = {
-    notifications,
-    unreadCount,
-    fetchNotifications,
-    markAsRead,
-    markAllAsRead,
-    clearAllNotifications,
-    showMessageNotifications,
-    showLikeNotifications,
-    showFriendNotifications,
-    showSystemNotifications,
-    toggleMessageNotifications,
-    toggleLikeNotifications,
-    toggleFriendNotifications,
-    toggleSystemNotifications,
-    requestNotificationPermission,
-    isNotificationPermissionGranted,
-    enableAutomaticNotifications,
-    deleteNotification
-  };
-
   return (
-    <NotificationContext.Provider value={value}>
+    <NotificationContext.Provider value={{
+      notifications,
+      unreadCount,
+      fetchNotifications,
+      markAsRead,
+      markAllAsRead,
+      clearAllNotifications,
+      showMessageNotifications,
+      showLikeNotifications,
+      showFriendNotifications,
+      showSystemNotifications,
+      toggleMessageNotifications,
+      toggleLikeNotifications,
+      toggleFriendNotifications,
+      toggleSystemNotifications,
+      requestNotificationPermission,
+      isNotificationPermissionGranted,
+      enableAutomaticNotifications,
+      deleteNotification
+    }}>
       {children}
     </NotificationContext.Provider>
   );

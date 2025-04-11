@@ -1,8 +1,7 @@
-
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Bell, MessageSquare, Heart, Check, UserPlus, User, Megaphone, Trash2, AtSign, X } from 'lucide-react';
+import { Bell, MessageSquare, Heart, Check, UserPlus, User, Megaphone, Trash2, AtSign, X, Loader2 } from 'lucide-react';
 import {
   DropdownMenuContent,
   DropdownMenuSeparator,
@@ -37,6 +36,9 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isAlertOpen, setIsAlertOpen] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [deletingIds, setDeletingIds] = React.useState<string[]>([]);
+  
   const { 
     notifications, 
     unreadCount, 
@@ -48,6 +50,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
     requestNotificationPermission,
     isNotificationPermissionGranted
   } = useNotification();
+  
   const { t } = useLanguage();
   
   // Refresh notifications when menu opens
@@ -101,21 +104,41 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
   };
 
   const confirmClearAllNotifications = async () => {
-    await clearAllNotifications();
-    setIsAlertOpen(false);
-    toast({
-      title: "Success",
-      description: "All notifications cleared",
-    });
+    setIsDeleting(true);
+    try {
+      await clearAllNotifications();
+      toast({
+        title: "Success",
+        description: "All notifications cleared",
+      });
+    } catch (error) {
+      console.error("Error clearing notifications:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear notifications. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+      setIsAlertOpen(false);
+    }
   };
 
   const handleDeleteNotification = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation(); // Prevent notification click event
-    await deleteNotification(id);
-    toast({
-      title: "Success",
-      description: "Notification deleted",
-    });
+    setDeletingIds(prev => [...prev, id]);
+    
+    try {
+      await deleteNotification(id);
+      toast({
+        title: "Success",
+        description: "Notification deleted",
+      });
+    } catch (error) {
+      console.error("Error deleting notification:", error);
+    } finally {
+      setDeletingIds(prev => prev.filter(itemId => itemId !== id));
+    }
   };
   
   const getNotificationIcon = (type: string) => {
@@ -212,8 +235,13 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
             size="icon" 
             className="h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
             onClick={(e) => handleDeleteNotification(e, notification.id)}
+            disabled={deletingIds.includes(notification.id)}
           >
-            <X className="h-3 w-3" />
+            {deletingIds.includes(notification.id) ? (
+              <Loader2 className="h-3 w-3 animate-spin" />
+            ) : (
+              <X className="h-3 w-3" />
+            )}
             <span className="sr-only">Delete notification</span>
           </Button>
         </div>
@@ -250,8 +278,13 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
               onClick={handleClearAllNotifications} 
               className="h-8 text-xs"
               title="Clear all notifications"
+              disabled={isDeleting || notifications.length === 0}
             >
-              <Trash2 className="h-3 w-3 mr-1" />
+              {isDeleting ? (
+                <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              ) : (
+                <Trash2 className="h-3 w-3 mr-1" />
+              )}
             </Button>
           </div>
         </DropdownMenuLabel>
@@ -318,9 +351,19 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmClearAllNotifications}>
-              Clear All
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmClearAllNotifications}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                'Clear All'
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

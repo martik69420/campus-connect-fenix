@@ -34,11 +34,19 @@ const Navbar = () => {
   const [notificationMenuOpen, setNotificationMenuOpen] = React.useState(false);
   const isMobile = useIsMobile();
   
-  // Fetch notifications when navbar mounts and when notification menu opens
+  // Fetch notifications periodically to ensure count is always accurate
   useEffect(() => {
     fetchNotifications();
+    
+    // Set up interval to refresh notifications every 30 seconds
+    const intervalId = setInterval(() => {
+      fetchNotifications();
+    }, 30000);
+    
+    return () => clearInterval(intervalId);
   }, [fetchNotifications]);
 
+  // Fetch notifications when notification menu opens
   useEffect(() => {
     if (notificationMenuOpen) {
       fetchNotifications();
