@@ -31,17 +31,38 @@ const Index = () => {
   const [forYouPosts, setForYouPosts] = useState([]);
   const [latestPosts, setLatestPosts] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
+  // Authentication check
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate('/login');
     }
   }, [isAuthenticated, authLoading, navigate]);
 
+  // Fetch posts with error handling
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
-    }
+    let isMounted = true;
+    
+    const loadPosts = async () => {
+      if (isAuthenticated && user) {
+        setLoadError(null);
+        try {
+          await fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
+        } catch (error) {
+          console.error("Error fetching posts:", error);
+          if (isMounted) {
+            setLoadError("Failed to load posts. Please try refreshing.");
+          }
+        }
+      }
+    };
+    
+    loadPosts();
+    
+    return () => {
+      isMounted = false;
+    };
   }, [isAuthenticated, user, activeTab, fetchPosts]);
 
   // Process posts when they're loaded
@@ -69,10 +90,19 @@ const Index = () => {
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
-    setTimeout(() => {
-      setIsRefreshing(false);
-    }, 600);
+    setLoadError(null);
+    
+    try {
+      await fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
+    } catch (error) {
+      console.error("Error refreshing posts:", error);
+      setLoadError("Failed to refresh posts. Please try again.");
+    } finally {
+      // Always end refreshing state after a short delay for visual feedback
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 600);
+    }
   };
 
   if (authLoading) {
@@ -137,6 +167,21 @@ const Index = () => {
                   </Button>
                 </motion.div>
               </div>
+              
+              {loadError && (
+                <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm">
+                  {loadError}
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleRefresh} 
+                    className="ml-2"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              )}
+              
               <Separator className="mb-4" />
               <TabsContent value="for-you" className="focus-visible:outline-none">
                 <PostList 
@@ -154,8 +199,6 @@ const Index = () => {
               </TabsContent>
             </Tabs>
           </div>
-
-          {/* Right sidebar - Removed */}
         </div>
         
         {/* AdSense banner */}

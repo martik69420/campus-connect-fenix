@@ -1,5 +1,5 @@
 
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider } from './context/auth';
 import { PostProvider } from './context/PostContext';
@@ -32,31 +32,64 @@ const Table = lazy(() => import('./pages/Table'));
 const NavigationHandler = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
   
   // Handle navigation issues by tracking page loads
   useEffect(() => {
-    // Set up navigation timeout detection
-    const navigationTimeout = setTimeout(() => {
-      console.log('Navigation timeout detected, trying to recover...');
-      
-      // Force refresh the current location to recover from any broken state
-      const currentPath = location.pathname;
-      navigate('/', { replace: true });
-      
-      // Go back to the original path after a brief moment
-      setTimeout(() => {
-        navigate(currentPath, { replace: true });
-      }, 100);
-    }, 5000);
+    let navigationTimeout: NodeJS.Timeout;
+    let isMounted = true;
     
-    // Clear the timeout when location changes correctly
-    return () => clearTimeout(navigationTimeout);
+    // Mark start of navigation
+    setIsLoading(true);
+    
+    // Set up navigation timeout detection with a shorter timeout
+    navigationTimeout = setTimeout(() => {
+      if (isMounted) {
+        console.log('Navigation timeout detected, attempting recovery for path:', location.pathname);
+        
+        // Clear loading state first
+        setIsLoading(false);
+        
+        // Force refresh the current location to recover from any broken state
+        // Use a more direct approach to reset the route
+        window.history.replaceState({}, '', location.pathname);
+        navigate(location.pathname, { replace: true });
+      }
+    }, 3000); // Reduced from 5000ms to 3000ms
+    
+    // Clear loading state when component updates/unmounts
+    const clearLoadingState = () => {
+      if (isMounted) {
+        setIsLoading(false);
+        clearTimeout(navigationTimeout);
+      }
+    };
+    
+    // Use a shorter timeout to mark a successful navigation
+    const successTimeout = setTimeout(clearLoadingState, 1000);
+    
+    // Clean up all timeouts when component unmounts or location changes
+    return () => {
+      isMounted = false;
+      clearTimeout(navigationTimeout);
+      clearTimeout(successTimeout);
+    };
   }, [location.pathname, navigate]);
   
   return <>{children}</>;
 };
 
 function App() {
+  // Add a fallback loading component that we can reuse
+  const LoadingFallback = () => (
+    <div className="flex items-center justify-center h-screen bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
+    </div>
+  );
+
   return (
     <BrowserRouter>
       <ThemeProvider>
@@ -67,11 +100,7 @@ function App() {
                 <GameProvider>
                   <TooltipProvider>
                     <NavigationHandler>
-                      <Suspense fallback={
-                        <div className="flex items-center justify-center h-screen">
-                          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                      }>
+                      <Suspense fallback={<LoadingFallback />}>
                         <Routes>
                           <Route path="/login" element={<Login />} />
                           <Route path="/" element={<Home />} />
