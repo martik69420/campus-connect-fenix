@@ -31,10 +31,9 @@ const Table = lazy(() => import('./pages/Table'));
 // This component handles navigation operations and preventing infinite loading
 const NavigationHandler = ({ children }: { children: React.ReactNode }) => {
   const location = useLocation();
-  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   
-  // Clean up navigation state tracking - simplified approach to prevent timeout loops
+  // Clean up navigation state tracking
   useState(() => {
     console.log(`Navigation to: ${location.pathname}`);
     

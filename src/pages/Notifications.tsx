@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 type Notification = {
   id: string;
@@ -39,6 +40,7 @@ const Notifications = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [deletingIds, setDeletingIds] = useState<string[]>([]);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     const checkUserAndFetchNotifications = async () => {
@@ -309,10 +311,10 @@ const Notifications = () => {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto p-4">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Notifications</h1>
-          <div className="flex space-x-2">
+      <div className="max-w-2xl mx-auto p-2 sm:p-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
+          <h1 className="text-2xl sm:text-3xl font-bold">Notifications</h1>
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             {!isNotificationPermissionGranted && 'Notification' in window && (
               <Button 
                 variant="outline" 
@@ -321,7 +323,7 @@ const Notifications = () => {
                 className="flex items-center gap-1"
               >
                 <Bell className="h-4 w-4" />
-                Enable Push
+                {!isMobile && "Enable Push"}
               </Button>
             )}
             <Button 
@@ -329,26 +331,29 @@ const Notifications = () => {
               size="sm"
               onClick={refreshNotifications} 
               disabled={refreshing}
+              className="flex-shrink-0"
             >
-              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
+              <RefreshCw className={`h-4 w-4 ${isMobile ? "" : "mr-2"} ${refreshing ? 'animate-spin' : ''}`} />
+              {!isMobile && "Refresh"}
             </Button>
             <Button 
               variant="outline" 
               size="sm"
               onClick={markAllAsRead}
+              className="flex-shrink-0"
             >
-              <Check className="h-4 w-4 mr-2" />
-              Mark all as read
+              <Check className={`h-4 w-4 ${isMobile ? "" : "mr-2"}`} />
+              {!isMobile && "Mark all as read"}
             </Button>
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button 
                   variant="outline" 
                   size="sm"
+                  className="flex-shrink-0"
                 >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Clear All
+                  <Trash2 className={`h-4 w-4 ${isMobile ? "" : "mr-2"}`} />
+                  {!isMobile && "Clear All"}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
@@ -391,7 +396,7 @@ const Notifications = () => {
             ))}
           </div>
         ) : notifications.length > 0 ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             <AnimatePresence>
               {notifications.map((notification) => (
                 <motion.div
@@ -401,24 +406,24 @@ const Notifications = () => {
                   exit={{ opacity: 0, height: 0, marginBottom: 0 }}
                   transition={{ duration: 0.2 }}
                   className={`
-                    flex items-start space-x-4 p-4 border rounded-lg 
+                    flex items-start space-x-3 p-3 sm:p-4 border rounded-lg 
                     ${notification.is_read ? 'bg-background' : 'bg-secondary'}
                     transition-colors duration-200 hover:border-primary/30
                     relative group
                   `}
                 >
                   <div 
-                    className="flex-1 flex items-start space-x-4 cursor-pointer"
+                    className="flex-1 flex items-start space-x-3 cursor-pointer"
                     onClick={() => handleNotificationClick(notification)}
                   >
                     <div className="rounded-full bg-muted p-2">
                       {getNotificationIcon(notification.type)}
                     </div>
                     <div className="flex-1">
-                      <p className={`${notification.is_read ? 'text-foreground' : 'text-foreground font-medium'}`}>
+                      <p className={`text-sm sm:text-base ${notification.is_read ? 'text-foreground' : 'text-foreground font-medium'}`}>
                         {notification.content}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                         {formatDate(notification.created_at)}
                       </p>
                     </div>
