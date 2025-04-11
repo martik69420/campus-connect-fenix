@@ -21,5 +21,35 @@ export function useIsMobile() {
     return () => window.removeEventListener("resize", checkMobile)
   }, [])
 
-  return !!isMobile
+  // Return true by default when SSR (server side rendering)
+  // This ensures mobile-friendly layout is prioritized when in doubt
+  return isMobile === undefined ? false : isMobile
+}
+
+// Detects if the device is a touch device
+export function useTouchDevice() {
+  const [isTouch, setIsTouch] = React.useState(false)
+  
+  React.useEffect(() => {
+    const isTouchDevice = 
+      'ontouchstart' in window || 
+      navigator.maxTouchPoints > 0 ||
+      (navigator as any).msMaxTouchPoints > 0
+
+    setIsTouch(isTouchDevice)
+  }, [])
+  
+  return isTouch
+}
+
+// Combine both hooks for ease of use
+export function useDeviceDetection() {
+  const isMobile = useIsMobile()
+  const isTouch = useTouchDevice()
+  
+  return {
+    isMobile,
+    isTouch,
+    isDesktop: !isMobile && !isTouch
+  }
 }

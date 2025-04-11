@@ -3,13 +3,13 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { Image as ImageIcon, X, Loader2, AtSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/context/auth';
 import { usePost } from '@/context/PostContext';
 import { supabase } from '@/integrations/supabase/client';
+import MentionInput from '@/components/common/MentionInput';
 
 interface CreatePostFormProps {
   onPostCreated?: () => void;
@@ -21,9 +21,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showMentions, setShowMentions] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   const { toast } = useToast();
   const { user } = useAuth();
@@ -54,23 +52,23 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
   
-  // Insert mention
-  const insertMention = () => {
-    if (textareaRef.current) {
-      const cursorPos = textareaRef.current.selectionStart;
-      const textBefore = content.substring(0, cursorPos);
-      const textAfter = content.substring(cursorPos);
-      
-      setContent(textBefore + '@' + textAfter);
-      
-      // Focus and place cursor after the @
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = cursorPos + 1;
-        }
-      }, 0);
-    }
+  // Process mentions from content
+  const processMentions = async (text: string): Promise<string[]> => {
+    const mentionRegex = /@(\w+)/g;
+    const matches = text.match(mentionRegex);
+    
+    if (!matches) return [];
+    
+    const usernames = matches.map(match => match.substring(1));
+    const uniqueUsernames = [...new Set(usernames)];
+    
+    // Check if these users exist
+    const { data } = await supabase
+      .from('profiles')
+      .select('id, username')
+      .in('username', uniqueUsernames);
+    
+    return data?.map(profile => profile.id) || [];
   };
   
   // Upload images to Supabase Storage
@@ -82,7 +80,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     for (const file of imageFiles) {
       try {
         const fileName = `${Date.now()}-${file.name}`;
-        // Upload to the 'post-images' bucket we just created
+        // Upload to the 'post-images' bucket
         const { data, error } = await supabase.storage
           .from('post-images')
           .upload(`public/${fileName}`, file);
@@ -136,8 +134,27 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
         console.log('Final uploaded URLs:', uploadedImageUrls);
       }
       
+      // Find all mentioned users
+      const mentionedUserIds = await processMentions(content);
+      
       // Create post
-      await createPost(content, uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined);
+      const postData = await createPost(content, uploadedImageUrls.length > 0 ? uploadedImageUrls : undefined);
+      
+      // Send notifications to mentioned users
+      if (mentionedUserIds.length > 0 && user) {
+        // Create notification for each mentioned user
+        for (const userId of mentionedUserIds) {
+          if (userId !== user.id) { // Don't notify yourself
+            await supabase.from('notifications').insert({
+              user_id: userId,
+              type: 'mention',
+              content: `${user.displayName || user.username} mentioned you in a post`,
+              related_id: postData?.id, // Use the post ID if available
+              is_read: false
+            });
+          }
+        }
+      }
       
       // Reset form
       setContent('');
@@ -165,6 +182,21 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
     }
   };
   
+  // Handle inserting @ mention
+  const handleAddMention = () => {
+    setContent(prev => prev + '@');
+    
+    // Focus the textarea
+    setTimeout(() => {
+      const textArea = document.querySelector('textarea');
+      if (textArea) {
+        textArea.focus();
+        const cursorPos = textArea.value.length;
+        textArea.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 0);
+  };
+  
   return (
     <Card className="mb-6">
       <CardContent className="pt-6">
@@ -176,12 +208,13 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
             </Avatar>
             
             <div className="flex-1 space-y-4">
-              <Textarea
-                placeholder="What's on your mind?"
+              <MentionInput
                 value={content}
-                onChange={(e) => setContent(e.target.value)}
+                onChange={setContent}
+                placeholder="What's on your mind? Use @ to mention friends"
                 className="min-h-[100px] resize-none"
-                ref={textareaRef}
+                rows={3}
+                disabled={isSubmitting}
               />
               
               <AnimatePresence>
@@ -248,7 +281,7 @@ const CreatePostForm: React.FC<CreatePostFormProps> = ({ onPostCreated }) => {
                     variant="ghost"
                     size="sm"
                     className="text-muted-foreground"
-                    onClick={insertMention}
+                    onClick={handleAddMention}
                   >
                     <AtSign className="h-4 w-4 mr-2" />
                     Mention

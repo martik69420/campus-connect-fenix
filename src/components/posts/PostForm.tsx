@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { usePost } from '@/context/PostContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Image as ImageIcon } from 'lucide-react';
+import { Loader2, Image as ImageIcon, AtSign } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import MentionInput from '@/components/common/MentionInput';
@@ -89,6 +89,28 @@ const PostForm: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  const handleAddMention = () => {
+    setContent(prev => {
+      // Insert @ at cursor position or at the end
+      const textArea = document.querySelector('textarea');
+      if (textArea) {
+        const cursorPos = textArea.selectionStart;
+        return prev.substring(0, cursorPos) + '@' + prev.substring(textArea.selectionEnd);
+      }
+      return prev + '@';
+    });
+    
+    // Focus the textarea and move cursor after the @
+    setTimeout(() => {
+      const textArea = document.querySelector('textarea');
+      if (textArea) {
+        textArea.focus();
+        const cursorPos = textArea.value.lastIndexOf('@') + 1;
+        textArea.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 0);
+  };
   
   return (
     <form onSubmit={handleSubmit}>
@@ -109,10 +131,16 @@ const PostForm: React.FC = () => {
           />
           
           <div className="flex justify-between items-center">
-            <Button type="button" variant="ghost" size="sm" className="text-muted-foreground">
-              <ImageIcon className="h-4 w-4 mr-2" />
-              Add Image
-            </Button>
+            <div className="flex gap-2">
+              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground" onClick={handleAddMention}>
+                <AtSign className="h-4 w-4 mr-2" />
+                Mention
+              </Button>
+              <Button type="button" variant="ghost" size="sm" className="text-muted-foreground">
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Add Image
+              </Button>
+            </div>
             
             <Button type="submit" disabled={isSubmitting || content.trim() === ''}>
               {isSubmitting ? (

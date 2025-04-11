@@ -3,8 +3,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Check, AtSign } from 'lucide-react';
+import { Check, AtSign, UserPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface MentionInputProps {
   value: string;
@@ -39,6 +40,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [mentionStart, setMentionStart] = useState(0);
   const [recentMentions, setRecentMentions] = useState<UserSuggestion[]>([]);
+  const isMobile = useIsMobile();
 
   // Get the current cursor position and text before cursor
   const getCurrentMentionQuery = () => {
@@ -102,7 +104,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
         .from('profiles')
         .select('id, username, display_name, avatar_url')
         .or(`username.ilike.${query}%,display_name.ilike.${query}%`)
-        .limit(5);
+        .limit(8);
         
       if (error) throw error;
       
@@ -117,7 +119,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
         .from('profiles')
         .select('id, username, display_name, avatar_url')
         .or(`username.ilike.%${query}%,display_name.ilike.%${query}%`)
-        .limit(5);
+        .limit(8);
       
       setSuggestions(fuzzyData || []);
     } catch (error) {
@@ -170,7 +172,12 @@ const MentionInput: React.FC<MentionInputProps> = ({
     
     // Calculate position
     const top = lastLineRect.top - inputRect.top + lastLineRect.height + 5;
-    const left = lastLineRect.left - inputRect.left;
+    let left = lastLineRect.left - inputRect.left;
+    
+    // For mobile, center the suggestions
+    if (isMobile) {
+      left = Math.max(0, Math.min(inputRect.width - 250, left));
+    }
     
     setPosition({
       top,
@@ -268,7 +275,7 @@ const MentionInput: React.FC<MentionInputProps> = ({
     if (showSuggestions) {
       positionSuggestions();
     }
-  }, [query, showSuggestions]);
+  }, [query, showSuggestions, isMobile]);
 
   return (
     <div className="relative">
@@ -291,15 +298,16 @@ const MentionInput: React.FC<MentionInputProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -5 }}
             transition={{ duration: 0.15 }}
-            className="absolute z-50 w-64 max-h-60 overflow-auto bg-popover text-popover-foreground shadow-md rounded-md border border-border"
+            className="absolute z-50 w-64 max-h-60 overflow-auto bg-popover text-popover-foreground shadow-lg rounded-lg border border-border"
             style={{ 
               top: `${position.top}px`, 
               left: `${position.left}px`,
+              width: isMobile ? '250px' : '280px'
             }}
           >
-            <div className="p-1">
+            <div className="p-2">
               {/* Header for the suggestion panel */}
-              <div className="px-2 py-1 text-xs font-medium text-muted-foreground flex items-center border-b mb-1">
+              <div className="px-2 py-1 text-xs font-medium text-muted-foreground flex items-center mb-1 border-b">
                 <AtSign className="h-3 w-3 mr-1" />
                 {query ? `Matching "${query}"` : "Recent mentions"}
               </div>
@@ -311,29 +319,35 @@ const MentionInput: React.FC<MentionInputProps> = ({
                   animate={{ 
                     backgroundColor: index === selectedIndex ? "hsl(var(--muted))" : "transparent"
                   }}
-                  className={`flex items-center space-x-2 p-2 rounded cursor-pointer hover:bg-muted`}
+                  whileHover={{ backgroundColor: "hsl(var(--muted))" }}
+                  className={`flex items-center space-x-3 p-3 rounded cursor-pointer transition-colors ${
+                    index === selectedIndex ? 'bg-muted' : ''
+                  }`}
                   onClick={() => insertMention(user)}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
-                  <Avatar className="h-6 w-6">
+                  <Avatar className="h-8 w-8 border">
                     <AvatarImage src={user.avatar_url || ''} alt={user.display_name} />
-                    <AvatarFallback>
+                    <AvatarFallback className="bg-primary/10 text-primary">
                       {user.display_name.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 overflow-hidden">
-                    <p className="text-sm font-medium truncate flex items-center justify-between">
-                      <span>{user.display_name}</span>
-                      {index === selectedIndex && <Check className="h-3 w-3 text-primary" />}
+                    <p className="text-sm font-medium truncate">
+                      {user.display_name || user.username}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
+                    <p className="text-xs text-muted-foreground">@{user.username}</p>
                   </div>
+                  {index === selectedIndex && (
+                    <Check className="h-4 w-4 text-primary self-center" />
+                  )}
                 </motion.div>
               ))}
               
               {suggestions.length === 0 && query && (
-                <div className="p-2 text-center text-sm text-muted-foreground">
-                  No users found matching "{query}"
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  <UserPlus className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" />
+                  <p>No users found matching "{query}"</p>
                 </div>
               )}
             </div>

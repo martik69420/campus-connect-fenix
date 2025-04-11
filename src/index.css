@@ -68,6 +68,13 @@
       padding-left: 1rem;
       padding-right: 1rem;
     }
+    
+    /* Mentions suggestions positioning for mobile */
+    .mention-suggestions-mobile {
+      max-width: 90vw !important;
+      left: 50% !important;
+      transform: translateX(-50%) !important;
+    }
   }
 }
 
@@ -79,5 +86,10 @@
   
   .mobile-nav-height {
     height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  
+  /* Twitter-like mention highlights */
+  .mention-highlight {
+    @apply text-primary font-medium;
   }
 }
