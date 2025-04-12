@@ -1,48 +1,43 @@
 
+import { User as SupabaseUser } from '@supabase/supabase-js';
+
 export interface User {
   id: string;
-  email?: string;
-  username: string;
-  displayName: string;
-  avatar?: string | null;
-  bio?: string | null;
-  school: string;
-  location?: string | null;
-  coins?: number;
+  email: string;
+  username?: string;
+  displayName?: string;
+  avatar?: string;
+  bio?: string;
   createdAt?: string;
-  lastActive?: string | null;
-  isOnline?: boolean;
+  lastLoginAt?: string;
+  isVerified?: boolean;
+  isBanned?: boolean;
+  location?: string;
+  school?: string;
+  website?: string;
+  interests?: string[];
 }
 
 export interface ProfileUpdateData {
   displayName?: string;
-  username?: string; // Added username to the interface
-  avatar?: string | null;
-  bio?: string | null;
+  bio?: string;
+  avatar?: string;
+  location?: string;
   school?: string;
-  location?: string | null;
-  website?: string | null; // Added website
-  birthday?: string | null; // Added birthday
-  availableForHire?: boolean; // Added availableForHire
+  website?: string;
+  interests?: string[];
 }
 
 export interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
   isAuthenticated: boolean;
-  authError: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  register: (
-    email: string, 
-    password: string, 
-    username: string, 
-    displayName: string,
-    school: string
-  ) => Promise<boolean>;
-  updateUserProfile: (profileData: ProfileUpdateData) => Promise<boolean>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
-  uploadProfilePicture: (file: File) => Promise<string | null>;
-  updateUser: (userData: Partial<User>) => void;
-  addCoins: (amount: number, reason?: string) => Promise<boolean>;
+  register: (email: string, password: string, username: string, displayName: string) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updateUserProfile: (data: ProfileUpdateData) => Promise<void>;
+  uploadProfilePicture: (file: File) => Promise<string>;
+  updatePassword: (password: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }

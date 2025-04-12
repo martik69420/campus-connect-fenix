@@ -46,12 +46,12 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
   const form = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      display_name: user?.displayName || '', // Changed display_name to displayName
+      display_name: user?.displayName || '', 
       bio: user?.bio || '',
       location: user?.location || '',
-      website: '', // Initialize as empty since it might not exist in the user object
+      website: user?.website || '', 
       school: user?.school || '',
-      interests: [] as string[], // Initialize as empty array with proper type
+      interests: user?.interests || [] as string[], 
     },
   });
 
@@ -59,12 +59,12 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
     if (user) {
       // Set default form values from user object
       form.reset({
-        display_name: user.displayName || '', // Changed display_name to displayName
+        display_name: user.displayName || '', 
         bio: user.bio || '',
         location: user.location || '',
-        website: '', // Initialize as empty
+        website: user?.website || '', 
         school: user.school || '',
-        interests: [] as string[], // Initialize as empty array with proper type
+        interests: user?.interests || [] as string[], 
       });
     }
   }, [user, form]);
@@ -95,7 +95,7 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
     setLoading(true);
     try {
       // Handle avatar upload if there's a new file
-      let avatarUrl = user.avatar; // Changed avatar_url to avatar
+      let avatarUrl = user.avatar;
       
       if (avatarFile) {
         const fileName = `${user.id}_${Date.now()}.${avatarFile.name.split('.').pop()}`;
@@ -118,10 +118,11 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
         location: data.location,
         website: data.website,
         school: data.school,
-        avatar: avatarUrl // Changed avatar_url to avatar
+        avatar: avatarUrl,
+        interests: data.interests
       };
       
-      await updateUserProfile(updateData); // Changed updateProfile to updateUserProfile
+      await updateUserProfile(updateData);
       
       toast({
         title: "Profile Updated",
@@ -156,7 +157,12 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex justify-center mb-4">
-              <ProfilePictureUpload />
+              <ProfilePictureUpload 
+                currentAvatar={user?.avatar} 
+                onFileSelect={setAvatarFile}
+                previewUrl={avatarPreview}
+                setPreviewUrl={setAvatarPreview}
+              />
             </div>
             
             <FormField
