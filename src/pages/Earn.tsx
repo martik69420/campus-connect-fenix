@@ -1,527 +1,274 @@
 
-import React, { useState, useEffect } from 'react';
-import AppLayout from '@/components/layout/AppLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/auth';
-import { Coins, Gift, Clock, ArrowRight, CheckCircle, AlertCircle, Calendar } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-import { motion } from 'framer-motion';
-import { Badge } from '@/components/ui/badge';
-import { supabase } from '@/integrations/supabase/client';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import React, { useState } from "react";
+import AppLayout from "@/components/layout/AppLayout";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useAuth } from "@/context/auth";
+import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { MessageSquare, Trophy, Star, Clock, GiftIcon, Coins } from "lucide-react";
 
+// Define the reward types
 interface Reward {
   id: string;
   name: string;
   description: string;
   cost: number;
   image: string;
-  type: 'digital' | 'physical' | 'discount';
   available: boolean;
+  category: "gift-card" | "digital" | "physical" | "exclusive";
 }
 
-interface DailyReward {
-  id?: string;
-  created_at?: string;
-  coins_rewarded: number;
-}
-
-const EarnPage: React.FC = () => {
-  const { user, addCoins, refreshUser } = useAuth();
-  const [rewards, setRewards] = useState<Reward[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [dailyRewardClaimed, setDailyRewardClaimed] = useState(false);
-  const [dailyRewardAmount, setDailyRewardAmount] = useState(0);
-  const [selectedReward, setSelectedReward] = useState<Reward | null>(null);
-  const [isRedeeming, setIsRedeeming] = useState(false);
+const Earn = () => {
+  const { user, addCoins } = useAuth();
   const { toast } = useToast();
+  const [isClaimingDaily, setIsClaimingDaily] = useState(false);
+  const [lastClaimedDaily, setLastClaimedDaily] = useState<Date | null>(null);
   
-  useEffect(() => {
-    loadRewards();
-    checkDailyReward();
-  }, [user?.id]);
-  
-  const loadRewards = () => {
-    setIsLoading(true);
-    // Mock data - in a real app, fetch from API
-    const mockRewards: Reward[] = [
-      {
-        id: '1',
-        name: 'Amazon Gift Card',
-        description: '$10 Amazon Gift Card',
-        cost: 5000,
-        image: 'https://placehold.co/300x200?text=Amazon+Card',
-        type: 'digital',
-        available: true
-      },
-      {
-        id: '2',
-        name: 'Spotify Premium',
-        description: '1 Month Subscription',
-        cost: 3000,
-        image: 'https://placehold.co/300x200?text=Spotify',
-        type: 'digital',
-        available: true
-      },
-      {
-        id: '3',
-        name: 'Netflix Subscription',
-        description: '1 Month Basic Plan',
-        cost: 4000,
-        image: 'https://placehold.co/300x200?text=Netflix',
-        type: 'digital',
-        available: true
-      },
-      {
-        id: '4',
-        name: 'Campus Merch',
-        description: 'T-shirt with logo',
-        cost: 8000,
-        image: 'https://placehold.co/300x200?text=Campus+Merch',
-        type: 'physical',
-        available: true
-      },
-      {
-        id: '5',
-        name: 'Food Discount',
-        description: '20% off at campus cafeteria',
-        cost: 2000,
-        image: 'https://placehold.co/300x200?text=Food+Discount',
-        type: 'discount',
-        available: true
-      },
-      {
-        id: '6',
-        name: 'Premium Badge',
-        description: 'Exclusive profile badge',
-        cost: 1000,
-        image: 'https://placehold.co/300x200?text=Premium+Badge',
-        type: 'digital',
-        available: true
-      }
-    ];
-    
-    setRewards(mockRewards);
-    setIsLoading(false);
-  };
-  
-  const checkDailyReward = async () => {
-    if (!user?.id) return;
-    
-    try {
-      // Check if user has claimed today's reward
-      const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      
-      const { data: dailyRewards, error } = await supabase
-        .from('daily_rewards')
-        .select('*')
-        .eq('user_id', user.id)
-        .gte('created_at', `${today}T00:00:00`)
-        .lte('created_at', `${today}T23:59:59`)
-        .order('created_at', { ascending: false })
-        .limit(1);
-        
-      if (error) throw error;
-      
-      if (dailyRewards && dailyRewards.length > 0) {
-        setDailyRewardClaimed(true);
-        setDailyRewardAmount(dailyRewards[0].coins_rewarded);
-      } else {
-        setDailyRewardClaimed(false);
-        
-        // Calculate today's reward amount (e.g., based on streak)
-        // In a real app, you'd calculate this based on user's login streak
-        // For now, use a random amount between 50-100
-        setDailyRewardAmount(Math.floor(Math.random() * 51) + 50);
-      }
-    } catch (error) {
-      console.error("Error checking daily reward:", error);
-    }
-  };
-  
+  // Claim daily reward
   const claimDailyReward = async () => {
-    if (!user?.id || dailyRewardClaimed) return;
-    
-    try {
-      // Add reward to user's coins
-      const success = await addCoins(dailyRewardAmount, 'Daily login reward');
-      
-      if (success) {
-        // Record the daily reward claim
-        const { error } = await supabase
-          .from('daily_rewards')
-          .insert([{ user_id: user.id, coins_rewarded: dailyRewardAmount }]);
-          
-        if (error) throw error;
-        
-        setDailyRewardClaimed(true);
-        toast({
-          title: 'Reward Claimed!',
-          description: `You've received ${dailyRewardAmount} coins as your daily reward.`
-        });
-        
-        // Refresh user data to show updated coins
-        await refreshUser();
-      } else {
-        throw new Error('Failed to add coins');
-      }
-    } catch (error) {
-      console.error("Error claiming daily reward:", error);
-      toast({
-        title: 'Error',
-        description: 'Failed to claim your daily reward. Please try again later.',
-        variant: 'destructive'
-      });
-    }
-  };
-  
-  const handleRedeemReward = async (reward: Reward) => {
     if (!user) return;
     
-    setSelectedReward(reward);
-  };
-  
-  const confirmRedemption = async () => {
-    if (!user || !selectedReward) return;
-    
-    setIsRedeeming(true);
-    
+    setIsClaimingDaily(true);
     try {
-      // Check if user has enough coins
-      if ((user.coins || 0) < selectedReward.cost) {
+      // In a real app, you would check server-side if the user has already claimed today
+      const success = await addCoins(10, "Daily login reward");
+      
+      if (success) {
+        setLastClaimedDaily(new Date());
         toast({
-          title: 'Not Enough Coins',
-          description: `You need ${selectedReward.cost - (user.coins || 0)} more coins to redeem this reward.`,
-          variant: 'destructive'
+          title: "Daily Reward Claimed!",
+          description: "You've earned 10 coins for logging in today.",
         });
-        setIsRedeeming(false);
-        return;
       }
-      
-      // In a real app, integrate with a proper reward system
-      // For now, just deduct coins
-      const { data, error } = await supabase
-        .from('profiles')
-        .update({ coins: (user.coins || 0) - selectedReward.cost })
-        .eq('id', user.id);
-        
-      if (error) throw error;
-      
-      // Refresh user data
-      await refreshUser();
-      
-      toast({
-        title: 'Reward Redeemed!',
-        description: `You've successfully redeemed the ${selectedReward.name}.`
-      });
-      
-      // Close dialog and reset state
-      setSelectedReward(null);
     } catch (error) {
-      console.error("Error redeeming reward:", error);
       toast({
-        title: 'Error',
-        description: 'Failed to redeem reward. Please try again later.',
-        variant: 'destructive'
+        title: "Error",
+        description: "Could not claim daily reward. Try again later.",
+        variant: "destructive",
       });
     } finally {
-      setIsRedeeming(false);
+      setIsClaimingDaily(false);
     }
   };
+  
+  // Example rewards data
+  const rewards: Reward[] = [
+    {
+      id: "1",
+      name: "5€ Amazon Gift Card",
+      description: "Redeem for a 5€ Amazon gift card code",
+      cost: 500,
+      image: "/placeholder.svg",
+      available: true,
+      category: "gift-card"
+    },
+    {
+      id: "2",
+      name: "10€ Google Play Gift Card",
+      description: "Redeem for a 10€ Google Play gift card code",
+      cost: 1000,
+      image: "/placeholder.svg",
+      available: true,
+      category: "gift-card"
+    },
+    {
+      id: "3",
+      name: "Campus Fenix T-shirt",
+      description: "Show your school spirit with this exclusive t-shirt",
+      cost: 2500,
+      image: "/placeholder.svg",
+      available: true,
+      category: "physical"
+    },
+    {
+      id: "4",
+      name: "Premium Membership (1 month)",
+      description: "Upgrade to premium for exclusive features",
+      cost: 1500,
+      image: "/placeholder.svg",
+      available: true,
+      category: "digital"
+    },
+    {
+      id: "5",
+      name: "Custom Profile Badge",
+      description: "Add a unique badge to your profile",
+      cost: 750,
+      image: "/placeholder.svg",
+      available: true,
+      category: "exclusive"
+    },
+  ];
+  
+  // Filter rewards by category
+  const filterRewardsByCategory = (category: string) => {
+    if (category === "all") return rewards;
+    return rewards.filter(reward => reward.category === category);
+  };
 
+  const canRedeemReward = (cost: number) => {
+    return user && user.coins >= cost;
+  };
+  
+  const handleRedeemReward = (reward: Reward) => {
+    if (!canRedeemReward(reward.cost)) {
+      toast({
+        title: "Not enough coins",
+        description: `You need ${reward.cost - (user?.coins || 0)} more coins to redeem this reward.`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Here you would make an API call to process the redemption
+    toast({
+      title: "Redemption requested",
+      description: `Your request for ${reward.name} has been submitted.`,
+    });
+  };
+  
   return (
     <AppLayout>
       <div className="container py-6">
-        <div className="grid gap-6">
-          {/* Header with coin balance */}
-          <Card className="bg-gradient-to-br from-primary/80 to-primary">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between text-primary-foreground mb-4">
+        <div className="flex flex-col gap-6">
+          {/* Coin balance card */}
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-3xl font-bold">Earn & Redeem</h2>
-                  <p className="opacity-90">Complete tasks to earn coins and redeem rewards</p>
-                </div>
-                <div className="text-right">
-                  <div className="flex items-center gap-2">
-                    <Coins className="h-6 w-6" />
-                    <span className="text-2xl font-bold">{user?.coins || 0}</span>
+                  <h2 className="text-2xl font-bold">Your Balance</h2>
+                  <div className="flex items-center mt-2">
+                    <Coins className="h-6 w-6 text-yellow-500 mr-2" />
+                    <span className="text-3xl font-bold">{user?.coins || 0}</span>
+                    <span className="ml-2 text-muted-foreground">coins</span>
                   </div>
-                  <p className="opacity-90">Your Balance</p>
+                </div>
+                <Button onClick={claimDailyReward} disabled={isClaimingDaily || !!lastClaimedDaily}>
+                  {isClaimingDaily ? "Claiming..." : "Claim Daily Reward"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+          
+          {/* Ways to earn coins */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Ways to Earn Coins</CardTitle>
+              <CardDescription>
+                Complete these activities to earn more coins
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Clock className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Daily Login</h4>
+                      <p className="text-sm text-muted-foreground">Log in every day to claim 10 coins</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline">10 coins</Badge>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <MessageSquare className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Post a Comment</h4>
+                      <p className="text-sm text-muted-foreground">Earn coins for active participation</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline">5 coins</Badge>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Trophy className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Win Games</h4>
+                      <p className="text-sm text-muted-foreground">Earn coins by winning mini-games</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline">20-50 coins</Badge>
+                </div>
+                
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 p-2 rounded-full">
+                      <Star className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Complete Achievements</h4>
+                      <p className="text-sm text-muted-foreground">Unlock achievements to earn bonus coins</p>
+                    </div>
+                  </div>
+                  <Badge variant="outline">Varies</Badge>
                 </div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Daily Reward */}
+          
+          {/* Rewards section */}
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="h-5 w-5" />
-                Daily Reward
-              </CardTitle>
-              <CardDescription>
-                Login every day to earn coins and increase your streak
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {dailyRewardClaimed ? (
-                <Alert>
-                  <CheckCircle className="h-5 w-5" />
-                  <AlertTitle>Daily reward claimed!</AlertTitle>
-                  <AlertDescription>
-                    You've already claimed today's reward of {dailyRewardAmount} coins.
-                    Come back tomorrow for more!
-                  </AlertDescription>
-                </Alert>
-              ) : (
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/50 p-4 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-14 h-14 bg-primary/20 rounded-full flex items-center justify-center">
-                      <Gift className="h-7 w-7 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium">Daily Login Bonus</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {dailyRewardAmount} coins are waiting for you!
-                      </p>
-                    </div>
-                  </div>
-                  <Button 
-                    onClick={claimDailyReward} 
-                    className="min-w-[120px]"
-                  >
-                    <Gift className="mr-2 h-4 w-4" />
-                    Claim Reward
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Available Rewards */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gift className="h-5 w-5" />
-                Available Rewards
-              </CardTitle>
+              <CardTitle>Rewards</CardTitle>
               <CardDescription>
                 Redeem your coins for these exciting rewards
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {isLoading ? (
-                  // Loading skeleton
-                  Array(6).fill(0).map((_, i) => (
-                    <Card key={i} className="border opacity-70">
-                      <div className="h-40 bg-muted animate-pulse"></div>
-                      <CardContent className="p-4">
-                        <div className="h-5 w-3/4 bg-muted animate-pulse rounded mb-2"></div>
-                        <div className="h-4 w-full bg-muted animate-pulse rounded mb-3"></div>
-                        <div className="flex justify-between items-center">
-                          <div className="h-6 w-16 bg-muted animate-pulse rounded"></div>
-                          <div className="h-9 w-24 bg-muted animate-pulse rounded"></div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  rewards.map((reward, index) => (
-                    <motion.div
-                      key={reward.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      <Card className="overflow-hidden hover:shadow-md transition-shadow">
-                        <div className="aspect-[3/2] overflow-hidden">
-                          <img
-                            src={reward.image}
-                            alt={reward.name}
-                            className="w-full h-full object-cover transition-transform hover:scale-105"
-                          />
-                        </div>
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start mb-2">
-                            <h3 className="font-medium">{reward.name}</h3>
-                            <Badge variant={reward.type === 'physical' ? 'outline' : 'default'}>
-                              {reward.type}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            {reward.description}
-                          </p>
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-1">
-                              <Coins className="h-4 w-4 text-amber-500" />
-                              <span className="font-bold">{reward.cost}</span>
-                            </div>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  size="sm" 
-                                  disabled={(user?.coins || 0) < reward.cost}
-                                  onClick={() => setSelectedReward(reward)}
-                                >
-                                  Redeem
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Redeem Reward</DialogTitle>
-                                  <DialogDescription>
-                                    Are you sure you want to redeem this reward?
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="flex gap-4 py-4">
-                                  <img 
-                                    src={selectedReward?.image} 
-                                    alt={selectedReward?.name} 
-                                    className="w-24 h-24 object-cover rounded"
-                                  />
-                                  <div>
-                                    <h3 className="font-medium">{selectedReward?.name}</h3>
-                                    <p className="text-sm text-muted-foreground">
-                                      {selectedReward?.description}
-                                    </p>
-                                    <div className="flex items-center gap-1 mt-2">
-                                      <Coins className="h-4 w-4 text-amber-500" />
-                                      <span className="font-bold">{selectedReward?.cost}</span>
-                                    </div>
-                                  </div>
-                                </div>
-                                <Separator />
-                                <div className="py-2">
-                                  <div className="flex justify-between text-sm">
-                                    <span>Your balance:</span>
-                                    <span>{user?.coins || 0} coins</span>
-                                  </div>
-                                  <div className="flex justify-between text-sm">
-                                    <span>Cost:</span>
-                                    <span>{selectedReward?.cost} coins</span>
-                                  </div>
-                                  <Separator className="my-2" />
-                                  <div className="flex justify-between font-medium">
-                                    <span>Remaining:</span>
-                                    <span>{Math.max(0, (user?.coins || 0) - (selectedReward?.cost || 0))} coins</span>
-                                  </div>
-                                </div>
-                                <DialogFooter>
-                                  <Button 
-                                    variant="outline"
-                                    onClick={() => setSelectedReward(null)}
-                                  >
-                                    Cancel
-                                  </Button>
-                                  <Button
-                                    onClick={confirmRedemption}
-                                    disabled={isRedeeming || (user?.coins || 0) < (selectedReward?.cost || 0)}
-                                  >
-                                    {isRedeeming ? "Processing..." : "Confirm Redemption"}
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  ))
-                )}
+            
+            <Tabs defaultValue="all">
+              <div className="px-6">
+                <TabsList className="w-full justify-start overflow-x-auto mb-4">
+                  <TabsTrigger value="all">All Rewards</TabsTrigger>
+                  <TabsTrigger value="gift-card">Gift Cards</TabsTrigger>
+                  <TabsTrigger value="digital">Digital</TabsTrigger>
+                  <TabsTrigger value="physical">Physical</TabsTrigger>
+                  <TabsTrigger value="exclusive">Exclusive</TabsTrigger>
+                </TabsList>
               </div>
-            </CardContent>
-          </Card>
-          
-          {/* How to earn more coins */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Coins className="h-5 w-5" />
-                How to Earn More Coins
-              </CardTitle>
-              <CardDescription>
-                Complete these activities to increase your coin balance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4">
-                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="bg-primary/10 p-3 rounded-full">
-                    <MessageSquare className="h-5 w-5 text-primary" />
+              
+              <CardContent>
+                <TabsContent value="all" className="mt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {rewards.map((reward) => (
+                      <RewardCard 
+                        key={reward.id} 
+                        reward={reward} 
+                        canRedeem={canRedeemReward(reward.cost)}
+                        onRedeem={() => handleRedeemReward(reward)}
+                      />
+                    ))}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium">Create Posts</h3>
-                    <p className="text-sm text-muted-foreground">10 coins per post</p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/">
-                      Post Now <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
+                </TabsContent>
                 
-                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="bg-primary/10 p-3 rounded-full">
-                    <Gift className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium">Complete Daily Login</h3>
-                    <p className="text-sm text-muted-foreground">{dailyRewardAmount} coins per day</p>
-                  </div>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    disabled={dailyRewardClaimed} 
-                    onClick={claimDailyReward}
-                  >
-                    {dailyRewardClaimed ? "Claimed" : "Claim"}
-                  </Button>
-                </div>
-                
-                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="bg-primary/10 p-3 rounded-full">
-                    <Trophy className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium">Unlock Achievements</h3>
-                    <p className="text-sm text-muted-foreground">50-1000 coins per achievement</p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/achievements">
-                      View Achievements <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
-                
-                <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg hover:bg-muted/50 transition-colors">
-                  <div className="bg-primary/10 p-3 rounded-full">
-                    <Gift className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-medium">Play Games</h3>
-                    <p className="text-sm text-muted-foreground">Earn coins based on your performance</p>
-                  </div>
-                  <Button variant="outline" size="sm" asChild>
-                    <a href="/games">
-                      Play Games <ArrowRight className="ml-2 h-4 w-4" />
-                    </a>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
+                {["gift-card", "digital", "physical", "exclusive"].map((category) => (
+                  <TabsContent key={category} value={category} className="mt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filterRewardsByCategory(category).map((reward) => (
+                        <RewardCard 
+                          key={reward.id} 
+                          reward={reward} 
+                          canRedeem={canRedeemReward(reward.cost)}
+                          onRedeem={() => handleRedeemReward(reward)}
+                        />
+                      ))}
+                    </div>
+                  </TabsContent>
+                ))}
+              </CardContent>
+            </Tabs>
           </Card>
         </div>
       </div>
@@ -529,4 +276,49 @@ const EarnPage: React.FC = () => {
   );
 };
 
-export default EarnPage;
+interface RewardCardProps {
+  reward: Reward;
+  canRedeem: boolean;
+  onRedeem: () => void;
+}
+
+const RewardCard = ({ reward, canRedeem, onRedeem }: RewardCardProps) => {
+  return (
+    <Card className="overflow-hidden">
+      <div className="aspect-video relative overflow-hidden bg-muted">
+        <img 
+          src={reward.image} 
+          alt={reward.name}
+          className="w-full h-full object-cover"
+        />
+      </div>
+      <CardContent className="p-4">
+        <h3 className="font-semibold text-lg">{reward.name}</h3>
+        <p className="text-sm text-muted-foreground">{reward.description}</p>
+        <div className="flex items-center mt-2">
+          <Coins className="h-4 w-4 text-yellow-500 mr-1" />
+          <span className="font-bold">{reward.cost}</span>
+          <span className="text-xs ml-1 text-muted-foreground">coins</span>
+        </div>
+      </CardContent>
+      <CardFooter className="p-4 pt-0">
+        <Button 
+          onClick={onRedeem}
+          disabled={!canRedeem}
+          className="w-full"
+          variant={canRedeem ? "default" : "outline"}
+        >
+          {canRedeem ? (
+            <>
+              <GiftIcon className="mr-2 h-4 w-4" /> Redeem Now
+            </>
+          ) : (
+            "Not Enough Coins"
+          )}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+export default Earn;

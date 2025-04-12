@@ -80,9 +80,9 @@ const NotificationsPage: React.FC = () => {
                         } hover:bg-muted transition-colors`}
                       >
                         <div className="flex gap-3 items-start">
-                          {notification.sender?.avatar_url && (
+                          {notification.sender && notification.sender.avatar && (
                             <img
-                              src={notification.sender.avatar_url}
+                              src={notification.sender.avatar}
                               alt=""
                               className="w-10 h-10 rounded-full object-cover"
                             />

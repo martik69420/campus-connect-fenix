@@ -17,19 +17,10 @@ import {
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-
-export interface Badge {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-  color: string;
-  backgroundColor: string;
-  earned: boolean;
-}
+import { UserBadge } from '@/types/user';
 
 interface ProfileBadgesProps {
-  badges: Badge[];
+  badges: UserBadge[];
   className?: string;
 }
 
