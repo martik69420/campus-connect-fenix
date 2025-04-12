@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import SnakeGame from './SnakeGame';
 import { useGame } from '@/context/GameContext';
@@ -23,9 +24,7 @@ const SnakeGameWrapper: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
 
     // Clean up
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   const handleGameEnd = async (score: number) => {

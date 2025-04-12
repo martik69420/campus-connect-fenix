@@ -16,6 +16,9 @@ export interface User {
   school?: string;
   website?: string;
   interests?: string[];
+  coins?: number;
+  lastActive?: string;
+  isOnline?: boolean;
 }
 
 export interface ProfileUpdateData {
@@ -32,12 +35,16 @@ export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
-  register: (email: string, password: string, username: string, displayName: string) => Promise<void>;
+  register: (email: string, password: string, username: string, displayName: string, school: string) => Promise<boolean>;
   resetPassword: (email: string) => Promise<void>;
-  updateUserProfile: (data: ProfileUpdateData) => Promise<void>;
+  updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
   uploadProfilePicture: (file: File) => Promise<string>;
   updatePassword: (password: string) => Promise<void>;
   refreshUser: () => Promise<void>;
+  authError: string | null;
+  updateUser: (userData: Partial<User>) => void;
+  addCoins: (amount: number, reason?: string) => Promise<boolean>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
 }
