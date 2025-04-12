@@ -25,7 +25,10 @@ import TicTacToe from "./pages/games/TicTacToe";
 import Reports from "./pages/Reports";
 import Achievements from "./pages/Achievements";
 import Earn from "./pages/Earn";
+import Leaderboard from "./pages/Leaderboard";
 import NotFound from "./pages/NotFound";
+import Search from "./pages/Search";
+import Table from "./pages/Table";
 
 // Protected route component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -49,9 +52,8 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
   return (
     <ThemeProvider>
-      {/* AuthProvider needs to be above any component that uses useAuth */}
       <AuthProvider>
-        <LanguageProvider> {/* Add LanguageProvider here */}
+        <LanguageProvider>
           <NotificationProvider>
             <PostProvider>
               <AchievementProvider>
@@ -65,6 +67,8 @@ function App() {
                   <Route path="/friend-requests" element={<ProtectedRoute><FriendRequests /></ProtectedRoute>} />
                   <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                  <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+                  <Route path="/table" element={<ProtectedRoute><Table /></ProtectedRoute>} />
                   <Route path="/games" element={<ProtectedRoute><Games /></ProtectedRoute>} />
                   <Route path="/games/snake" element={<ProtectedRoute><Snake /></ProtectedRoute>} />
                   <Route path="/games/trivia" element={<ProtectedRoute><Trivia /></ProtectedRoute>} />
@@ -72,6 +76,7 @@ function App() {
                   <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
                   <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
                   <Route path="/earn" element={<ProtectedRoute><Earn /></ProtectedRoute>} />
+                  <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
                   
                   <Route path="*" element={<NotFound />} />
                 </Routes>
@@ -79,7 +84,7 @@ function App() {
               </AchievementProvider>
             </PostProvider>
           </NotificationProvider>
-        </LanguageProvider> {/* Close LanguageProvider */}
+        </LanguageProvider>
       </AuthProvider>
     </ThemeProvider>
   );

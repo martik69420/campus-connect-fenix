@@ -40,7 +40,7 @@ const MobileNavBar: React.FC = () => {
     { icon: <Heart className="h-5 w-5" />, label: 'Earn', path: '/earn' },
     { icon: <Trophy className="h-5 w-5" />, label: 'Leaderboard', path: '/leaderboard' },
     { icon: <Award className="h-5 w-5" />, label: 'Achievements', path: '/achievements' },
-    { icon: <User className="h-5 w-5" />, label: 'Profile', path: `/profile/${user?.username}` },
+    { icon: <User className="h-5 w-5" />, label: 'Profile', path: user ? `/profile/${user.username}` : '/profile' },
     { icon: <Settings className="h-5 w-5" />, label: 'Settings', path: '/settings' },
   ];
   

@@ -62,7 +62,7 @@ const Navbar = () => {
   
   const handleLogout = () => {
     logout();
-    navigate('/auth');
+    navigate('/login');
   };
   
   return (
@@ -74,7 +74,7 @@ const Navbar = () => {
             {!isMobile ? (
               <span className="font-bold text-xl">Campus Connect</span>
             ) : (
-              <img src="/logo.svg" alt="Logo" className="h-6 w-6" />
+              <span className="font-bold text-lg">CC</span>
             )}
           </Link>
           

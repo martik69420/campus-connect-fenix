@@ -15,20 +15,10 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   const isMobile = useIsMobile();
 
   React.useEffect(() => {
-    // Add meta viewport tag to ensure proper mobile rendering
-    const metaTag = document.createElement('meta');
-    metaTag.name = 'viewport';
-    metaTag.content = 'width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no';
-    document.head.appendChild(metaTag);
-
     // Only redirect if we're sure the user is not authenticated and auth is not still loading
     if (!isLoading && !isAuthenticated) {
       navigate("/login");
     }
-
-    return () => {
-      document.head.removeChild(metaTag);
-    };
   }, [isAuthenticated, isLoading, navigate]);
 
   // Show loading state while checking authentication
@@ -49,25 +39,27 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {!isMobile && <Sidebar />}
-      <div className={`flex-1 flex flex-col min-h-screen ${!isMobile ? "ml-64" : ""}`}> 
-        <div className="safe-top">
-          {!isMobile ? <TopBar /> : <Navbar />}
+    <div className="min-h-screen bg-background">
+      <div className="flex min-h-screen">
+        {!isMobile && <Sidebar />}
+        <div className={`flex-1 flex flex-col min-h-screen ${!isMobile ? "ml-64" : ""}`}> 
+          <div className="sticky top-0 z-40 w-full">
+            {!isMobile ? <TopBar /> : <Navbar />}
+          </div>
+          <main className="flex-1 container mx-auto py-4 px-4 md:px-6">
+            <AnimatePresence mode="wait">
+              <motion.div
+                initial={{ opacity: 0, y: 5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="h-full"
+              >
+                {children || <Outlet />}
+              </motion.div>
+            </AnimatePresence>
+          </main>
         </div>
-        <main className="flex-1 container mx-auto py-4 px-4 md:px-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              initial={{ opacity: 0, y: 5 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="h-full"
-            >
-              {children || <Outlet />}
-            </motion.div>
-          </AnimatePresence>
-        </main>
       </div>
       <Toaster />
     </div>
