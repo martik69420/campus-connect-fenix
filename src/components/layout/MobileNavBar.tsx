@@ -13,7 +13,8 @@ import {
   Search,
   Users,
   Trophy,
-  Heart
+  Heart,
+  Award
 } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,7 @@ const MobileNavBar: React.FC = () => {
     { icon: <Gamepad2 className="h-5 w-5" />, label: 'Games', path: '/games' },
     { icon: <Heart className="h-5 w-5" />, label: 'Earn', path: '/earn' },
     { icon: <Trophy className="h-5 w-5" />, label: 'Leaderboard', path: '/leaderboard' },
+    { icon: <Award className="h-5 w-5" />, label: 'Achievements', path: '/achievements' },
     { icon: <User className="h-5 w-5" />, label: 'Profile', path: `/profile/${user?.username}` },
     { icon: <Settings className="h-5 w-5" />, label: 'Settings', path: '/settings' },
   ];
@@ -46,10 +48,10 @@ const MobileNavBar: React.FC = () => {
     setMenuOpen(false);
   };
   
-  const handleLogout = () => {
+  const handleLogout = async () => {
     closeMenu();
-    logout();
-    navigate('/auth');
+    await logout();
+    navigate('/login');
   };
   
   return (
@@ -104,6 +106,10 @@ const MobileNavBar: React.FC = () => {
                 <div className="ml-3">
                   <p className="font-medium">{user?.displayName}</p>
                   <p className="text-xs text-muted-foreground">@{user?.username}</p>
+                  <div className="flex items-center text-xs text-amber-500 mt-1">
+                    <Trophy className="h-3 w-3 mr-1" />
+                    <span>{user?.coins || 0} coins</span>
+                  </div>
                 </div>
               </div>
               

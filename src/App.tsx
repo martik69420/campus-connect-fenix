@@ -27,6 +27,7 @@ const Games = lazy(() => import('./pages/Games'));
 const Snake = lazy(() => import('./pages/Snake'));
 const Trivia = lazy(() => import('./pages/Trivia'));
 const Table = lazy(() => import('./pages/Table'));
+const Achievements = lazy(() => import('./pages/Achievements'));
 
 // This component handles navigation operations and preventing infinite loading
 const NavigationHandler = ({ children }: { children: React.ReactNode }) => {
@@ -89,6 +90,8 @@ function App() {
                           <Route path="/snake" element={<Snake />} />
                           <Route path="/trivia" element={<Trivia />} />
                           <Route path="/table" element={<Table />} />
+                          <Route path="/achievements" element={<Achievements />} />
+                          <Route path="*" element={<NotFound />} />
                         </Routes>
                       </Suspense>
                     </NavigationHandler>

@@ -16,6 +16,7 @@ import AdBanner from '@/components/ads/AdBanner';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useViewport } from '@/hooks/use-viewport';
 
 // Add window.adsbygoogle type declaration if not already defined
 declare global {
@@ -33,7 +34,9 @@ const Index = () => {
   const [latestPosts, setLatestPosts] = useState([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [friendsLoaded, setFriendsLoaded] = useState(false);
   const { toast } = useToast();
+  const { isMobile } = useViewport();
 
   // Authentication check - simplified to prevent potential loops
   useEffect(() => {
@@ -74,6 +77,14 @@ const Index = () => {
       mounted = false;
     };
   }, [isAuthenticated, user, loadPosts, postsLoading, posts]);
+
+  // Force friends data to load immediately
+  useEffect(() => {
+    if (isAuthenticated && user && !friendsLoaded) {
+      // This is just to trigger FriendsForYou to load on first render
+      setFriendsLoaded(true);
+    }
+  }, [isAuthenticated, user, friendsLoaded]);
 
   // Process posts when they're loaded
   useEffect(() => {
@@ -130,13 +141,13 @@ const Index = () => {
 
   return (
     <AppLayout>
-      <div className="container mx-auto py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="container mx-auto py-4 md:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           {/* Left sidebar - Friends For You */}
           <div className="hidden md:block">
             <Card className="sticky top-20">
               <CardContent className="p-4">
-                <FriendsForYou />
+                <FriendsForYou key={`friends-${friendsLoaded ? 'loaded' : 'loading'}`} />
               </CardContent>
             </Card>
           </div>
@@ -144,7 +155,7 @@ const Index = () => {
           {/* Main content */}
           <div className="md:col-span-2">
             {user && (
-              <Card className="mb-6 shadow-md border-primary/10 overflow-hidden">
+              <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden">
                 <CardContent className="p-4">
                   <PostForm />
                 </CardContent>
@@ -153,7 +164,7 @@ const Index = () => {
 
             <Tabs defaultValue="for-you" onValueChange={handleTabChange}>
               <div className="flex items-center justify-between mb-4">
-                <TabsList className="grid grid-cols-2 w-[300px]">
+                <TabsList className="grid grid-cols-2 w-[200px] md:w-[300px]">
                   <TabsTrigger value="for-you" className="text-sm">
                     For You
                   </TabsTrigger>
@@ -164,7 +175,7 @@ const Index = () => {
                 <motion.div whileTap={{ rotate: 360 }} transition={{ duration: 0.5 }}>
                   <Button 
                     variant="outline" 
-                    size="sm" 
+                    size={isMobile ? "sm" : "default"} 
                     onClick={handleRefresh}
                     disabled={isRefreshing}
                     className={cn("gap-2", isRefreshing && "opacity-70")}
@@ -173,7 +184,7 @@ const Index = () => {
                       "h-4 w-4", 
                       isRefreshing && "animate-spin"
                     )} />
-                    Refresh
+                    {!isMobile && "Refresh"}
                   </Button>
                 </motion.div>
               </div>
