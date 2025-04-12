@@ -13,7 +13,7 @@ interface User {
   avatar_url?: string;
 }
 
-interface MentionSuggestionsProps {
+export interface MentionSuggestionsProps {
   query: string;
   position: { top: number; left: number };
   onSelect: (username: string) => void;

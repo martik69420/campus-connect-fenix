@@ -86,6 +86,10 @@ export function PostCreator() {
     );
   }
 
+  const handleMention = (mention: string) => {
+    setContent(prev => prev + `@${mention} `);
+  };
+
   return (
     <Card className="mb-6 overflow-hidden">
       <form onSubmit={handleSubmit}>
@@ -93,19 +97,22 @@ export function PostCreator() {
           <div className="flex gap-3">
             <Avatar>
               <AvatarImage 
-                src={user.avatar || "/placeholder.svg"} 
-                alt={user.displayName || user.username} 
+                src={user?.avatar || "/placeholder.svg"} 
+                alt={user?.displayName || user?.username} 
               />
-              <AvatarFallback>{(user.displayName || user.username)?.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{(user?.displayName || user?.username)?.charAt(0)}</AvatarFallback>
             </Avatar>
             
             <div className="flex-1">
-              <MentionInput 
+              <textarea
                 value={content}
-                onChange={setContent}
-                placeholder={`What's on your mind, ${user.displayName || user.username}?`}
-                className="min-h-[80px]"
+                onChange={(e) => setContent(e.target.value)}
+                placeholder={`What's on your mind, ${user?.displayName || user?.username}?`}
+                className="w-full border-none focus:ring-0 resize-none min-h-[80px]"
               />
+              <div className="mt-2">
+                <MentionInput onMention={handleMention} />
+              </div>
             </div>
           </div>
         </CardHeader>

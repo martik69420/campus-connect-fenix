@@ -1,14 +1,15 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MentionSuggestions } from './MentionSuggestions';
+import { MentionSuggestions, MentionSuggestionsProps } from './MentionSuggestions';
 
-interface MentionInputProps {
+export interface MentionInputProps {
   onMention: (mention: string) => void;
 }
 
 const MentionInput: React.FC<MentionInputProps> = ({ onMention }) => {
   const [inputValue, setInputValue] = useState('');
-  const [mentionSuggestions, setMentionSuggestions] = useState<string[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionPosition, setMentionPosition] = useState<{ top: number; left: number } | null>(null);
   const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -36,17 +37,26 @@ const MentionInput: React.FC<MentionInputProps> = ({ onMention }) => {
       const filteredUsers = users.filter(user =>
         user.toLowerCase().includes(searchText)
       );
-      setMentionSuggestions(filteredUsers);
-      setIsSuggestionsOpen(true);
+      
+      if (filteredUsers.length > 0) {
+        setMentionQuery(searchText);
+        // Calculate position
+        if (inputRef.current) {
+          const rect = inputRef.current.getBoundingClientRect();
+          setMentionPosition({ top: rect.bottom, left: rect.left });
+        }
+        setIsSuggestionsOpen(true);
+      } else {
+        setIsSuggestionsOpen(false);
+      }
     } else {
-      setMentionSuggestions([]);
+      setMentionQuery(null);
       setIsSuggestionsOpen(false);
     }
   };
 
   const handleMentionSelect = (mention: string) => {
     setInputValue(mention + ' ');
-    setMentionSuggestions([]);
     setIsSuggestionsOpen(false);
     onMention(mention);
     if (inputRef.current) {
@@ -64,9 +74,10 @@ const MentionInput: React.FC<MentionInputProps> = ({ onMention }) => {
         placeholder="Type @ to mention someone"
         className="border rounded p-2 w-full"
       />
-      {isSuggestionsOpen && (
+      {isSuggestionsOpen && mentionPosition && mentionQuery !== null && (
         <MentionSuggestions
-          suggestions={mentionSuggestions}
+          query={mentionQuery}
+          position={mentionPosition}
           onSelect={handleMentionSelect}
         />
       )}

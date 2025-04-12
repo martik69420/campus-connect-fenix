@@ -16,7 +16,7 @@ export function PrivacySettings() {
   
   // Get initial values from user settings or use defaults
   const [settings, setSettings] = useState<UserSettingsType>({
-    privacyProfile: user?.settings?.privacy?.profileVisibility || 'public',
+    privacyProfile: (user?.settings?.privacy?.profileVisibility as "public" | "friends" | "private") || "public",
     showEmail: user?.settings?.privacy?.showEmail || false,
     showSchool: user?.settings?.privacy?.onlineStatus || true,
     showLocation: user?.settings?.privacy?.dataSharing || true,
