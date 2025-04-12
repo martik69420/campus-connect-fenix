@@ -1,171 +1,171 @@
 
-import * as React from 'react';
+import React, { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { useAuth } from '@/context/auth';
-import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-  FormDescription,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, User, School, FileText } from 'lucide-react';
+import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import ProfilePictureUpload from './ProfilePictureUpload';
-import { Card, CardContent } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
+import { supabase } from '@/integrations/supabase/client';
+import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-const profileFormSchema = z.object({
-  displayName: z.string().min(2, {
+// Add onComplete prop to component props interface
+interface ProfileUpdateFormProps {
+  onComplete?: () => void;
+}
+
+const profileSchema = z.object({
+  display_name: z.string().min(2, {
     message: "Display name must be at least 2 characters.",
-  }),
-  bio: z.string().max(160, {
-    message: "Bio must not be longer than 160 characters.",
+  }).max(50),
+  bio: z.string().max(500, {
+    message: "Bio must be 500 characters or less.",
   }).optional(),
-  school: z.string().min(2, {
-    message: "School must be at least 2 characters.",
-  }),
+  location: z.string().max(100).optional(),
+  website: z.string().url({
+    message: "Please enter a valid URL.",
+  }).optional().or(z.literal('')),
+  school: z.string().max(100).optional(),
+  interests: z.array(z.string()).optional(),
 });
 
-type ProfileFormValues = z.infer<typeof profileFormSchema>;
+const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => {
+  const { user, updateProfile } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [interestsInput, setInterestsInput] = useState<string>('');
+  const navigate = useNavigate();
 
-const ProfileUpdateForm = () => {
-  const { user, updateUserProfile } = useAuth();
-  const { toast } = useToast();
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
-
-  const defaultValues: Partial<ProfileFormValues> = {
-    displayName: user?.displayName || '',
-    bio: user?.bio || '',
-    school: user?.school || '',
-  };
-
-  const form = useForm<ProfileFormValues>({
-    resolver: zodResolver(profileFormSchema),
-    defaultValues,
-    mode: "onChange",
+  const form = useForm({
+    resolver: zodResolver(profileSchema),
+    defaultValues: {
+      display_name: user?.display_name || '',
+      bio: user?.bio || '',
+      location: user?.location || '',
+      website: user?.website || '',
+      school: user?.school || '',
+      interests: user?.interests as string[] || [],
+    },
   });
 
-  // Reset form when user data changes
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       form.reset({
-        displayName: user.displayName || '',
+        display_name: user.display_name || '',
         bio: user.bio || '',
+        location: user.location || '',
+        website: user.website || '',
         school: user.school || '',
+        interests: user.interests as string[] || [],
       });
     }
   }, [user, form]);
 
-  async function onSubmit(data: ProfileFormValues) {
-    setIsSubmitting(true);
+  const handleAddInterest = () => {
+    if (!interestsInput.trim()) return;
+    
+    const currentInterests = form.getValues('interests') || [];
+    if (!currentInterests.includes(interestsInput.trim())) {
+      form.setValue('interests', [...currentInterests, interestsInput.trim()]);
+    }
+    setInterestsInput('');
+  };
+
+  const handleRemoveInterest = (interest: string) => {
+    const currentInterests = form.getValues('interests') || [];
+    form.setValue(
+      'interests', 
+      currentInterests.filter(i => i !== interest)
+    );
+  };
+
+  const onSubmit = async (data: z.infer<typeof profileSchema>) => {
+    if (!user) return;
+    
+    setLoading(true);
     try {
-      console.log("Updating profile with data:", data);
+      // Handle avatar upload if there's a new file
+      let avatarUrl = user.avatar_url;
       
-      const profileData = {
-        displayName: data.displayName,
-        bio: data.bio || null,
-        school: data.school,
+      if (avatarFile) {
+        const fileName = `${user.id}_${Date.now()}.${avatarFile.name.split('.').pop()}`;
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(fileName, avatarFile);
+          
+        if (uploadError) throw uploadError;
+        
+        const { data: urlData } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(fileName);
+          
+        avatarUrl = urlData.publicUrl;
+      }
+      
+      const updateData = {
+        ...data,
+        avatar_url: avatarUrl
       };
       
-      // First try to update directly via Supabase to see errors
-      try {
-        const { error } = await supabase
-          .from('profiles')
-          .update({
-            display_name: profileData.displayName,
-            bio: profileData.bio,
-            school: profileData.school,
-          })
-          .eq('id', user?.id || '');
-        
-        if (error) {
-          console.error("Failed to update profile in Supabase:", error);
-          throw new Error(error.message);
-        }
-      } catch (error: any) {
-        console.error("Supabase update error:", error);
-        throw error;
-      }
+      await updateProfile(updateData);
       
-      // If direct update succeeds, update the context as well
-      const success = await updateUserProfile(profileData);
-      
-      if (success) {
-        toast({
-          title: "Profile updated",
-          description: "Your profile has been updated successfully",
-        });
-      } else {
-        toast({
-          title: "Failed to update profile",
-          description: "There was an error updating your profile. Please try again.",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
-      console.error("Error updating profile:", error);
       toast({
-        title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        title: "Profile Updated",
+        description: "Your profile has been updated successfully.",
+      });
+      
+      // Call the onComplete callback if provided
+      if (onComplete) {
+        onComplete();
+      } else {
+        // If no callback, navigate back to profile
+        navigate(`/profile/${user.username}`);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      toast({
+        title: "Update Failed",
+        description: "There was an error updating your profile. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Avatar Upload with improved UI */}
-        <Card className="p-4">
-          <div className="flex flex-col items-center sm:items-start sm:flex-row gap-6 mb-6">
-            <ProfilePictureUpload />
-            
-            <div className="flex-1 space-y-2">
-              <h3 className="font-medium text-lg">Profile Picture</h3>
-              <p className="text-sm text-muted-foreground">
-                Upload a profile picture to personalize your account. 
-                JPG, PNG, GIF or WebP, max 5MB.
-              </p>
+    <Card>
+      <CardHeader className="bg-secondary/5 pb-2">
+        <CardTitle className="text-xl">Edit Profile</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <div className="flex justify-center mb-4">
+              <ProfilePictureUpload 
+                currentAvatar={user?.avatar_url} 
+                onFileSelect={setAvatarFile}
+                previewUrl={avatarPreview}
+                setPreviewUrl={setAvatarPreview}
+              />
             </div>
-          </div>
-        </Card>
-        
-        {/* Form Fields with Icons */}
-        <Card className="p-6">
-          <h3 className="text-lg font-medium mb-4">Personal Information</h3>
-          <Separator className="my-4" />
-          
-          <div className="space-y-6">
+            
             <FormField
               control={form.control}
-              name="displayName"
+              name="display_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Display Name
-                  </FormLabel>
+                  <FormLabel>Display Name</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Your display name" 
-                      {...field} 
-                      className="transition-all focus:border-primary"
-                    />
+                    <Input placeholder="Your name" {...field} />
                   </FormControl>
-                  <FormDescription>
-                    This is how others will see you on the platform
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -176,73 +176,145 @@ const ProfileUpdateForm = () => {
               name="bio"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    Bio
-                  </FormLabel>
+                  <FormLabel>Bio</FormLabel>
                   <FormControl>
-                    <Textarea
-                      placeholder="Tell us a little bit about yourself"
-                      className="resize-none min-h-[100px] transition-all focus:border-primary"
-                      {...field}
+                    <Textarea 
+                      placeholder="Tell us about yourself"
+                      className="min-h-32 resize-none"
+                      {...field} 
                       value={field.value || ''}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Share a brief description about yourself (max 160 characters)
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
             
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="location"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Location</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your location" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="school"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>School/Institution</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Your school or institution" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="website"
+                render={({ field }) => (
+                  <FormItem className="col-span-full">
+                    <FormLabel>Website</FormLabel>
+                    <FormControl>
+                      <Input placeholder="https://example.com" {...field} value={field.value || ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
             <FormField
               control={form.control}
-              name="school"
+              name="interests"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="flex items-center gap-2">
-                    <School className="h-4 w-4" />
-                    School
-                  </FormLabel>
-                  <FormControl>
+                <FormItem className="col-span-full">
+                  <FormLabel>Interests</FormLabel>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {field.value && field.value.length > 0 ? (
+                      field.value.map((interest, index) => (
+                        <div 
+                          key={index}
+                          className="flex items-center bg-secondary/20 px-3 py-1 rounded-full text-sm"
+                        >
+                          <span>{interest}</span>
+                          <button
+                            type="button"
+                            className="ml-2 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleRemoveInterest(interest)}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-muted-foreground text-sm">No interests added yet</p>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
                     <Input 
-                      placeholder="Your school or university" 
-                      {...field}
-                      className="transition-all focus:border-primary" 
+                      placeholder="Add an interest"
+                      value={interestsInput}
+                      onChange={(e) => setInterestsInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddInterest();
+                        }
+                      }}
                     />
-                  </FormControl>
-                  <FormDescription>
-                    The educational institution you're associated with
-                  </FormDescription>
+                    <Button 
+                      type="button" 
+                      variant="outline"
+                      onClick={handleAddInterest}
+                    >
+                      Add
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
             />
-          </div>
-        </Card>
-        
-        <div className="flex justify-end">
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || !form.formState.isDirty} 
-            className="w-full sm:w-auto"
-          >
-            {isSubmitting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Updating...
-              </>
-            ) : (
-              <>
-                <Save className="mr-2 h-4 w-4" />
-                Save Changes
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
+            
+            <div className="flex justify-end gap-4">
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => {
+                  if (onComplete) {
+                    onComplete();
+                  } else {
+                    navigate(`/profile/${user?.username}`);
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
   );
 };
 
