@@ -16,15 +16,15 @@ export function PrivacySettings() {
   
   // Get initial values from user settings or use defaults
   const [settings, setSettings] = useState<UserSettingsType>({
-    privacyProfile: user?.settings?.profilePrivacy || 'public',
-    showEmail: user?.settings?.showEmail || false,
-    showSchool: user?.settings?.showSchool || true,
-    showLocation: user?.settings?.showLocation || true,
-    showLikedPosts: user?.settings?.showLikedPosts || false,
-    showSavedPosts: user?.settings?.showSavedPosts || false,
-    showActivity: user?.settings?.showActivityStatus || true,
-    showFriendsList: user?.settings?.showFriendsList || true,
-    readReceipts: user?.settings?.readReceipts || true,
+    privacyProfile: user?.settings?.privacy?.profileVisibility || 'public',
+    showEmail: user?.settings?.privacy?.showEmail || false,
+    showSchool: user?.settings?.privacy?.onlineStatus || true,
+    showLocation: user?.settings?.privacy?.dataSharing || true,
+    showLikedPosts: user?.settings?.privacy?.showActivity || false,
+    showSavedPosts: user?.settings?.privacy?.friendRequests || false,
+    showActivity: user?.settings?.privacy?.showActivity || true,
+    showFriendsList: user?.settings?.privacy?.dataSharing || true,
+    readReceipts: user?.settings?.privacy?.showEmail || true,
   });
 
   const handleToggleChange = (setting: keyof UserSettingsType) => {
@@ -45,14 +45,16 @@ export function PrivacySettings() {
     try {
       await updateUserProfile({
         settings: {
-          profilePrivacy: settings.privacyProfile,
-          showEmail: settings.showEmail,
-          showSchool: settings.showSchool,
-          showLikedPosts: settings.showLikedPosts,
-          showSavedPosts: settings.showSavedPosts,
-          showActivityStatus: settings.showActivity,
-          showFriendsList: settings.showFriendsList,
-          readReceipts: settings.readReceipts,
+          privacy: {
+            profileVisibility: settings.privacyProfile,
+            showEmail: settings.showEmail,
+            onlineStatus: settings.showSchool,
+            dataSharing: settings.showLocation,
+            showActivity: settings.showLikedPosts,
+            friendRequests: settings.showSavedPosts,
+            allowMessages: "all", // default value
+            allowTags: true // default value
+          }
         }
       });
       

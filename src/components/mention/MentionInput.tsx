@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import MentionSuggestions from './MentionSuggestions';
+import { MentionSuggestions } from './MentionSuggestions';
 
 interface MentionInputProps {
   onMention: (mention: string) => void;

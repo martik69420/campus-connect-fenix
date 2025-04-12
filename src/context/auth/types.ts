@@ -14,6 +14,7 @@ export interface User {
   interests?: string[];
   isOnline?: boolean;
   location?: string;
+  lastActive?: string;
   settings?: {
     privacy: {
       profileVisibility: string;

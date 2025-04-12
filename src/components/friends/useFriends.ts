@@ -4,7 +4,7 @@ import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
-interface FriendRequest {
+export interface FriendRequest {
   id: string;
   user: {
     id: string;

@@ -1,12 +1,13 @@
+
 import React, { useState, useEffect } from 'react';
 import SnakeGame from './SnakeGame';
 import { Button } from '../ui/button';
 import { Card } from '../ui/card';
 import { PlayIcon, PauseIcon } from 'lucide-react';
-import { SnakeGameState } from './SnakeGameTypes';
+import { SnakeGameProps, SnakeGameState } from './SnakeGameTypes';
 
 interface SnakeGameWrapperProps {
-  onGameEnd: (score: number) => void;
+  onGameEnd: (score: number) => Promise<void>;
 }
 
 const SnakeGameWrapper: React.FC<SnakeGameWrapperProps> = ({ onGameEnd }) => {
@@ -30,9 +31,9 @@ const SnakeGameWrapper: React.FC<SnakeGameWrapperProps> = ({ onGameEnd }) => {
     setScore(newScore);
   };
 
-  const handleGameOver = () => {
+  const handleGameOver = async () => {
     setIsGameStarted(false);
-    onGameEnd(score);
+    await onGameEnd(score);
   };
 
   return (
@@ -66,8 +67,7 @@ const SnakeGameWrapper: React.FC<SnakeGameWrapperProps> = ({ onGameEnd }) => {
         <div className="relative">
           <SnakeGame 
             key={gameKey} 
-            onScore={handleScore}
-            onGameOver={handleGameOver}
+            onGameEnd={handleGameOver}
           />
           
           {isPaused && (

@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import SnakeGameWrapper from '@/components/game/SnakeGameWrapper';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
@@ -9,10 +8,21 @@ import { Gamepad, Trophy, History, Zap, Award, KeyRound, Coins, Flame, FastForwa
 import { Badge } from '@/components/ui/badge';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast';
 
 const Snake: React.FC = () => {
   const { t } = useLanguage();
   const { bestScores, gameState } = useGame();
+  const { toast } = useToast();
+  
+  const handleGameEnd = async (score: number) => {
+    toast({
+      title: "Game Over!",
+      description: `Your score: ${score}`,
+    });
+    
+    // Any additional game end logic could go here
+  };
 
   // Animation variants
   const containerVariants = {
@@ -183,7 +193,7 @@ const Snake: React.FC = () => {
                     whileHover={{ scale: 1.01 }}
                     transition={{ type: "spring", stiffness: 300, damping: 15 }}
                   >
-                    <SnakeGameWrapper />
+                    <SnakeGameWrapper onGameEnd={handleGameEnd} />
                   </motion.div>
                   <div className="mt-4 text-sm text-muted-foreground text-center">
                     <div className="p-3 bg-emerald-500/10 rounded-lg border border-emerald-500/20 inline-block">

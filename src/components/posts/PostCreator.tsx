@@ -1,4 +1,3 @@
-
 import React, { useState, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { useAuth } from "@/context/auth";
 import { usePost } from "@/context/PostContext";
 import { ImagePlus, Smile, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { MentionInput } from "@/components/mention/MentionInput";
+import MentionInput from "@/components/mention/MentionInput";
 
 export function PostCreator() {
   const [content, setContent] = useState<string>("");

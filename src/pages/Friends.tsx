@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth';
-import { useFriends } from '@/components/friends/useFriends';
+import { useFriends, FriendRequest } from '@/components/friends/useFriends';
 import AppLayout from '@/components/layout/AppLayout';
 import FriendsList from '@/components/friends/FriendsList';
 import AdBanner from '@/components/ads/AdBanner';
@@ -103,10 +103,10 @@ const Friends = () => {
               </Card>
             }>
               <FriendRequestsTab 
-                requests={receivedRequests}
+                requests={receivedRequests as FriendRequest[]}
                 loading={isLoading}
-                onAccept={acceptFriendRequest}
-                onDecline={rejectFriendRequest}
+                onAccept={async (userId) => { await acceptFriendRequest(userId); }}
+                onDecline={async (userId) => { await rejectFriendRequest(userId); }}
               />
             </Suspense>
           </TabsContent>
