@@ -4,6 +4,7 @@ import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import TopBar from "./TopBar";
 import Navbar from "./Navbar";
+import MobileNavBar from "./MobileNavBar";
 import { useAuth } from "@/context/auth";
 import { Toaster } from "@/components/ui/toaster";
 import { AnimatePresence, motion } from "framer-motion";
@@ -24,10 +25,10 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
   // Show loading state while checking authentication
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center space-y-4">
-          <div className="w-10 h-10 rounded-full border-3 border-primary border-t-transparent animate-spin"></div>
-          <p className="text-lg font-medium">Loading...</p>
+          <div className="w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+          <p className="text-lg font-medium">Loading your experience...</p>
         </div>
       </div>
     );
@@ -46,13 +47,13 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
           <div className="sticky top-0 z-40 w-full">
             {!isMobile ? <TopBar /> : <Navbar />}
           </div>
-          <main className="flex-1 container mx-auto py-4 px-4 md:px-6">
+          <main className="flex-1 container mx-auto py-6 px-4 md:px-6 pb-16 md:pb-6">
             <AnimatePresence mode="wait">
               <motion.div
-                initial={{ opacity: 0, y: 5 }}
+                initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.15 }}
+                transition={{ duration: 0.2 }}
                 className="h-full"
               >
                 {children || <Outlet />}
@@ -61,6 +62,7 @@ const AppLayout = ({ children }: { children?: React.ReactNode }) => {
           </main>
         </div>
       </div>
+      {isMobile && <MobileNavBar />}
       <Toaster />
     </div>
   );

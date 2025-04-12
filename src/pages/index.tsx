@@ -4,14 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
 import { usePost } from '@/context/PostContext';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
-import AppLayout from '@/components/layout/AppLayout';
 import PostForm from '@/components/posts/PostForm';
 import PostList from '@/components/posts/PostList';
 import FriendsForYou from '@/components/users/FriendsForYou';
-import { Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, TrendingUp, Clock, UserPlus } from 'lucide-react';
 import AdBanner from '@/components/ads/AdBanner';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -38,19 +37,18 @@ const Index = () => {
   const { toast } = useToast();
   const { isMobile } = useViewport();
 
-  // Authentication check - simplified to prevent potential loops
+  // Authentication check
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       navigate('/login');
     }
   }, [isAuthenticated, authLoading, navigate]);
 
-  // Fetch posts with error handling - simplified to prevent recursive patterns
+  // Fetch posts with error handling
   const loadPosts = useCallback(async () => {
     if (isAuthenticated && user) {
       setLoadError(null);
       try {
-        console.log(`Fetching ${activeTab === 'for-you' ? 'feed' : 'latest'} posts`);
         await fetchPosts(activeTab === 'for-you' ? 'feed' : 'latest');
       } catch (error) {
         console.error("Error fetching posts:", error);
@@ -65,7 +63,7 @@ const Index = () => {
     }
   }, [isAuthenticated, user, activeTab, fetchPosts, toast]);
   
-  // Initial posts loading - added safety check to prevent infinite fetch
+  // Initial posts loading
   useEffect(() => {
     let mounted = true;
     
@@ -81,7 +79,6 @@ const Index = () => {
   // Force friends data to load immediately
   useEffect(() => {
     if (isAuthenticated && user && !friendsLoaded) {
-      // This is just to trigger FriendsForYou to load on first render
       setFriendsLoaded(true);
     }
   }, [isAuthenticated, user, friendsLoaded]);
@@ -90,13 +87,11 @@ const Index = () => {
   useEffect(() => {
     if (!postsLoading && posts.length > 0) {
       if (activeTab === 'for-you') {
-        // For "For You" tab, we might prioritize posts from friends or with more engagement
         const sortedPosts = [...posts].sort((a, b) => 
           (b.likes.length + b.comments.length * 2) - (a.likes.length + a.comments.length * 2)
         );
         setForYouPosts(sortedPosts);
       } else {
-        // For "Latest" tab, we simply sort by date
         const sortedPosts = [...posts].sort((a, b) => 
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
@@ -140,93 +135,102 @@ const Index = () => {
     : "No recent posts found";
 
   return (
-    <AppLayout>
-      <div className="container mx-auto py-4 md:py-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          {/* Left sidebar - Friends For You */}
-          <div className="hidden md:block">
-            <Card className="sticky top-20">
+    <div className="container mx-auto py-4 md:py-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+        {/* Left sidebar - Friends For You */}
+        <div className="hidden md:block">
+          <Card className="sticky top-20 overflow-hidden border-primary/10 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-2">
+              <CardTitle className="flex items-center text-lg">
+                <UserPlus className="h-5 w-5 mr-2 text-primary" />
+                People You May Know
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-4">
+              <FriendsForYou key={`friends-${friendsLoaded ? 'loaded' : 'loading'}`} />
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Main content */}
+        <div className="md:col-span-2">
+          {user && (
+            <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-3">
+                <CardTitle className="text-lg">Create Post</CardTitle>
+              </CardHeader>
               <CardContent className="p-4">
-                <FriendsForYou key={`friends-${friendsLoaded ? 'loaded' : 'loading'}`} />
+                <PostForm />
               </CardContent>
             </Card>
-          </div>
+          )}
 
-          {/* Main content */}
-          <div className="md:col-span-2">
-            {user && (
-              <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden">
-                <CardContent className="p-4">
-                  <PostForm />
-                </CardContent>
-              </Card>
-            )}
-
-            <Tabs defaultValue="for-you" onValueChange={handleTabChange}>
-              <div className="flex items-center justify-between mb-4">
-                <TabsList className="grid grid-cols-2 w-[200px] md:w-[300px]">
-                  <TabsTrigger value="for-you" className="text-sm">
-                    For You
-                  </TabsTrigger>
-                  <TabsTrigger value="latest" className="text-sm">
-                    Latest
-                  </TabsTrigger>
-                </TabsList>
-                <motion.div whileTap={{ rotate: 360 }} transition={{ duration: 0.5 }}>
-                  <Button 
-                    variant="outline" 
-                    size={isMobile ? "sm" : "default"} 
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className={cn("gap-2", isRefreshing && "opacity-70")}
-                  >
-                    <RefreshCw className={cn(
-                      "h-4 w-4", 
-                      isRefreshing && "animate-spin"
-                    )} />
-                    {!isMobile && "Refresh"}
-                  </Button>
-                </motion.div>
+          <Tabs defaultValue="for-you" onValueChange={handleTabChange}>
+            <div className="flex items-center justify-between mb-4">
+              <TabsList className="grid grid-cols-2 w-[200px] md:w-[300px]">
+                <TabsTrigger value="for-you" className="text-sm flex items-center">
+                  <TrendingUp className="h-4 w-4 mr-2" />
+                  For You
+                </TabsTrigger>
+                <TabsTrigger value="latest" className="text-sm flex items-center">
+                  <Clock className="h-4 w-4 mr-2" />
+                  Latest
+                </TabsTrigger>
+              </TabsList>
+              <motion.div whileTap={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                <Button 
+                  variant="outline" 
+                  size={isMobile ? "sm" : "default"} 
+                  onClick={handleRefresh}
+                  disabled={isRefreshing}
+                  className={cn("gap-2", isRefreshing && "opacity-70")}
+                >
+                  <RefreshCw className={cn(
+                    "h-4 w-4", 
+                    isRefreshing && "animate-spin"
+                  )} />
+                  {!isMobile && "Refresh"}
+                </Button>
+              </motion.div>
+            </div>
+            
+            {loadError && (
+              <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                <span className="flex-1">{loadError}</span>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRefresh} 
+                  className="ml-2"
+                >
+                  Try Again
+                </Button>
               </div>
-              
-              {loadError && (
-                <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center">
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                  <span className="flex-1">{loadError}</span>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={handleRefresh} 
-                    className="ml-2"
-                  >
-                    Try Again
-                  </Button>
-                </div>
-              )}
-              
-              <Separator className="mb-4" />
-              <TabsContent value="for-you" className="focus-visible:outline-none">
-                <PostList 
-                  posts={displayedPosts} 
-                  isLoading={postsLoading || isRefreshing} 
-                  emptyMessage={emptyMessage}
-                />
-              </TabsContent>
-              <TabsContent value="latest" className="focus-visible:outline-none">
-                <PostList 
-                  posts={displayedPosts} 
-                  isLoading={postsLoading || isRefreshing} 
-                  emptyMessage={emptyMessage}
-                />
-              </TabsContent>
-            </Tabs>
-          </div>
+            )}
+            
+            <Separator className="mb-4" />
+            <TabsContent value="for-you" className="focus-visible:outline-none">
+              <PostList 
+                posts={displayedPosts} 
+                isLoading={postsLoading || isRefreshing} 
+                emptyMessage={emptyMessage}
+              />
+            </TabsContent>
+            <TabsContent value="latest" className="focus-visible:outline-none">
+              <PostList 
+                posts={displayedPosts} 
+                isLoading={postsLoading || isRefreshing} 
+                emptyMessage={emptyMessage}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
-        
-        {/* AdSense banner */}
-        <AdBanner adSlot="2813542194" className="mt-8" />
       </div>
-    </AppLayout>
+      
+      {/* AdSense banner */}
+      <AdBanner adSlot="2813542194" className="mt-8" />
+    </div>
   );
 };
 

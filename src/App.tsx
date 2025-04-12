@@ -6,7 +6,8 @@ import { PostProvider } from "./context/PostContext";
 import { NotificationProvider } from "./context/NotificationContext";
 import { AchievementProvider } from './context/AchievementContext';
 import { AuthProvider } from './context/auth'; // Make sure AuthProvider is imported
-import { LanguageProvider } from './context/LanguageContext'; // Import LanguageProvider
+import { LanguageProvider } from './context/LanguageContext'; 
+import { GameProvider } from './context/GameContext'; // Import GameProvider
 import { Toaster } from "./components/ui/toaster";
 
 // Pages
@@ -57,30 +58,32 @@ function App() {
           <NotificationProvider>
             <PostProvider>
               <AchievementProvider>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  
-                  <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-                  <Route path="/profile/:username" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                  <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-                  <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
-                  <Route path="/friend-requests" element={<ProtectedRoute><FriendRequests /></ProtectedRoute>} />
-                  <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
-                  <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
-                  <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
-                  <Route path="/table" element={<ProtectedRoute><Table /></ProtectedRoute>} />
-                  <Route path="/games" element={<ProtectedRoute><Games /></ProtectedRoute>} />
-                  <Route path="/games/snake" element={<ProtectedRoute><Snake /></ProtectedRoute>} />
-                  <Route path="/games/trivia" element={<ProtectedRoute><Trivia /></ProtectedRoute>} />
-                  <Route path="/games/tic-tac-toe" element={<ProtectedRoute><TicTacToe /></ProtectedRoute>} />
-                  <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
-                  <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
-                  <Route path="/earn" element={<ProtectedRoute><Earn /></ProtectedRoute>} />
-                  <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-                  
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-                <Toaster />
+                <GameProvider>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    
+                    <Route path="/" element={<ProtectedRoute><Home /></ProtectedRoute>} />
+                    <Route path="/profile/:username" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+                    <Route path="/friends" element={<ProtectedRoute><Friends /></ProtectedRoute>} />
+                    <Route path="/friend-requests" element={<ProtectedRoute><FriendRequests /></ProtectedRoute>} />
+                    <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
+                    <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
+                    <Route path="/search" element={<ProtectedRoute><Search /></ProtectedRoute>} />
+                    <Route path="/table" element={<ProtectedRoute><Table /></ProtectedRoute>} />
+                    <Route path="/games" element={<ProtectedRoute><Games /></ProtectedRoute>} />
+                    <Route path="/games/snake" element={<ProtectedRoute><Snake /></ProtectedRoute>} />
+                    <Route path="/games/trivia" element={<ProtectedRoute><Trivia /></ProtectedRoute>} />
+                    <Route path="/games/tic-tac-toe" element={<ProtectedRoute><TicTacToe /></ProtectedRoute>} />
+                    <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
+                    <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+                    <Route path="/earn" element={<ProtectedRoute><Earn /></ProtectedRoute>} />
+                    <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+                    
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                  <Toaster />
+                </GameProvider>
               </AchievementProvider>
             </PostProvider>
           </NotificationProvider>
