@@ -5,10 +5,11 @@ import React, {
   useEffect,
   useContext,
   useCallback,
+  useRef,
 } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import PushNotificationService from '@/services/PushNotificationService';
 
@@ -48,7 +49,7 @@ export interface NotificationContextProps {
   isNotificationPermissionGranted: boolean;
   enableAutomaticNotifications: (enable: boolean) => void;
   deleteNotification: (id: string) => Promise<void>;
-  isLoading: boolean; // Add the missing property
+  isLoading: boolean;
 }
 
 // Create the context with a default value
@@ -78,7 +79,18 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
   const [isNotificationPermissionGranted, setIsNotificationPermissionGranted] = useState(false);
   const [isLoading, setIsLoading] = useState(false); // Add isLoading state
   const { toast } = useToast();
-  const navigate = useNavigate();
+  
+  // Use optional chaining with useNavigate for safety
+  // This ensures the hook isn't called immediately if not in Router context
+  const navigate = useRef<ReturnType<typeof useNavigate> | null>(null);
+  const location = useLocation();
+  
+  // Set the navigate ref once we're sure we're inside a Router
+  try {
+    navigate.current = useNavigate();
+  } catch (error) {
+    console.error("Router context not available for navigation");
+  }
   
   const pushNotificationService = PushNotificationService.getInstance();
 
@@ -419,6 +431,15 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
     setShowSystemNotifications((prev) => !prev);
   };
 
+  // Modified version of the provider that safely handles navigation
+  const safeNavigate = useCallback((path: string, options?: { replace?: boolean }) => {
+    if (navigate.current) {
+      navigate.current(path, options);
+    } else {
+      console.warn("Navigation attempted before router was initialized");
+    }
+  }, []);
+
   return (
     <NotificationContext.Provider value={{
       notifications,
@@ -439,7 +460,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({
       isNotificationPermissionGranted,
       enableAutomaticNotifications,
       deleteNotification,
-      isLoading // Add isLoading to the context value
+      isLoading
     }}>
       {children}
     </NotificationContext.Provider>
