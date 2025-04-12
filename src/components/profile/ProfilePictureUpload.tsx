@@ -1,4 +1,3 @@
-
 import * as React from 'react';
 import { useAuth } from '@/context/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -6,7 +5,19 @@ import { Button } from '@/components/ui/button';
 import { UserRound, Camera, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
-const ProfilePictureUpload: React.FC = () => {
+interface ProfilePictureUploadProps {
+  currentAvatar?: string | null;
+  onFileSelect?: (file: File) => void;
+  previewUrl?: string | null;
+  setPreviewUrl?: React.Dispatch<React.SetStateAction<string | null>>;
+}
+
+const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
+  currentAvatar,
+  onFileSelect,
+  previewUrl,
+  setPreviewUrl
+}) => {
   const { user, uploadProfilePicture } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = React.useState(false);
@@ -41,6 +52,22 @@ const ProfilePictureUpload: React.FC = () => {
       return;
     }
 
+    // If parent component has provided callbacks, use those
+    if (onFileSelect) {
+      onFileSelect(file);
+      
+      // Create preview URL
+      if (setPreviewUrl) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setPreviewUrl(event.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+      return;
+    }
+
+    // Otherwise use the default behavior
     try {
       setIsUploading(true);
       await uploadProfilePicture(file);
@@ -55,12 +82,16 @@ const ProfilePictureUpload: React.FC = () => {
     }
   };
 
+  // Determine which avatar URL to use
+  const avatarUrl = previewUrl || (currentAvatar !== undefined ? currentAvatar : user?.avatar);
+  const displayName = user?.displayName || "";
+
   return (
     <div className="relative group">
       <Avatar className="h-24 w-24 border-2 border-border">
-        <AvatarImage src={user?.avatar || ""} alt={user?.displayName || ""} />
+        <AvatarImage src={avatarUrl || ""} alt={displayName} />
         <AvatarFallback className="bg-primary text-primary-foreground text-xl">
-          {user?.displayName?.charAt(0) || user?.username?.charAt(0) || <UserRound />}
+          {displayName?.charAt(0) || user?.username?.charAt(0) || <UserRound />}
         </AvatarFallback>
       </Avatar>
       

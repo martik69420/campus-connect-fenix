@@ -36,7 +36,7 @@ const profileSchema = z.object({
 });
 
 const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => {
-  const { user, updateProfile } = useAuth();
+  const { user, updateUserProfile } = useAuth(); // Changed updateProfile to updateUserProfile
   const [loading, setLoading] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
@@ -46,24 +46,25 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
   const form = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      display_name: user?.display_name || '',
+      display_name: user?.displayName || '', // Changed display_name to displayName
       bio: user?.bio || '',
       location: user?.location || '',
-      website: user?.website || '',
+      website: '', // Initialize as empty since it might not exist in the user object
       school: user?.school || '',
-      interests: user?.interests as string[] || [],
+      interests: [] as string[], // Initialize as empty array with proper type
     },
   });
 
   useEffect(() => {
     if (user) {
+      // Set default form values from user object
       form.reset({
-        display_name: user.display_name || '',
+        display_name: user.displayName || '', // Changed display_name to displayName
         bio: user.bio || '',
         location: user.location || '',
-        website: user.website || '',
+        website: '', // Initialize as empty
         school: user.school || '',
-        interests: user.interests as string[] || [],
+        interests: [] as string[], // Initialize as empty array with proper type
       });
     }
   }, [user, form]);
@@ -72,7 +73,7 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
     if (!interestsInput.trim()) return;
     
     const currentInterests = form.getValues('interests') || [];
-    if (!currentInterests.includes(interestsInput.trim())) {
+    if (Array.isArray(currentInterests) && !currentInterests.includes(interestsInput.trim())) {
       form.setValue('interests', [...currentInterests, interestsInput.trim()]);
     }
     setInterestsInput('');
@@ -80,10 +81,12 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
 
   const handleRemoveInterest = (interest: string) => {
     const currentInterests = form.getValues('interests') || [];
-    form.setValue(
-      'interests', 
-      currentInterests.filter(i => i !== interest)
-    );
+    if (Array.isArray(currentInterests)) {
+      form.setValue(
+        'interests', 
+        currentInterests.filter(i => i !== interest)
+      );
+    }
   };
 
   const onSubmit = async (data: z.infer<typeof profileSchema>) => {
@@ -92,7 +95,7 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
     setLoading(true);
     try {
       // Handle avatar upload if there's a new file
-      let avatarUrl = user.avatar_url;
+      let avatarUrl = user.avatar; // Changed avatar_url to avatar
       
       if (avatarFile) {
         const fileName = `${user.id}_${Date.now()}.${avatarFile.name.split('.').pop()}`;
@@ -110,11 +113,15 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
       }
       
       const updateData = {
-        ...data,
-        avatar_url: avatarUrl
+        displayName: data.display_name, // Map form data to expected format
+        bio: data.bio,
+        location: data.location,
+        website: data.website,
+        school: data.school,
+        avatar: avatarUrl // Changed avatar_url to avatar
       };
       
-      await updateProfile(updateData);
+      await updateUserProfile(updateData); // Changed updateProfile to updateUserProfile
       
       toast({
         title: "Profile Updated",
@@ -149,12 +156,7 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="flex justify-center mb-4">
-              <ProfilePictureUpload 
-                currentAvatar={user?.avatar_url} 
-                onFileSelect={setAvatarFile}
-                previewUrl={avatarPreview}
-                setPreviewUrl={setAvatarPreview}
-              />
+              <ProfilePictureUpload />
             </div>
             
             <FormField
@@ -241,7 +243,7 @@ const ProfileUpdateForm: React.FC<ProfileUpdateFormProps> = ({ onComplete }) => 
                 <FormItem className="col-span-full">
                   <FormLabel>Interests</FormLabel>
                   <div className="flex flex-wrap gap-2 mb-2">
-                    {field.value && field.value.length > 0 ? (
+                    {field.value && Array.isArray(field.value) && field.value.length > 0 ? (
                       field.value.map((interest, index) => (
                         <div 
                           key={index}
