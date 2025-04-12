@@ -2,106 +2,83 @@
 import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Check, X, Loader2 } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { User } from '@/context/auth/types';
 import { FriendRequest } from '@/components/friends/useFriends';
-import { Card, CardContent } from '@/components/ui/card';
 
 interface FriendRequestTabProps {
   requests: FriendRequest[];
   loading: boolean;
-  onAccept: (requestId: string) => Promise<void>;
-  onDecline: (requestId: string) => Promise<void>;
+  onAccept: (userId: string) => Promise<void>;
+  onDecline: (userId: string) => Promise<void>;
 }
 
 const FriendRequestsTab: React.FC<FriendRequestTabProps> = ({ requests, loading, onAccept, onDecline }) => {
   const [processingRequests, setProcessingRequests] = useState<Record<string, boolean>>({});
 
-  const handleAccept = async (requestId: string) => {
+  const handleAccept = async (requestId: string, userId: string) => {
     setProcessingRequests(prev => ({ ...prev, [requestId]: true }));
     try {
-      await onAccept(requestId);
+      await onAccept(userId);
     } finally {
       setProcessingRequests(prev => ({ ...prev, [requestId]: false }));
     }
   };
 
-  const handleDecline = async (requestId: string) => {
+  const handleDecline = async (requestId: string, userId: string) => {
     setProcessingRequests(prev => ({ ...prev, [requestId]: true }));
     try {
-      await onDecline(requestId);
+      await onDecline(userId);
     } finally {
       setProcessingRequests(prev => ({ ...prev, [requestId]: false }));
     }
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-8 flex justify-center">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        </CardContent>
-      </Card>
-    );
+    return <p>Loading friend requests...</p>;
   }
 
   if (!requests || requests.length === 0) {
-    return (
-      <Card>
-        <CardContent className="p-10 text-center">
-          <div className="text-muted-foreground">
-            <X className="h-10 w-10 mx-auto mb-4" />
-            <h3 className="text-lg font-medium">No friend requests</h3>
-            <p className="mt-1">You have no pending friend requests at the moment.</p>
-          </div>
-        </CardContent>
-      </Card>
-    );
+    return <p>No friend requests to display.</p>;
   }
 
   return (
-    <div className="space-y-4">
+    <ul>
       {requests.map((request) => (
-        <Card key={request.id} className="overflow-hidden">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={request.profiles?.avatar_url || "/placeholder.svg"} />
-                  <AvatarFallback>{(request.profiles?.display_name || "?").charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-medium">{request.profiles?.display_name}</h3>
-                  <p className="text-sm text-muted-foreground">@{request.profiles?.username}</p>
-                </div>
-              </div>
-              <div className="flex space-x-2">
-                <Button 
-                  onClick={() => handleAccept(request.id)}
-                  disabled={processingRequests[request.id]}
-                  size="sm"
-                >
-                  {processingRequests[request.id] ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Check className="h-4 w-4 mr-2" />
-                  )}
-                  Accept
-                </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={() => handleDecline(request.id)}
-                  disabled={processingRequests[request.id]}
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Decline
-                </Button>
-              </div>
+        <li key={request.id} className="flex items-center justify-between py-2 border-b">
+          <div className="flex items-center space-x-4">
+            <Avatar>
+              <AvatarImage src={request.user.avatar || ""} alt={request.user.displayName || "Friend"} />
+              <AvatarFallback>{request.user.displayName?.charAt(0) || "U"}</AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{request.user.displayName || request.user.username}</p>
+              <p className="text-sm text-muted-foreground">@{request.user.username}</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <div className="flex space-x-2">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => handleAccept(request.id, request.user.id)}
+              disabled={processingRequests[request.id]}
+            >
+              <Check className="w-4 h-4 mr-2" />
+              Accept
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleDecline(request.id, request.user.id)}
+              disabled={processingRequests[request.id]}
+            >
+              <X className="w-4 h-4 mr-2" />
+              Decline
+            </Button>
+          </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 };
 
