@@ -21,70 +21,77 @@ interface FriendSuggestion {
 const FriendsForYou: React.FC = () => {
   const [friendSuggestions, setFriendSuggestions] = useState<FriendSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0); // Add a refresh key to trigger refetches
-  const [offset, setOffset] = useState(0); // Add pagination offset for fetching new suggestions
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [offset, setOffset] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  useEffect(() => {
-    const fetchFriendSuggestions = async () => {
-      if (!user?.id) return;
-      
-      try {
-        setIsLoading(true);
-        
-        // Get friend suggestions based on mutual connections with pagination
-        const { data: users, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .neq('id', user.id)
-          .range(offset, offset + 4) // Fetch 5 users at a time
-          .limit(5);
-          
-        if (error) throw error;
-        
-        // No need to filter bots since there's no is_bot field
-        let filteredUsers = users || [];
-        
-        // If no users found, fetch more with increased offset
-        if (filteredUsers.length === 0 && users?.length) {
-          setOffset(prev => prev + users.length);
-          return; // Will trigger another fetch through the dependency change
-        }
-        
-        // Filter out users that are already friends
-        const { data: friends } = await supabase
-          .from('friends')
-          .select('friend_id, status')
-          .eq('user_id', user.id);
-          
-        const { data: friendRequests } = await supabase
-          .from('friends')
-          .select('user_id, status')
-          .eq('friend_id', user.id);
-          
-        const friendIds = new Set([
-          ...(friends?.map(f => f.friend_id) || []),
-          ...(friendRequests?.map(f => f.user_id) || [])
-        ]);
-        
-        // Add mutual friends count
-        const enhancedUsers = filteredUsers
-          .filter(u => !friendIds.has(u.id))
-          .map(user => ({
-            ...user,
-            mutual_friends: Math.floor(Math.random() * 5) + 1, // Simulate 1-5 mutual friends
-          }));
-          
-        setFriendSuggestions(enhancedUsers);
-      } catch (error) {
-        console.error('Error fetching friend suggestions:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Function to fetch suggestions - separated so we can call it directly
+  const fetchFriendSuggestions = async () => {
+    if (!user?.id) return;
     
+    try {
+      setIsLoading(true);
+      
+      // Get friend suggestions with pagination
+      const { data: users, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .neq('id', user.id)
+        .range(offset, offset + 4)
+        .limit(5);
+        
+      if (error) throw error;
+      
+      let filteredUsers = users || [];
+      
+      // If no users found with current offset, reset to 0 and try again
+      if (filteredUsers.length === 0 && offset > 0) {
+        setOffset(0);
+        return; // Will trigger another fetch through the dependency change
+      }
+      
+      // Filter out users that are already friends
+      const { data: friends } = await supabase
+        .from('friends')
+        .select('friend_id, status')
+        .eq('user_id', user.id);
+        
+      const { data: friendRequests } = await supabase
+        .from('friends')
+        .select('user_id, status')
+        .eq('friend_id', user.id);
+        
+      const friendIds = new Set([
+        ...(friends?.map(f => f.friend_id) || []),
+        ...(friendRequests?.map(f => f.user_id) || [])
+      ]);
+      
+      // Add mutual friends count and filter out existing friends
+      const enhancedUsers = filteredUsers
+        .filter(u => !friendIds.has(u.id))
+        .map(user => ({
+          ...user,
+          mutual_friends: Math.floor(Math.random() * 5) + 1, // Simulate mutual friends
+        }));
+        
+      if (enhancedUsers.length === 0 && offset === 0) {
+        // If we still have no suggestions at offset 0, increment to try more users
+        setOffset(prev => prev + 5);
+        return;
+      }
+      
+      setFriendSuggestions(enhancedUsers);
+    } catch (error) {
+      console.error('Error fetching friend suggestions:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Initial fetch + refetch when dependencies change
+  useEffect(() => {
     fetchFriendSuggestions();
   }, [user?.id, refreshKey, offset]);
 

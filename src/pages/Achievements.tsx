@@ -1,7 +1,7 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import { useAuth, User } from '@/context/auth'; // Import the User type
+import { useAuth } from '@/context/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -9,157 +9,27 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Award, Trophy, Star, Target, Gift, BookOpen, MessageSquare, Heart, UserPlus, Calendar, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
-
-// Define achievement types
-interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-  progress: number;
-  maxProgress: number;
-  unlocked: boolean;
-  category: 'engagement' | 'social' | 'games' | 'profile' | 'special';
-  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary';
-  reward: number;
-}
+import { useAchievements } from '@/context/AchievementContext';
+import { motion } from 'framer-motion';
+import { ProfileBadges } from '@/components/profile/ProfileBadges';
 
 const AchievementsPage: React.FC = () => {
-  const { user, addCoins, refreshUser } = useAuth();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<string>('all');
   const { toast } = useToast();
-  const [achievements, setAchievements] = useState<Achievement[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { achievements, badges, isLoading, claimAchievementReward } = useAchievements();
 
-  // Mock data - would be fetched from backend in a real app
-  useEffect(() => {
-    const fetchAchievements = async () => {
-      setIsLoading(true);
-      
-      // In a real app, this would fetch from an API or database
-      // For now, we're using mock data
-      const mockAchievements: Achievement[] = [
-        {
-          id: 'welcome',
-          name: 'Welcome Aboard',
-          description: 'Join our community',
-          icon: <Award className="h-6 w-6" />,
-          progress: 1,
-          maxProgress: 1,
-          unlocked: true,
-          category: 'profile',
-          rarity: 'common',
-          reward: 50
-        },
-        {
-          id: 'first-post',
-          name: 'First Words',
-          description: 'Create your first post',
-          icon: <MessageSquare className="h-6 w-6" />,
-          progress: user ? 1 : 0,
-          maxProgress: 1,
-          unlocked: user ? true : false,
-          category: 'engagement',
-          rarity: 'common',
-          reward: 100
-        },
-        {
-          id: 'profile-complete',
-          name: 'Identity Established',
-          description: 'Complete your profile information',
-          icon: <UserIcon className="h-6 w-6" />,
-          progress: user?.bio ? 1 : 0,
-          maxProgress: 1,
-          unlocked: user?.bio ? true : false,
-          category: 'profile',
-          rarity: 'uncommon',
-          reward: 150
-        },
-        {
-          id: 'friend-maker',
-          name: 'Friend Maker',
-          description: 'Add 5 friends',
-          icon: <UserPlus className="h-6 w-6" />,
-          progress: 0, // Would be dynamically calculated
-          maxProgress: 5,
-          unlocked: false,
-          category: 'social',
-          rarity: 'uncommon',
-          reward: 200
-        },
-        {
-          id: 'snake-master',
-          name: 'Snake Charmer',
-          description: 'Score over 100 in Snake game',
-          icon: <Target className="h-6 w-6" />,
-          progress: 0, // Would be dynamically calculated
-          maxProgress: 100,
-          unlocked: false,
-          category: 'games',
-          rarity: 'rare',
-          reward: 300
-        },
-        {
-          id: 'trivia-wizard',
-          name: 'Trivia Wizard',
-          description: 'Answer 20 trivia questions correctly',
-          icon: <BookOpen className="h-6 w-6" />,
-          progress: 0, // Would be dynamically calculated
-          maxProgress: 20,
-          unlocked: false,
-          category: 'games',
-          rarity: 'rare',
-          reward: 300
-        },
-        {
-          id: 'popular-post',
-          name: 'Trending Topic',
-          description: 'Get 50 likes on a post',
-          icon: <Heart className="h-6 w-6" />,
-          progress: 0, // Would be dynamically calculated
-          maxProgress: 50,
-          unlocked: false,
-          category: 'engagement',
-          rarity: 'epic',
-          reward: 500
-        },
-        {
-          id: 'active-user',
-          name: 'Dedicated Member',
-          description: 'Log in for 30 consecutive days',
-          icon: <Calendar className="h-6 w-6" />,
-          progress: 1, // Would be dynamically calculated
-          maxProgress: 30,
-          unlocked: false,
-          category: 'engagement',
-          rarity: 'legendary',
-          reward: 1000
-        }
-      ];
-
-      setAchievements(mockAchievements);
-      setIsLoading(false);
-    };
-
-    fetchAchievements();
-  }, [user]);
-
-  const handleClaimReward = async (achievement: Achievement) => {
-    if (!achievement.unlocked || !user) return;
-
-    // Update user's coins
-    const success = await addCoins(achievement.reward, `Claimed achievement: ${achievement.name}`);
+  const handleClaimReward = async (achievementId: string) => {
+    if (!user) return;
+    
+    const success = await claimAchievementReward(achievementId);
     
     if (success) {
+      const achievement = achievements.find(a => a.id === achievementId);
       toast({
         title: "Reward Claimed!",
-        description: `You received ${achievement.reward} coins for "${achievement.name}"`,
+        description: `You received ${achievement?.reward} coins for "${achievement?.name}"`,
       });
-      
-      // In a real app, mark the achievement as claimed
-      // For now, just refresh user data
-      refreshUser();
     } else {
       toast({
         title: "Error",
@@ -169,7 +39,24 @@ const AchievementsPage: React.FC = () => {
     }
   };
 
-  const getRarityColor = (rarity: Achievement['rarity']): string => {
+  const getIconComponent = (iconName: string): React.ReactNode => {
+    switch (iconName) {
+      case 'award': return <Award className="h-6 w-6" />;
+      case 'trophy': return <Trophy className="h-6 w-6" />;
+      case 'star': return <Star className="h-6 w-6" />;
+      case 'target': return <Target className="h-6 w-6" />;
+      case 'gift': return <Gift className="h-6 w-6" />;
+      case 'book-open': return <BookOpen className="h-6 w-6" />;
+      case 'message-square': return <MessageSquare className="h-6 w-6" />;
+      case 'heart': return <Heart className="h-6 w-6" />;
+      case 'user-plus': return <UserPlus className="h-6 w-6" />;
+      case 'calendar': return <Calendar className="h-6 w-6" />;
+      case 'user': return <UserIcon className="h-6 w-6" />;
+      default: return <Award className="h-6 w-6" />;
+    }
+  };
+
+  const getRarityColor = (rarity: string): string => {
     switch (rarity) {
       case 'common': return 'bg-slate-500';
       case 'uncommon': return 'bg-green-500';
@@ -197,7 +84,7 @@ const AchievementsPage: React.FC = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl">Achievements</CardTitle>
+                <CardTitle className="text-2xl">Achievements & Badges</CardTitle>
                 <CardDescription>
                   Unlock achievements to earn rewards and showcase your progress
                 </CardDescription>
@@ -209,6 +96,12 @@ const AchievementsPage: React.FC = () => {
             </div>
             <Progress value={completionPercentage} className="h-2 mt-2" />
           </CardHeader>
+          
+          {/* Display badges */}
+          <CardContent>
+            <h3 className="text-lg font-medium mb-4">Your Badges</h3>
+            <ProfileBadges badges={badges} />
+          </CardContent>
         </Card>
 
         <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
@@ -223,54 +116,90 @@ const AchievementsPage: React.FC = () => {
           
           <TabsContent value={activeTab} className="focus-visible:outline-none">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredAchievements.map((achievement) => (
-                <Card key={achievement.id} className={cn(
-                  "transition-all hover:shadow-md cursor-pointer",
-                  achievement.unlocked ? "border-primary/20" : "opacity-80"
-                )}
-                onClick={() => achievement.unlocked && handleClaimReward(achievement)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-start gap-4">
-                      <div className={cn(
-                        "p-2 rounded-full",
-                        achievement.unlocked ? "bg-primary/10" : "bg-muted"
-                      )}>
-                        <div className={achievement.unlocked ? "text-primary" : "text-muted-foreground"}>
-                          {achievement.icon}
+              {isLoading ? (
+                // Loading state
+                Array(6).fill(0).map((_, index) => (
+                  <Card key={index} className="border border-border/50">
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="p-2 rounded-full bg-muted animate-pulse w-10 h-10"></div>
+                        <div className="flex-1">
+                          <div className="w-3/4 h-4 bg-muted animate-pulse rounded mb-2"></div>
+                          <div className="w-full h-3 bg-muted animate-pulse rounded mb-4"></div>
+                          <div className="w-full h-2 bg-muted animate-pulse rounded mb-1"></div>
+                          <div className="flex justify-between">
+                            <div className="w-10 h-3 bg-muted animate-pulse rounded"></div>
+                            <div className="w-10 h-3 bg-muted animate-pulse rounded"></div>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-medium">{achievement.name}</h3>
-                          <Badge className={cn(
-                            "ml-2",
-                            getRarityColor(achievement.rarity)
+                    </CardContent>
+                  </Card>
+                ))
+              ) : filteredAchievements.length > 0 ? (
+                filteredAchievements.map((achievement, index) => (
+                  <motion.div
+                    key={achievement.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.05 }}
+                  >
+                    <Card 
+                      className={cn(
+                        "transition-all hover:shadow-md cursor-pointer",
+                        achievement.unlocked ? "border-primary/20" : "opacity-80"
+                      )}
+                      onClick={() => achievement.unlocked && handleClaimReward(achievement.id)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start gap-4">
+                          <div className={cn(
+                            "p-2 rounded-full",
+                            achievement.unlocked ? "bg-primary/10" : "bg-muted"
                           )}>
-                            {achievement.rarity}
-                          </Badge>
+                            <div className={achievement.unlocked ? "text-primary" : "text-muted-foreground"}>
+                              {getIconComponent(achievement.icon)}
+                            </div>
+                          </div>
+                          
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h3 className="font-medium">{achievement.name}</h3>
+                              <Badge className={cn(
+                                "ml-2",
+                                getRarityColor(achievement.rarity)
+                              )}>
+                                {achievement.rarity}
+                              </Badge>
+                            </div>
+                            
+                            <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
+                            
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs">{achievement.progress}/{achievement.maxProgress}</span>
+                              <span className="text-xs flex items-center">
+                                <Trophy className="h-3 w-3 text-amber-500 mr-1" />
+                                {achievement.reward}
+                              </span>
+                            </div>
+                            
+                            <Progress 
+                              value={(achievement.progress / achievement.maxProgress) * 100} 
+                              className="h-1"
+                            />
+                          </div>
                         </div>
-                        
-                        <p className="text-sm text-muted-foreground mb-2">{achievement.description}</p>
-                        
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs">{achievement.progress}/{achievement.maxProgress}</span>
-                          <span className="text-xs flex items-center">
-                            <Trophy className="h-3 w-3 text-amber-500 mr-1" />
-                            {achievement.reward}
-                          </span>
-                        </div>
-                        
-                        <Progress 
-                          value={(achievement.progress / achievement.maxProgress) * 100} 
-                          className="h-1"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="col-span-full flex flex-col items-center justify-center py-10">
+                  <Award className="h-16 w-16 text-muted-foreground/50 mb-4" />
+                  <h3 className="text-xl font-medium">No achievements found</h3>
+                  <p className="text-muted-foreground">There are no achievements in this category yet.</p>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

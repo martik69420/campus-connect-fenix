@@ -45,7 +45,10 @@ const NotificationsPage: React.FC = () => {
               </CardDescription>
             </div>
             {user && (
-              <ClearAllButton userId={user.id} onSuccess={handleClearSuccess} />
+              <div className="flex gap-2">
+                <ClearAllButton userId={user.id} onSuccess={handleClearSuccess} mode="mark-read" />
+                <ClearAllButton userId={user.id} onSuccess={handleClearSuccess} mode="delete" />
+              </div>
             )}
           </CardHeader>
           
@@ -77,9 +80,9 @@ const NotificationsPage: React.FC = () => {
                         } hover:bg-muted transition-colors`}
                       >
                         <div className="flex gap-3 items-start">
-                          {notification.sender?.avatar && (
+                          {notification.sender?.avatar_url && (
                             <img
-                              src={notification.sender.avatar}
+                              src={notification.sender.avatar_url}
                               alt=""
                               className="w-10 h-10 rounded-full object-cover"
                             />
