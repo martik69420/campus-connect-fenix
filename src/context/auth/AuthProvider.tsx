@@ -392,6 +392,74 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Implementing the missing methods
+  const resetPassword = async (email: string): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/reset-password',
+      });
+      
+      if (error) {
+        console.error("Password reset error:", error);
+        setAuthError(error.message);
+        throw error;
+      }
+      
+      toast({
+        title: "Password reset email sent",
+        description: "Check your email for a password reset link",
+      });
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      setAuthError(error.message || "Failed to send password reset email");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updatePassword = async (password: string): Promise<void> => {
+    try {
+      setIsLoading(true);
+      const { error } = await supabase.auth.updateUser({
+        password: password,
+      });
+      
+      if (error) {
+        console.error("Update password error:", error);
+        setAuthError(error.message);
+        throw error;
+      }
+      
+      toast({
+        title: "Password updated",
+        description: "Your password has been successfully updated",
+      });
+    } catch (error: any) {
+      console.error("Update password error:", error);
+      setAuthError(error.message || "Failed to update password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const refreshUser = async (): Promise<void> => {
+    try {
+      if (!user) return;
+      
+      setIsLoading(true);
+      const currentUser = await getCurrentUser();
+      
+      if (currentUser) {
+        setUser(currentUser);
+      }
+    } catch (error: any) {
+      console.error("Refresh user error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isLoading,
@@ -404,7 +472,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     uploadProfilePicture,
     updateUser,
     addCoins,
-    authError
+    authError,
+    resetPassword,
+    updatePassword,
+    refreshUser
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
