@@ -5,8 +5,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FriendRequestsTab from '@/components/friends/FriendRequestsTab';
 import SentRequestsTab from '@/components/friends/SentRequestsTab';
+import { useFriends } from '@/components/friends/useFriends';
 
 const FriendRequests: React.FC = () => {
+  const { 
+    receivedRequests, 
+    sentRequests, 
+    isLoading, 
+    acceptFriendRequest, 
+    rejectFriendRequest, 
+    removeFriend 
+  } = useFriends();
+
   return (
     <AppLayout>
       <div className="container py-6">
@@ -22,11 +32,20 @@ const FriendRequests: React.FC = () => {
               </TabsList>
               
               <TabsContent value="received" className="space-y-4">
-                <FriendRequestsTab />
+                <FriendRequestsTab 
+                  requests={receivedRequests}
+                  loading={isLoading}
+                  onAccept={acceptFriendRequest}
+                  onDecline={rejectFriendRequest}
+                />
               </TabsContent>
               
               <TabsContent value="sent" className="space-y-4">
-                <SentRequestsTab />
+                <SentRequestsTab 
+                  requests={sentRequests}
+                  loading={isLoading}
+                  onCancel={rejectFriendRequest}
+                />
               </TabsContent>
             </Tabs>
           </CardContent>

@@ -18,20 +18,20 @@ interface AchievementContextType {
 const AchievementContext = createContext<AchievementContextType | undefined>(undefined);
 
 export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, addCoins } = useAuth();
+  const auth = useAuth(); // Use auth object instead of destructuring to avoid early access
   const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
   // Load achievements and badges
   useEffect(() => {
-    if (user) {
+    if (auth.user) {
       refreshAchievements();
     }
-  }, [user]);
+  }, [auth.user]);
 
   const refreshAchievements = async () => {
-    if (!user) return;
+    if (!auth.user) return;
     
     setIsLoading(true);
     try {
@@ -55,7 +55,7 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
           name: 'First Words',
           description: 'Create your first post',
           icon: 'message-square',
-          progress: user ? 1 : 0,
+          progress: auth.user ? 1 : 0,
           maxProgress: 1,
           unlocked: true,
           category: 'engagement',
@@ -213,14 +213,14 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
   };
 
   const claimAchievementReward = async (achievementId: string): Promise<boolean> => {
-    if (!user) return false;
+    if (!auth.user) return false;
     
     const achievement = achievements.find(a => a.id === achievementId);
     if (!achievement || !achievement.unlocked) return false;
     
     try {
       // In a real app, you'd mark this achievement as claimed in the database
-      const success = await addCoins(
+      const success = await auth.addCoins(
         achievement.reward,
         `Achievement reward: ${achievement.name}`
       );
