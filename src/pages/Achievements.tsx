@@ -68,7 +68,7 @@ const AchievementsPage: React.FC = () => {
           id: 'profile-complete',
           name: 'Identity Established',
           description: 'Complete your profile information',
-          icon: <User className="h-6 w-6" />,
+          icon: <UserIcon className="h-6 w-6" />,
           progress: user?.bio ? 1 : 0,
           maxProgress: 1,
           unlocked: user?.bio ? true : false,
