@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Award, Trophy, Star, Target, Gift, BookOpen, MessageSquare, Heart, UserPlus, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/auth';
@@ -67,9 +66,9 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
           name: 'Identity Established',
           description: 'Complete your profile information',
           icon: 'user',
-          progress: user?.bio ? 1 : 0,
+          progress: auth.user?.bio ? 1 : 0,
           maxProgress: 1,
-          unlocked: user?.bio ? true : false,
+          unlocked: auth.user?.bio ? true : false,
           category: 'profile',
           rarity: 'uncommon',
           reward: 150

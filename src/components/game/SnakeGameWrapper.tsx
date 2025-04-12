@@ -1,78 +1,88 @@
-
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { useGame } from '@/context/GameContext';
-import { useAuth } from '@/context/auth';
 import SnakeGame from './SnakeGame';
+import { Button } from '../ui/button';
+import { Card } from '../ui/card';
+import { PlayIcon, PauseIcon } from 'lucide-react';
+import { SnakeGameState } from './SnakeGameTypes';
 
-const SnakeGameWrapper: React.FC = () => {
-  const [gameKey, setGameKey] = useState(0);
-  const [gameOver, setGameOver] = useState(false);
+interface SnakeGameWrapperProps {
+  onGameEnd: (score: number) => void;
+}
+
+const SnakeGameWrapper: React.FC<SnakeGameWrapperProps> = ({ onGameEnd }) => {
   const [score, setScore] = useState(0);
-  const { toast } = useToast();
-  const { updateGameScore, bestScores } = useGame();
-  const { addCoins, user } = useAuth();
-  
-  // Handle game over
-  const handleGameOver = (finalScore: number) => {
-    setScore(finalScore);
-    setGameOver(true);
-    
-    // Update the best score if needed
-    updateGameScore('snake', finalScore);
-    
-    // Award coins based on score
-    if (finalScore > 0) {
-      const coinsEarned = Math.floor(finalScore / 10);
-      if (coinsEarned > 0) {
-        addCoins(coinsEarned, `Snake game score: ${finalScore}`);
-        
-        toast({
-          title: "Coins earned!",
-          description: `You earned ${coinsEarned} coins for your snake game score.`,
-        });
-      }
-    }
-  };
-  
-  // Restart the game
-  const restartGame = () => {
-    setGameOver(false);
+  const [isGameStarted, setIsGameStarted] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [gameKey, setGameKey] = useState(0); // Key to force remount of SnakeGame on restart
+
+  const handleStartGame = () => {
+    setIsGameStarted(true);
+    setIsPaused(false);
     setScore(0);
-    setGameKey(prev => prev + 1);
+    setGameKey(prevKey => prevKey + 1); // Update key to remount SnakeGame
   };
-  
+
+  const handlePauseResume = () => {
+    setIsPaused(!isPaused);
+  };
+
+  const handleScore = (newScore: number) => {
+    setScore(newScore);
+  };
+
+  const handleGameOver = () => {
+    setIsGameStarted(false);
+    onGameEnd(score);
+  };
+
   return (
-    <div className="flex flex-col items-center">
-      <div className="mb-4 text-center">
-        <p className="text-lg font-medium">Current Score: <span className="text-primary font-bold">{score}</span></p>
-        <p className="text-sm">Best Score: <span className="font-bold">{bestScores.snake}</span></p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="text-lg font-semibold">Score: {score}</div>
+        {!isGameStarted && (
+          <Button onClick={handleStartGame}>
+            <PlayIcon className="mr-2 h-4 w-4" />
+            Start Game
+          </Button>
+        )}
+        {isGameStarted && (
+          <Button onClick={handlePauseResume}>
+            {isPaused ? (
+              <>
+                <PlayIcon className="mr-2 h-4 w-4" />
+                Resume
+              </>
+            ) : (
+              <>
+                <PauseIcon className="mr-2 h-4 w-4" />
+                Pause
+              </>
+            )}
+          </Button>
+        )}
       </div>
       
-      <Card className="w-full max-w-md border-2 overflow-hidden">
-        <CardContent className="p-0">
+      {isGameStarted && (
+        <div className="relative">
           <SnakeGame 
-            key={gameKey}
+            key={gameKey} 
+            onScore={handleScore}
             onGameOver={handleGameOver}
           />
-        </CardContent>
-      </Card>
-      
-      {gameOver && (
-        <div className="mt-6 text-center">
-          <h3 className="text-xl font-bold mb-2">Game Over!</h3>
-          <p className="mb-4">Your score: <span className="text-primary font-bold">{score}</span></p>
-          <Button onClick={restartGame}>Play Again</Button>
+          
+          {isPaused && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-md">
+              <div className="text-3xl font-bold text-white">Paused</div>
+            </div>
+          )}
         </div>
       )}
       
-      <div className="mt-6 text-sm text-muted-foreground">
-        <p>How to play:</p>
-        <p>Use arrow keys to change direction. Collect food to grow longer.</p>
-        <p>Don't crash into the walls or yourself!</p>
-      </div>
+      {!isGameStarted && score > 0 && (
+        <div className="text-center">
+          Game Over! Your score: {score}
+        </div>
+      )}
     </div>
   );
 };

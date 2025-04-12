@@ -1,4 +1,3 @@
-
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface User {
@@ -14,6 +13,19 @@ export interface User {
   coins?: number;
   interests?: string[];
   isOnline?: boolean;
+  location?: string;
+  settings?: {
+    privacy: {
+      profileVisibility: string;
+      onlineStatus: boolean;
+      friendRequests: boolean;
+      showActivity: boolean;
+      allowMessages: string;
+      allowTags: boolean;
+      dataSharing: boolean;
+      showEmail: boolean;
+    };
+  };
 }
 
 export interface ProfileUpdateData {
@@ -23,6 +35,19 @@ export interface ProfileUpdateData {
   school?: string;
   avatar?: string;
   interests?: string[];
+  location?: string;
+  settings?: {
+    privacy: {
+      profileVisibility: string;
+      onlineStatus: boolean;
+      friendRequests: boolean;
+      showActivity: boolean;
+      allowMessages: string;
+      allowTags: boolean;
+      dataSharing: boolean;
+      showEmail: boolean;
+    };
+  };
 }
 
 export interface AuthContextType {

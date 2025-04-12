@@ -1,203 +1,119 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, CheckCircle, XCircle, ArrowRight } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useToast } from '@/hooks/use-toast';
-
-interface TriviaQuestion {
-  question: string;
-  options: string[];
-  correctAnswer: number;
-}
+import { Award, Timer } from 'lucide-react';
 
 interface TriviaGameProps {
   onGameEnd: (score: number, totalQuestions: number) => void;
 }
 
 const TriviaGame: React.FC<TriviaGameProps> = ({ onGameEnd }) => {
-  const [questions, setQuestions] = useState<TriviaQuestion[]>([]);
+  const [questions, setQuestions] = useState([
+    { question: 'What is the capital of France?', answer: 'Paris', options: ['London', 'Paris', 'Berlin', 'Rome'] },
+    { question: 'What is 2 + 2?', answer: '4', options: ['3', '4', '5', '6'] },
+    { question: 'What is the largest planet in our solar system?', answer: 'Jupiter', options: ['Mars', 'Jupiter', 'Saturn', 'Neptune'] },
+  ]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
-  const [isAnswered, setIsAnswered] = useState(false);
+  const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
   const [score, setScore] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [gameCompleted, setGameCompleted] = useState(false);
-  const { toast } = useToast();
-  
-  // Load trivia questions
+  const [timer, setTimer] = useState(15);
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [gameEnded, setGameEnded] = useState(false);
+
   useEffect(() => {
-    const mockQuestions: TriviaQuestion[] = [
-      {
-        question: "What is the capital of France?",
-        options: ["London", "Berlin", "Paris", "Madrid"],
-        correctAnswer: 2 // Paris (index 2)
-      },
-      {
-        question: "What is the largest planet in our solar system?",
-        options: ["Earth", "Jupiter", "Mars", "Saturn"],
-        correctAnswer: 1 // Jupiter (index 1)
-      },
-      {
-        question: "Who wrote 'Romeo and Juliet'?",
-        options: ["Charles Dickens", "William Shakespeare", "Jane Austen", "Mark Twain"],
-        correctAnswer: 1 // William Shakespeare (index 1)
-      },
-      {
-        question: "What is the chemical symbol for gold?",
-        options: ["Go", "Gd", "Au", "Ag"],
-        correctAnswer: 2 // Au (index 2)
-      },
-      {
-        question: "In which year did World War II end?",
-        options: ["1943", "1944", "1945", "1946"],
-        correctAnswer: 2 // 1945 (index 2)
+    if (!gameEnded) {
+      let intervalId: NodeJS.Timeout;
+      if (timer > 0 && !isTimeUp) {
+        intervalId = setInterval(() => {
+          setTimer(prevTimer => prevTimer - 1);
+        }, 1000);
+      } else if (timer === 0) {
+        setIsTimeUp(true);
       }
-    ];
-    
-    setQuestions(mockQuestions);
-    setLoading(false);
-  }, []);
-  
-  const handleSelectOption = (optionIndex: number) => {
-    if (isAnswered) return;
-    
-    setSelectedOption(optionIndex);
-    setIsAnswered(true);
-    
-    const currentQuestion = questions[currentQuestionIndex];
-    
-    if (optionIndex === currentQuestion.correctAnswer) {
+
+      return () => clearInterval(intervalId);
+    }
+  }, [timer, isTimeUp, gameEnded]);
+
+  const handleAnswerSelection = (answer: string) => {
+    setSelectedAnswer(answer);
+  };
+
+  const handleNextQuestion = () => {
+    if (selectedAnswer === questions[currentQuestionIndex].answer) {
       setScore(prevScore => prevScore + 1);
     }
-  };
-  
-  const handleNextQuestion = () => {
+
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(prevIndex => prevIndex + 1);
-      setSelectedOption(null);
-      setIsAnswered(false);
+      setSelectedAnswer(null);
+      setTimer(15);
+      setIsTimeUp(false);
     } else {
-      // Game completed
-      setGameCompleted(true);
-      onGameEnd(score + (selectedOption === questions[currentQuestionIndex]?.correctAnswer ? 1 : 0), questions.length);
+      setGameEnded(true);
+      onGameEnd(score, questions.length);
     }
   };
-  
-  const handleRestartGame = () => {
-    setCurrentQuestionIndex(0);
-    setSelectedOption(null);
-    setIsAnswered(false);
-    setScore(0);
-    setGameCompleted(false);
-    
-    // Shuffle questions for a new game
-    setQuestions(prevQuestions => [...prevQuestions].sort(() => Math.random() - 0.5));
-  };
-  
-  if (loading) {
+
+  useEffect(() => {
+    if (isTimeUp) {
+      handleNextQuestion();
+    }
+  }, [isTimeUp]);
+
+  if (gameEnded) {
     return (
-      <div className="flex justify-center items-center py-10">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-      </div>
-    );
-  }
-  
-  if (gameCompleted) {
-    return (
-      <div className="py-6 text-center">
-        <h2 className="text-xl font-bold mb-4">Game Completed!</h2>
-        <p className="text-lg mb-6">
-          Your final score: <span className="font-bold text-primary">{score}/{questions.length}</span>
+      <CardContent className="flex flex-col items-center justify-center p-6">
+        <Award className="h-12 w-12 text-yellow-500 mb-4" />
+        <h2 className="text-2xl font-semibold mb-2">Game Over!</h2>
+        <p className="text-lg text-gray-600 mb-4">
+          Your Score: {score} / {questions.length}
         </p>
-        
-        <div className="mb-6">
-          {score === questions.length ? (
-            <p className="text-green-500 font-medium">Perfect score! Excellent job!</p>
-          ) : score >= questions.length / 2 ? (
-            <p className="text-primary font-medium">Good job! You did well!</p>
-          ) : (
-            <p className="text-muted-foreground font-medium">Better luck next time!</p>
-          )}
-        </div>
-        
-        <Button onClick={handleRestartGame}>Play Again</Button>
-      </div>
+        <Button onClick={() => {
+          setGameEnded(false);
+          setCurrentQuestionIndex(0);
+          setScore(0);
+          setTimer(15);
+          setIsTimeUp(false);
+          setSelectedAnswer(null);
+        }}>
+          Play Again
+        </Button>
+      </CardContent>
     );
   }
-  
+
   const currentQuestion = questions[currentQuestionIndex];
-  
+  const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
+
   return (
-    <div className="space-y-6">
+    <CardContent className="space-y-4">
       <div className="flex justify-between items-center">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Question {currentQuestionIndex + 1} of {questions.length}
-          </p>
-          <p className="text-sm font-medium">
-            Score: {score}
-          </p>
-        </div>
-        <div className="text-right">
-          <p className="text-sm font-medium">
-            Progress
-          </p>
-          <Progress 
-            value={((currentQuestionIndex + (isAnswered ? 1 : 0)) / questions.length) * 100} 
-            className="w-24 h-2" 
-          />
+        <h2 className="text-xl font-semibold">Question {currentQuestionIndex + 1}</h2>
+        <div className="flex items-center space-x-2">
+          <Timer className="h-4 w-4 text-gray-500" />
+          <span>{timer}s</span>
         </div>
       </div>
-      
-      <div className="p-4 bg-muted/30 rounded-lg">
-        <h2 className="text-lg font-medium mb-6">{currentQuestion.question}</h2>
-        
-        <div className="space-y-3">
-          {currentQuestion.options.map((option, index) => (
-            <button
-              key={index}
-              onClick={() => handleSelectOption(index)}
-              disabled={isAnswered}
-              className={`w-full text-left p-3 rounded-lg border transition-colors ${
-                isAnswered
-                  ? index === currentQuestion.correctAnswer
-                    ? "bg-green-100 border-green-300 dark:bg-green-900/20 dark:border-green-700"
-                    : selectedOption === index
-                    ? "bg-red-100 border-red-300 dark:bg-red-900/20 dark:border-red-700"
-                    : "bg-muted/50 border-border"
-                  : "hover:bg-accent border-border"
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span>{option}</span>
-                {isAnswered && (
-                  index === currentQuestion.correctAnswer ? (
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                  ) : selectedOption === index ? (
-                    <XCircle className="h-5 w-5 text-red-500" />
-                  ) : null
-                )}
-              </div>
-            </button>
-          ))}
-        </div>
+      <Progress value={progress} className="h-2" />
+      <p className="text-lg">{currentQuestion.question}</p>
+      <div className="grid grid-cols-2 gap-4">
+        {currentQuestion.options.map((option, index) => (
+          <Button
+            key={index}
+            variant={selectedAnswer === option ? 'secondary' : 'outline'}
+            onClick={() => handleAnswerSelection(option)}
+            disabled={selectedAnswer !== null}
+          >
+            {option}
+          </Button>
+        ))}
       </div>
-      
-      <div className="flex justify-end">
-        <Button 
-          onClick={handleNextQuestion} 
-          disabled={!isAnswered}
-          className={!isAnswered ? "opacity-50" : ""}
-        >
-          {currentQuestionIndex < questions.length - 1 ? (
-            <>Next Question <ArrowRight className="h-4 w-4 ml-2" /></>
-          ) : (
-            <>Finish Game <ArrowRight className="h-4 w-4 ml-2" /></>
-          )}
-        </Button>
-      </div>
-    </div>
+      <Button onClick={handleNextQuestion} disabled={selectedAnswer === null}>
+        {currentQuestionIndex === questions.length - 1 ? 'Finish' : 'Next Question'}
+      </Button>
+    </CardContent>
   );
 };
 

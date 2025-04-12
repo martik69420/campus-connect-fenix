@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { useAuth } from '@/context/auth';
@@ -11,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useAchievements } from '@/context/AchievementContext';
 import { motion } from 'framer-motion';
-import { ProfileBadges } from '@/components/profile/ProfileBadges';
+import ProfileBadges from '@/components/profile/ProfileBadges';
 
 const AchievementsPage: React.FC = () => {
   const { user } = useAuth();
