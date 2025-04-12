@@ -53,25 +53,31 @@ const MobileNavBar: React.FC = () => {
   };
   
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40 sm:hidden">
+    <div className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-40 sm:hidden pb-safe">
       <div className="flex justify-between items-center px-4 py-2">
         {/* Bottom Tab Navigation */}
         <Link to="/" className="flex flex-col items-center justify-center p-2">
-          <Home className={`h-5 w-5 ${location.pathname === '/' ? 'text-primary' : 'text-muted-foreground'}`} />
+          <div className={`rounded-full p-1.5 ${location.pathname === '/' ? 'bg-primary/10' : ''}`}>
+            <Home className={`h-5 w-5 ${location.pathname === '/' ? 'text-primary' : 'text-muted-foreground'}`} />
+          </div>
           <span className="text-xs mt-1">Home</span>
         </Link>
         
         <Link to="/messages" className="flex flex-col items-center justify-center p-2">
-          <MessageSquare className={`h-5 w-5 ${location.pathname === '/messages' ? 'text-primary' : 'text-muted-foreground'}`} />
+          <div className={`rounded-full p-1.5 ${location.pathname === '/messages' ? 'bg-primary/10' : ''}`}>
+            <MessageSquare className={`h-5 w-5 ${location.pathname === '/messages' ? 'text-primary' : 'text-muted-foreground'}`} />
+          </div>
           <span className="text-xs mt-1">Messages</span>
         </Link>
         
         <Link to="/notifications" className="flex flex-col items-center justify-center p-2 relative">
-          <Bell className={`h-5 w-5 ${location.pathname === '/notifications' ? 'text-primary' : 'text-muted-foreground'}`} />
+          <div className={`rounded-full p-1.5 ${location.pathname === '/notifications' ? 'bg-primary/10' : ''}`}>
+            <Bell className={`h-5 w-5 ${location.pathname === '/notifications' ? 'text-primary' : 'text-muted-foreground'}`} />
+          </div>
           {unreadCount > 0 && (
             <Badge 
               variant="destructive" 
-              className="absolute -top-1 -right-1 h-4 min-w-[16px] px-1 flex items-center justify-center text-xs"
+              className="absolute top-0 right-0.5 h-4 min-w-[16px] px-1 flex items-center justify-center text-xs"
             >
               {unreadCount}
             </Badge>
@@ -82,14 +88,16 @@ const MobileNavBar: React.FC = () => {
         <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full p-2 flex flex-col items-center justify-center">
-              <Menu className="h-5 w-5" />
+              <div className="rounded-full p-1.5">
+                <Menu className="h-5 w-5" />
+              </div>
               <span className="text-xs mt-1">Menu</span>
             </Button>
           </SheetTrigger>
           <SheetContent side="bottom" className="h-[80vh] rounded-t-xl">
-            <div className="pt-4 pb-16 px-2">
+            <div className="py-4 px-2 pb-safe">
               <div className="flex items-center mb-6 px-2">
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-12 w-12">
                   <AvatarImage src={user?.avatar} alt={user?.displayName} />
                   <AvatarFallback>{user?.displayName?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
@@ -99,7 +107,7 @@ const MobileNavBar: React.FC = () => {
                 </div>
               </div>
               
-              <div className="grid grid-cols-4 gap-4">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
                 {navItems.map((item) => (
                   <Button 
                     key={item.path}
@@ -110,8 +118,10 @@ const MobileNavBar: React.FC = () => {
                       navigate(item.path);
                     }}
                   >
-                    <div className={`mb-1 ${location.pathname === item.path ? 'text-primary' : 'text-foreground'}`}>
-                      {item.icon}
+                    <div className={`mb-2 p-2 rounded-full ${location.pathname === item.path ? 'bg-primary/10' : ''}`}>
+                      <div className={location.pathname === item.path ? 'text-primary' : 'text-foreground'}>
+                        {item.icon}
+                      </div>
                     </div>
                     <span className="text-xs text-center">{item.label}</span>
                   </Button>

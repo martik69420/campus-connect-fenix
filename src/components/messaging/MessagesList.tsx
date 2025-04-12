@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
@@ -35,6 +34,28 @@ const MessagesList: React.FC<MessagesListProps> = ({
   const [initialLoad, setInitialLoad] = useState(true);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [loadingTimeoutId, setLoadingTimeoutId] = useState<NodeJS.Timeout | null>(null);
+  const [showFallback, setShowFallback] = useState(false);
+
+  // Set a loading timeout to show fallback UI if loading takes too long
+  useEffect(() => {
+    if (isLoading && !showFallback) {
+      const timeoutId = setTimeout(() => {
+        setShowFallback(true);
+      }, 5000); // Show fallback after 5 seconds of loading
+      setLoadingTimeoutId(timeoutId);
+    } else if (!isLoading && loadingTimeoutId) {
+      clearTimeout(loadingTimeoutId);
+      setLoadingTimeoutId(null);
+      setShowFallback(false);
+    }
+
+    return () => {
+      if (loadingTimeoutId) {
+        clearTimeout(loadingTimeoutId);
+      }
+    };
+  }, [isLoading, loadingTimeoutId, showFallback]);
 
   // Only scroll automatically on new messages if user is already at the bottom
   useEffect(() => {
@@ -101,12 +122,16 @@ const MessagesList: React.FC<MessagesListProps> = ({
     }
   };
 
-  if (isLoading) {
+  // Show fallback UI if loading takes too long (prevents infinite loading)
+  if (isLoading && (showFallback || messages.length === 0)) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
+      <div className="flex flex-col items-center justify-center h-full">
+        <div className="glass-panel p-8 rounded-xl text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="font-medium">Loading messages...</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            {showFallback ? "This is taking longer than expected. Please refresh if messages don't appear." : "Just a moment..."}
+          </p>
         </div>
       </div>
     );
@@ -145,9 +170,9 @@ const MessagesList: React.FC<MessagesListProps> = ({
             <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
           </svg>
         </div>
-        <h3 className="text-xl font-medium mb-3">{t('messages.noMessagesYet')}</h3>
+        <h3 className="text-xl font-medium mb-3">No messages yet</h3>
         <p className="text-sm text-muted-foreground max-w-xs">
-          {t('messages.startConversation')}
+          Send a message to start the conversation
         </p>
       </div>
     );
@@ -243,7 +268,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
                         {isOptimistic ? (
                           <span className="flex items-center justify-end text-xs text-muted-foreground">
                             <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                            {t('messages.sending')}
+                            Sending...
                           </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">
