@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/auth';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import ProfilePosts from '@/components/profile/ProfilePosts';
@@ -76,7 +77,14 @@ const Profile: React.FC = () => {
             </CardContent>
           </Card>
         ) : (
-          <ProfileHeader username={username} isCurrentUser={isCurrentUser} onEditProfile={() => setIsEditingProfile(true)} />
+          <ProfileHeader 
+            user={user || { id: '', username: username || '', displayName: username || '' }}
+            isCurrentUser={isCurrentUser}
+            isFriend={false}
+            onAddFriend={() => {}}
+            onRemoveFriend={() => {}}
+            loading={false} 
+          />
         )}
 
         <Card>
