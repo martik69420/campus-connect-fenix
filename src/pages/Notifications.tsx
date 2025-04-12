@@ -10,7 +10,7 @@ import { useViewport } from '@/hooks/use-viewport';
 
 const NotificationsPage: React.FC = () => {
   const { user } = useAuth();
-  const { notifications, markAllAsRead, loadNotifications } = useNotification();
+  const { notifications, markAllAsRead, fetchNotifications } = useNotification();
   const [activeTab, setActiveTab] = useState<string>('all');
   const { isMobile } = useViewport();
   
@@ -28,8 +28,8 @@ const NotificationsPage: React.FC = () => {
   
   const handleClearSuccess = () => {
     // Reload notifications after clearing
-    if (loadNotifications) {
-      loadNotifications();
+    if (fetchNotifications) {
+      fetchNotifications();
     }
   };
 
@@ -77,9 +77,9 @@ const NotificationsPage: React.FC = () => {
                         } hover:bg-muted transition-colors`}
                       >
                         <div className="flex gap-3 items-start">
-                          {notification.avatar && (
+                          {notification.sender?.avatar && (
                             <img
-                              src={notification.avatar}
+                              src={notification.sender.avatar}
                               alt=""
                               className="w-10 h-10 rounded-full object-cover"
                             />
@@ -89,7 +89,7 @@ const NotificationsPage: React.FC = () => {
                               {notification.message}
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              {new Date(notification.createdAt).toLocaleString()}
+                              {new Date(notification.timestamp).toLocaleString()}
                             </p>
                           </div>
                         </div>

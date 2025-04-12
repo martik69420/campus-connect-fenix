@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
-import { useAuth } from '@/context/auth';
+import { useAuth, User } from '@/context/auth'; // Import the User type
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Award, Trophy, Star, Target, Gift, BookOpen, MessageSquare, Heart, UserPlus, Calendar } from 'lucide-react';
+import { Award, Trophy, Star, Target, Gift, BookOpen, MessageSquare, Heart, UserPlus, Calendar, User as UserIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
