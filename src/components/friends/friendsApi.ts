@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
-import { Friend, FriendRequest } from './types';
+import { Friend, FriendRequest, FriendProfile } from './types';
 
 /**
  * Fetch accepted friends for a user

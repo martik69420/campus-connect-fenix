@@ -41,7 +41,7 @@ const FriendRequests: React.FC = () => {
               
               <TabsContent value="received" className="space-y-4">
                 <FriendRequestsTab 
-                  requests={receivedRequests}
+                  requests={receivedRequests as any}
                   loading={isLoading}
                   onAccept={handleAcceptRequest}
                   onDecline={handleRejectRequest}
@@ -50,7 +50,7 @@ const FriendRequests: React.FC = () => {
               
               <TabsContent value="sent" className="space-y-4">
                 <SentRequestsTab 
-                  requests={sentRequests}
+                  requests={sentRequests as any}
                   loading={isLoading}
                   onCancel={handleRejectRequest}
                 />

@@ -98,7 +98,7 @@ const Friends = () => {
         
         <TabsContent value="all-friends">
           <FriendsList 
-            friends={friends}
+            friends={friends as any}
             loading={isLoading}
             onRemoveFriend={handleRemoveFriend}
             onMessageFriend={handleMessageFriend}
@@ -114,7 +114,7 @@ const Friends = () => {
             </Card>
           }>
             <FriendRequestsTab 
-              requests={receivedRequests}
+              requests={receivedRequests as any}
               loading={isLoading}
               onAccept={handleAcceptRequest}
               onDecline={handleRejectRequest}
@@ -131,7 +131,7 @@ const Friends = () => {
             </Card>
           }>
             <SentRequestsTab 
-              requests={sentRequests}
+              requests={sentRequests as any}
               loading={isLoading} 
               onCancel={handleRejectRequest}
             />
