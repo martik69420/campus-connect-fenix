@@ -87,7 +87,7 @@ const Friends = () => {
           <FriendsList 
             friends={friends}
             loading={isLoading}
-            onRemoveFriend={removeFriend}
+            onRemoveFriend={async (friendId) => { await removeFriend(friendId); }}
             onMessageFriend={handleMessageFriend}
           />
         </TabsContent>
@@ -103,8 +103,8 @@ const Friends = () => {
             <FriendRequestsTab 
               requests={receivedRequests}
               loading={isLoading}
-              onAccept={acceptFriendRequest}
-              onDecline={rejectFriendRequest}
+              onAccept={async (requestId) => { await acceptFriendRequest(requestId); }}
+              onDecline={async (requestId) => { await rejectFriendRequest(requestId); }}
             />
           </Suspense>
         </TabsContent>
@@ -120,7 +120,7 @@ const Friends = () => {
             <SentRequestsTab 
               requests={sentRequests}
               loading={isLoading} 
-              onCancel={rejectFriendRequest}
+              onCancel={async (requestId) => { await rejectFriendRequest(requestId); }}
             />
           </Suspense>
         </TabsContent>

@@ -43,7 +43,7 @@ const FriendRequests: React.FC = () => {
                 <SentRequestsTab 
                   requests={sentRequests}
                   loading={isLoading}
-                  onCancel={rejectFriendRequest}
+                  onCancel={async (requestId) => { await rejectFriendRequest(requestId); }}
                 />
               </TabsContent>
             </Tabs>
