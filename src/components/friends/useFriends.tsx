@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -272,6 +271,12 @@ export const useFriends = () => {
     removeFriend,
     fetchFriends
   };
+};
+
+export {
+  Friend,
+  FriendProfile,
+  FriendRequest
 };
 
 export default useFriends;

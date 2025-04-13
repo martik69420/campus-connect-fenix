@@ -70,7 +70,7 @@ const SentRequestsTab: React.FC<SentRequestsTabProps> = ({
                   <h3 className="font-medium">{request.profiles?.display_name || "Unknown User"}</h3>
                   <p className="text-sm text-muted-foreground">@{request.profiles?.username || "unknown"}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Sent {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
+                    Sent {request.created_at ? formatDistanceToNow(new Date(request.created_at), { addSuffix: true }) : 'recently'}
                   </p>
                 </div>
               </div>
