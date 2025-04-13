@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { Friend, FriendRequest, FriendProfile } from './types';
@@ -11,7 +12,8 @@ import {
   removeFriend 
 } from './friendsApi';
 
-export { Friend, FriendRequest, FriendProfile } from './types';
+export { Friend, FriendRequest } from './types';
+export type { FriendProfile } from './types';
 
 export const useFriends = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
