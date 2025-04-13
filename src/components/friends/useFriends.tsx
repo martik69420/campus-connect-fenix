@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +17,7 @@ export interface Friend {
   status: string;
   created_at: string;
   friend_id: string;
-  profiles: FriendProfile;
+  profiles?: FriendProfile;
 }
 
 // Friend request type definition
