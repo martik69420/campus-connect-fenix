@@ -1,11 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, UserMinus, Loader2, Users } from 'lucide-react';
-import { Friend } from '@/components/friends/useFriends';
+import { Friend } from '@/components/friends/types';
 
 interface FriendsListProps {
   friends: Friend[];

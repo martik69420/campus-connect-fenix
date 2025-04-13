@@ -3,8 +3,8 @@ import React, { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Check, X, Loader2 } from "lucide-react";
-import { FriendRequest } from '@/components/friends/useFriends';
 import { Card, CardContent } from '@/components/ui/card';
+import { FriendRequest } from '@/components/friends/types';
 
 interface FriendRequestTabProps {
   requests: FriendRequest[];

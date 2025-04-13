@@ -1,34 +1,19 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/components/ui/use-toast';
+import { Friend, FriendRequest } from './types';
+import { 
+  fetchFriendsData, 
+  fetchReceivedRequests, 
+  fetchSentRequests, 
+  sendFriendRequest, 
+  acceptFriendRequest, 
+  rejectFriendRequest, 
+  removeFriend 
+} from './friendsApi';
 
-// Define the profile type used in friends
-export interface FriendProfile {
-  id: string;
-  display_name: string;
-  username: string;
-  avatar_url: string;
-}
-
-// Friend type definition
-export interface Friend {
-  id: string;
-  status: string;
-  created_at: string;
-  friend_id: string;
-  profiles?: FriendProfile;
-}
-
-// Friend request type definition
-export interface FriendRequest {
-  id: string;
-  status: string;
-  created_at: string;
-  user_id?: string;
-  friend_id?: string;
-  profiles?: FriendProfile;
-}
+export { Friend, FriendRequest } from './types';
+export type { FriendProfile } from './types';
 
 export const useFriends = () => {
   const [friends, setFriends] = useState<Friend[]>([]);
@@ -44,212 +29,66 @@ export const useFriends = () => {
     setIsLoading(true);
     
     try {
-      // Fetch accepted friends
-      const { data: friendsData, error: friendsError } = await supabase
-        .from('friends')
-        .select(`
-          id, 
-          status, 
-          created_at, 
-          friend_id,
-          profiles:profiles!friends_friend_id_fkey(id, display_name, username, avatar_url)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'accepted');
-
-      if (friendsError) throw friendsError;
+      // Fetch all data in parallel
+      const [friendsData, receivedData, sentData] = await Promise.all([
+        fetchFriendsData(user.id),
+        fetchReceivedRequests(user.id),
+        fetchSentRequests(user.id)
+      ]);
       
-      // Fetch received friend requests
-      const { data: receivedData, error: receivedError } = await supabase
-        .from('friends')
-        .select(`
-          id, 
-          status, 
-          created_at, 
-          user_id,
-          profiles:profiles!friends_user_id_fkey(id, display_name, username, avatar_url)
-        `)
-        .eq('friend_id', user.id)
-        .eq('status', 'pending');
-
-      if (receivedError) throw receivedError;
-      
-      // Fetch sent friend requests
-      const { data: sentData, error: sentError } = await supabase
-        .from('friends')
-        .select(`
-          id, 
-          status, 
-          created_at, 
-          friend_id,
-          profiles:profiles!friends_friend_id_fkey(id, display_name, username, avatar_url)
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'pending');
-
-      if (sentError) throw sentError;
-
-      // Process the data before updating state to fix TypeScript errors
-      const processedFriends = friendsData.map(friend => ({
-        ...friend,
-        profiles: friend.profiles as unknown as FriendProfile
-      }));
-      
-      const processedReceivedRequests = receivedData.map(request => ({
-        ...request,
-        profiles: request.profiles as unknown as FriendProfile
-      }));
-      
-      const processedSentRequests = sentData.map(request => ({
-        ...request,
-        profiles: request.profiles as unknown as FriendProfile
-      }));
-      
-      setFriends(processedFriends);
-      setReceivedRequests(processedReceivedRequests);
-      setSentRequests(processedSentRequests);
-    } catch (error: any) {
-      console.error('Error fetching friends:', error.message);
-      toast({
-        title: 'Error',
-        description: 'Failed to load friends. Please try again later.',
-        variant: 'destructive',
-      });
+      setFriends(friendsData);
+      setReceivedRequests(receivedData);
+      setSentRequests(sentData);
+    } catch (error) {
+      console.error('Error in fetchFriends:', error);
     } finally {
       setIsLoading(false);
     }
   }, [user?.id]);
 
-  // Send friend request
-  const sendFriendRequest = useCallback(async (friendId: string): Promise<void> => {
+  // Handle sending friend request
+  const handleSendFriendRequest = useCallback(async (friendId: string): Promise<void> => {
     if (!user?.id) return;
     
-    try {
-      const { error } = await supabase
-        .from('friends')
-        .insert([
-          { user_id: user.id, friend_id: friendId, status: 'pending' }
-        ]);
-
-      if (error) throw error;
-      
-      toast({
-        title: 'Friend request sent',
-        description: 'Your friend request has been sent successfully.',
-      });
-      
+    const success = await sendFriendRequest(user.id, friendId);
+    if (success) {
       // Refetch to update the UI
       fetchFriends();
-    } catch (error: any) {
-      console.error('Error sending friend request:', error.message);
-      toast({
-        title: 'Error',
-        description: 'Failed to send friend request. Please try again.',
-        variant: 'destructive',
-      });
     }
   }, [user?.id, fetchFriends]);
 
-  // Accept friend request
-  const acceptFriendRequest = useCallback(async (requestId: string): Promise<void> => {
-    try {
-      // Update the request status to accepted
-      const { error: updateError } = await supabase
-        .from('friends')
-        .update({ status: 'accepted' })
-        .eq('id', requestId);
-
-      if (updateError) throw updateError;
-
-      // Create a reciprocal friend relationship
-      const request = receivedRequests.find(req => req.id === requestId);
-      
-      if (request && user?.id) {
-        const { error: insertError } = await supabase
-          .from('friends')
-          .insert([
-            { user_id: user.id, friend_id: request.user_id, status: 'accepted' }
-          ]);
-
-        if (insertError) throw insertError;
-      }
-      
-      toast({
-        title: 'Friend request accepted',
-        description: 'You are now friends!',
-      });
-      
+  // Handle accepting friend request
+  const handleAcceptFriendRequest = useCallback(async (requestId: string): Promise<void> => {
+    if (!user?.id) return;
+    
+    const request = receivedRequests.find(req => req.id === requestId);
+    const success = await acceptFriendRequest(requestId, user.id, request?.user_id);
+    
+    if (success) {
       // Refetch to update the UI
       fetchFriends();
-    } catch (error: any) {
-      console.error('Error accepting friend request:', error.message);
-      toast({
-        title: 'Error',
-        description: 'Failed to accept friend request. Please try again.',
-        variant: 'destructive',
-      });
     }
   }, [user?.id, receivedRequests, fetchFriends]);
 
-  // Reject/cancel friend request
-  const rejectFriendRequest = useCallback(async (requestId: string): Promise<void> => {
-    try {
-      const { error } = await supabase
-        .from('friends')
-        .delete()
-        .eq('id', requestId);
-
-      if (error) throw error;
-      
-      toast({
-        title: 'Request removed',
-        description: 'The friend request has been removed.',
-      });
-      
+  // Handle rejecting/canceling friend request
+  const handleRejectFriendRequest = useCallback(async (requestId: string): Promise<void> => {
+    const success = await rejectFriendRequest(requestId);
+    
+    if (success) {
       // Refetch to update the UI
       fetchFriends();
-    } catch (error: any) {
-      console.error('Error rejecting friend request:', error.message);
-      toast({
-        title: 'Error',
-        description: 'Failed to reject friend request. Please try again.',
-        variant: 'destructive',
-      });
     }
   }, [fetchFriends]);
 
-  // Remove friend
-  const removeFriend = useCallback(async (friendId: string): Promise<void> => {
+  // Handle removing friend
+  const handleRemoveFriend = useCallback(async (friendId: string): Promise<void> => {
     if (!user?.id) return;
     
-    try {
-      // Delete both directions of the friendship
-      await Promise.all([
-        supabase
-          .from('friends')
-          .delete()
-          .eq('id', friendId),
-        supabase
-          .from('friends')
-          .delete()
-          .eq('user_id', friendId)
-          .eq('friend_id', user.id)
-      ]);
-      
-      toast({
-        title: 'Friend removed',
-        description: 'You have removed this friend from your list.',
-      });
-      
+    const success = await removeFriend(friendId, user.id);
+    
+    if (success) {
       // Refetch to update the UI
       fetchFriends();
-    } catch (error: any) {
-      console.error('Error removing friend:', error.message);
-      toast({
-        title: 'Error',
-        description: 'Failed to remove friend. Please try again.',
-        variant: 'destructive',
-      });
     }
   }, [user?.id, fetchFriends]);
 
@@ -265,18 +104,12 @@ export const useFriends = () => {
     receivedRequests,
     sentRequests,
     isLoading,
-    sendFriendRequest,
-    acceptFriendRequest,
-    rejectFriendRequest,
-    removeFriend,
+    sendFriendRequest: handleSendFriendRequest,
+    acceptFriendRequest: handleAcceptFriendRequest,
+    rejectFriendRequest: handleRejectFriendRequest,
+    removeFriend: handleRemoveFriend,
     fetchFriends
   };
-};
-
-export {
-  Friend,
-  FriendProfile,
-  FriendRequest
 };
 
 export default useFriends;

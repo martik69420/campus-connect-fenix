@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, UserX, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { FriendRequest } from '@/components/friends/useFriends';
+import { FriendRequest } from '@/components/friends/types';
 
 export interface SentRequestsTabProps {
   requests: FriendRequest[];
