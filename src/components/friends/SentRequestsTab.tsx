@@ -10,7 +10,7 @@ import { FriendRequest } from '@/components/friends/useFriends';
 export interface SentRequestsTabProps {
   requests: FriendRequest[];
   loading: boolean;
-  onCancel: (requestId: string) => Promise<any>;
+  onCancel: (requestId: string) => Promise<void>;
 }
 
 const SentRequestsTab: React.FC<SentRequestsTabProps> = ({
@@ -67,8 +67,8 @@ const SentRequestsTab: React.FC<SentRequestsTabProps> = ({
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-medium">{request.profiles?.display_name}</h3>
-                  <p className="text-sm text-muted-foreground">@{request.profiles?.username}</p>
+                  <h3 className="font-medium">{request.profiles?.display_name || "Unknown User"}</h3>
+                  <p className="text-sm text-muted-foreground">@{request.profiles?.username || "unknown"}</p>
                   <p className="text-xs text-muted-foreground mt-1">
                     Sent {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
                   </p>

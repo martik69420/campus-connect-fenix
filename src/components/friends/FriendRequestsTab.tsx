@@ -70,8 +70,8 @@ const FriendRequestsTab: React.FC<FriendRequestTabProps> = ({ requests, loading,
                   <AvatarFallback>{(request.profiles?.display_name || "?").charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-medium">{request.profiles?.display_name}</h3>
-                  <p className="text-sm text-muted-foreground">@{request.profiles?.username}</p>
+                  <h3 className="font-medium">{request.profiles?.display_name || "Unknown User"}</h3>
+                  <p className="text-sm text-muted-foreground">@{request.profiles?.username || "unknown"}</p>
                 </div>
               </div>
               <div className="flex space-x-2">

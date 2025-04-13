@@ -10,7 +10,7 @@ import { Friend } from '@/components/friends/useFriends';
 interface FriendsListProps {
   friends: Friend[];
   loading: boolean;
-  onRemoveFriend: (friendId: string) => Promise<any>;
+  onRemoveFriend: (friendId: string) => Promise<void>;
   onMessageFriend: (friendId: string) => void;
 }
 

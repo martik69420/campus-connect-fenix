@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -28,7 +27,7 @@ export interface FriendRequest {
   created_at: string;
   user_id?: string;
   friend_id?: string;
-  profiles: FriendProfile;
+  profiles?: FriendProfile;
 }
 
 export const useFriends = () => {
@@ -152,7 +151,7 @@ export const useFriends = () => {
   }, [user?.id, fetchFriends]);
 
   // Accept friend request
-  const acceptFriendRequest = useCallback(async (requestId: string) => {
+  const acceptFriendRequest = useCallback(async (requestId: string): Promise<void> => {
     try {
       // Update the request status to accepted
       const { error: updateError } = await supabase
@@ -193,7 +192,7 @@ export const useFriends = () => {
   }, [user?.id, receivedRequests, fetchFriends]);
 
   // Reject/cancel friend request
-  const rejectFriendRequest = useCallback(async (requestId: string) => {
+  const rejectFriendRequest = useCallback(async (requestId: string): Promise<void> => {
     try {
       const { error } = await supabase
         .from('friends')
@@ -220,7 +219,7 @@ export const useFriends = () => {
   }, [fetchFriends]);
 
   // Remove friend
-  const removeFriend = useCallback(async (friendId: string) => {
+  const removeFriend = useCallback(async (friendId: string): Promise<void> => {
     if (!user?.id) return;
     
     try {
