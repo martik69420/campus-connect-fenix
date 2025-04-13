@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -121,7 +122,7 @@ export const useFriends = () => {
   }, [user?.id]);
 
   // Send friend request
-  const sendFriendRequest = useCallback(async (friendId: string) => {
+  const sendFriendRequest = useCallback(async (friendId: string): Promise<void> => {
     if (!user?.id) return;
     
     try {
@@ -228,8 +229,7 @@ export const useFriends = () => {
         supabase
           .from('friends')
           .delete()
-          .eq('user_id', user.id)
-          .eq('friend_id', friendId),
+          .eq('id', friendId),
         supabase
           .from('friends')
           .delete()

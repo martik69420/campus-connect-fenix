@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FriendRequestsTab from '@/components/friends/FriendRequestsTab';
 import SentRequestsTab from '@/components/friends/SentRequestsTab';
-import { useFriends, FriendRequest } from '@/components/friends/useFriends';
+import { useFriends } from '@/components/friends/useFriends';
 
 const FriendRequests: React.FC = () => {
   const { 
@@ -13,8 +13,7 @@ const FriendRequests: React.FC = () => {
     sentRequests, 
     isLoading, 
     acceptFriendRequest, 
-    rejectFriendRequest, 
-    removeFriend 
+    rejectFriendRequest
   } = useFriends();
 
   return (
@@ -33,7 +32,7 @@ const FriendRequests: React.FC = () => {
               
               <TabsContent value="received" className="space-y-4">
                 <FriendRequestsTab 
-                  requests={receivedRequests as FriendRequest[]}
+                  requests={receivedRequests}
                   loading={isLoading}
                   onAccept={async (userId) => { await acceptFriendRequest(userId); }}
                   onDecline={async (userId) => { await rejectFriendRequest(userId); }}
