@@ -64,15 +64,15 @@ const FriendsList: React.FC<FriendsListProps> = ({
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Avatar>
-                    <AvatarImage src={friend.profiles.avatar_url || "/placeholder.svg"} />
+                    <AvatarImage src={friend.profiles?.avatar_url || "/placeholder.svg"} />
                     <AvatarFallback>
-                      {friend.profiles.display_name.substring(0, 2).toUpperCase()}
+                      {friend.profiles?.display_name?.substring(0, 2).toUpperCase() || "??"}
                     </AvatarFallback>
                   </Avatar>
                 </div>
                 <div>
-                  <h3 className="font-medium">{friend.profiles.display_name}</h3>
-                  <p className="text-sm text-muted-foreground">@{friend.profiles.username}</p>
+                  <h3 className="font-medium">{friend.profiles?.display_name}</h3>
+                  <p className="text-sm text-muted-foreground">@{friend.profiles?.username}</p>
                 </div>
               </div>
               <div className="flex gap-2">
