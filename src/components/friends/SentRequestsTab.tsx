@@ -5,22 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Loader2, UserX, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-
-interface FriendRequest {
-  id: string;
-  user: {
-    id: string;
-    username: string;
-    displayName: string;
-    avatar?: string;
-  };
-  createdAt: string;
-}
+import { FriendRequest } from '@/components/friends/useFriends';
 
 export interface SentRequestsTabProps {
   requests: FriendRequest[];
   loading: boolean;
-  onCancel: (requestId: string) => Promise<boolean>;
+  onCancel: (requestId: string) => Promise<any>;
 }
 
 const SentRequestsTab: React.FC<SentRequestsTabProps> = ({
@@ -71,16 +61,16 @@ const SentRequestsTab: React.FC<SentRequestsTabProps> = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  <AvatarImage src={request.user.avatar} />
+                  <AvatarImage src={request.profiles?.avatar_url || "/placeholder.svg"} />
                   <AvatarFallback>
-                    {request.user.displayName.substring(0, 2).toUpperCase()}
+                    {(request.profiles?.display_name || "?").substring(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-medium">{request.user.displayName}</h3>
-                  <p className="text-sm text-muted-foreground">@{request.user.username}</p>
+                  <h3 className="font-medium">{request.profiles?.display_name}</h3>
+                  <p className="text-sm text-muted-foreground">@{request.profiles?.username}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Sent {formatDistanceToNow(new Date(request.createdAt), { addSuffix: true })}
+                    Sent {formatDistanceToNow(new Date(request.created_at), { addSuffix: true })}
                   </p>
                 </div>
               </div>

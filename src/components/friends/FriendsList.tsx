@@ -5,20 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, UserMinus, Loader2, Users } from 'lucide-react';
-
-interface Friend {
-  id: string;
-  username: string;
-  displayName: string;
-  avatar?: string;
-  isOnline?: boolean;
-  lastActive?: string;
-}
+import { Friend } from '@/components/friends/useFriends';
 
 interface FriendsListProps {
   friends: Friend[];
   loading: boolean;
-  onRemoveFriend: (friendId: string) => Promise<boolean>;
+  onRemoveFriend: (friendId: string) => Promise<any>;
   onMessageFriend: (friendId: string) => void;
 }
 
@@ -72,33 +64,21 @@ const FriendsList: React.FC<FriendsListProps> = ({
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Avatar>
-                    <AvatarImage src={friend.avatar} />
+                    <AvatarImage src={friend.profiles.avatar_url || "/placeholder.svg"} />
                     <AvatarFallback>
-                      {friend.displayName.substring(0, 2).toUpperCase()}
+                      {friend.profiles.display_name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
-                  {friend.isOnline !== undefined && (
-                    <span 
-                      className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-background ${
-                        friend.isOnline ? 'bg-green-500' : 'bg-gray-400'
-                      }`}
-                    />
-                  )}
                 </div>
                 <div>
-                  <h3 className="font-medium">{friend.displayName}</h3>
-                  <p className="text-sm text-muted-foreground">@{friend.username}</p>
-                  {!friend.isOnline && friend.lastActive && (
-                    <p className="text-xs text-muted-foreground">
-                      Last seen {formatDistanceToNow(new Date(friend.lastActive), { addSuffix: true })}
-                    </p>
-                  )}
+                  <h3 className="font-medium">{friend.profiles.display_name}</h3>
+                  <p className="text-sm text-muted-foreground">@{friend.profiles.username}</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Button 
                   size="sm" 
-                  onClick={() => onMessageFriend(friend.id)}
+                  onClick={() => onMessageFriend(friend.friend_id)}
                 >
                   <MessageSquare className="h-4 w-4 mr-2" />
                   Message
