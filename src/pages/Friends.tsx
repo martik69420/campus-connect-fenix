@@ -38,6 +38,19 @@ const Friends = () => {
     navigate(`/messages?userId=${friendId}`);
   };
   
+  // Helper functions to convert the Promise<boolean> to Promise<void>
+  const handleRemoveFriend = async (friendId: string): Promise<void> => {
+    await removeFriend(friendId);
+  };
+
+  const handleAcceptRequest = async (requestId: string): Promise<void> => {
+    await acceptFriendRequest(requestId);
+  };
+
+  const handleRejectRequest = async (requestId: string): Promise<void> => {
+    await rejectFriendRequest(requestId);
+  };
+
   if (authLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -87,7 +100,7 @@ const Friends = () => {
           <FriendsList 
             friends={friends}
             loading={isLoading}
-            onRemoveFriend={async (friendId) => { await removeFriend(friendId); }}
+            onRemoveFriend={handleRemoveFriend}
             onMessageFriend={handleMessageFriend}
           />
         </TabsContent>
@@ -103,8 +116,8 @@ const Friends = () => {
             <FriendRequestsTab 
               requests={receivedRequests}
               loading={isLoading}
-              onAccept={async (requestId) => { await acceptFriendRequest(requestId); }}
-              onDecline={async (requestId) => { await rejectFriendRequest(requestId); }}
+              onAccept={handleAcceptRequest}
+              onDecline={handleRejectRequest}
             />
           </Suspense>
         </TabsContent>
@@ -120,7 +133,7 @@ const Friends = () => {
             <SentRequestsTab 
               requests={sentRequests}
               loading={isLoading} 
-              onCancel={async (requestId) => { await rejectFriendRequest(requestId); }}
+              onCancel={handleRejectRequest}
             />
           </Suspense>
         </TabsContent>

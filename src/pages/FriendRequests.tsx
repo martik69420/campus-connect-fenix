@@ -16,6 +16,15 @@ const FriendRequests: React.FC = () => {
     rejectFriendRequest
   } = useFriends();
 
+  // Helper functions to convert the Promise<boolean> to Promise<void>
+  const handleAcceptRequest = async (requestId: string): Promise<void> => {
+    await acceptFriendRequest(requestId);
+  };
+
+  const handleRejectRequest = async (requestId: string): Promise<void> => {
+    await rejectFriendRequest(requestId);
+  };
+
   return (
     <AppLayout>
       <div className="container py-6">
@@ -34,8 +43,8 @@ const FriendRequests: React.FC = () => {
                 <FriendRequestsTab 
                   requests={receivedRequests}
                   loading={isLoading}
-                  onAccept={async (userId) => { await acceptFriendRequest(userId); }}
-                  onDecline={async (userId) => { await rejectFriendRequest(userId); }}
+                  onAccept={handleAcceptRequest}
+                  onDecline={handleRejectRequest}
                 />
               </TabsContent>
               
@@ -43,7 +52,7 @@ const FriendRequests: React.FC = () => {
                 <SentRequestsTab 
                   requests={sentRequests}
                   loading={isLoading}
-                  onCancel={async (requestId) => { await rejectFriendRequest(requestId); }}
+                  onCancel={handleRejectRequest}
                 />
               </TabsContent>
             </Tabs>
