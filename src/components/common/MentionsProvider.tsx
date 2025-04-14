@@ -32,10 +32,9 @@ export const MentionsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     
     setLoadingMentions(true);
     try {
-      // Remove 'is_admin' from the query since it doesn't exist
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, username, display_name, avatar_url')
+        .select('id, username, display_name, avatar_url, is_admin')
         .ilike('username', `%${query}%`)
         .order('username')
         .limit(8);
@@ -47,8 +46,7 @@ export const MentionsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         username: user.username,
         display_name: user.display_name,
         avatar_url: user.avatar_url,
-        // We'll assume no users are admins by default since we don't have that column
-        isAdmin: false
+        isAdmin: user.is_admin || false
       }));
       
       setMentionUsers(formattedData);

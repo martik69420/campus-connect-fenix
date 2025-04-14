@@ -392,6 +392,7 @@ export type Database = {
           email: string | null
           id: string
           invite_code: string | null
+          is_admin: boolean
           password_hash: string | null
           school: string
           username: string
@@ -405,6 +406,7 @@ export type Database = {
           email?: string | null
           id: string
           invite_code?: string | null
+          is_admin?: boolean
           password_hash?: string | null
           school: string
           username: string
@@ -418,6 +420,7 @@ export type Database = {
           email?: string | null
           id?: string
           invite_code?: string | null
+          is_admin?: boolean
           password_hash?: string | null
           school?: string
           username?: string
