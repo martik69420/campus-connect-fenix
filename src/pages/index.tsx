@@ -10,7 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import PostForm from '@/components/posts/PostForm';
 import PostList from '@/components/posts/PostList';
 import FriendsForYou from '@/components/users/FriendsForYou';
-import { Loader2, RefreshCw, AlertCircle, TrendingUp, Clock, UserPlus } from 'lucide-react';
+import { Loader2, RefreshCw, AlertCircle, TrendingUp, Clock, UserPlus, Sparkles, ShieldCheck } from 'lucide-react';
 import AdBanner from '@/components/ads/AdBanner';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -18,6 +18,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useViewport } from '@/hooks/use-viewport';
 import AdminFeatures from '@/components/admin/AdminFeatures';
 import { MentionsProvider } from '@/components/common/MentionsProvider';
+import CreatePostForm from '@/components/post/CreatePostForm';
+import TrendingTopics from '@/components/posts/TrendingTopics';
 
 // Add window.adsbygoogle type declaration if not already defined
 declare global {
@@ -154,8 +156,27 @@ const Index = () => {
               </CardContent>
             </Card>
             
+            {/* Trending Topics */}
+            <Card className="overflow-hidden border-primary/10 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <Sparkles className="h-5 w-5 mr-2 text-primary" />
+                  Trending Topics
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <TrendingTopics />
+              </CardContent>
+            </Card>
+            
             {user?.isAdmin && (
               <Card className="overflow-hidden border-primary/10 shadow-sm">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-2">
+                  <CardTitle className="flex items-center text-lg">
+                    <ShieldCheck className="h-5 w-5 mr-2 text-primary" />
+                    Admin Features
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="p-4">
                   <AdminFeatures />
                 </CardContent>
@@ -166,14 +187,7 @@ const Index = () => {
           {/* Main content */}
           <div className="md:col-span-2">
             {user && (
-              <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-3">
-                  <CardTitle className="text-lg">Create Post</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4">
-                  <PostForm />
-                </CardContent>
-              </Card>
+              <CreatePostForm />
             )}
 
             <Tabs defaultValue="for-you" onValueChange={handleTabChange}>

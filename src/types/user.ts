@@ -30,3 +30,18 @@ export interface AdminFeature {
   path: string;
   icon: string;
 }
+
+export interface AdminRole {
+  id: string;
+  name: string;
+  description: string;
+  permissions: string[];
+  createdAt: string;
+}
+
+export interface AdminPermission {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+}
