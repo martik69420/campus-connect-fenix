@@ -3,19 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import ProfileHeader from '@/components/profile/ProfileHeader';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/context/auth';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import ProfilePosts from '@/components/profile/ProfilePosts';
-import ProfileFriends from '@/components/profile/ProfileFriends';
-import ProfileAbout from '@/components/profile/ProfileAbout';
 import ProfilePictureUpload from '@/components/profile/ProfilePictureUpload';
 import { Shield, Star, Award, BookMarked, Heart, Sparkles } from 'lucide-react';
-import ProfileBadges from '@/components/profile/ProfileBadges';
+import ProfileTabs from '@/components/profile/ProfileTabs';
 import { UserBadge } from '@/types/user';
 import { useAchievements } from '@/context/AchievementContext';
+import { supabase } from '@/integrations/supabase/client';
 
 const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -23,14 +20,16 @@ const Profile: React.FC = () => {
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const { earnedBadges, badges } = useAchievements();
+  const [isFriend, setIsFriend] = useState(false);
+  const [profileUser, setProfileUser] = useState<any>(null);
+  const { earnedBadges } = useAchievements();
 
   // Combine achievement badges with admin badge if user is admin
   const getUserBadges = (): UserBadge[] => {
     const allBadges = [...earnedBadges];
     
     // Add admin badge if user is an admin
-    if (user?.isAdmin && isCurrentUser) {
+    if (profileUser?.isAdmin) {
       const adminBadge: UserBadge = {
         id: 'admin',
         name: 'Administrator',
@@ -49,11 +48,77 @@ const Profile: React.FC = () => {
   };
 
   useEffect(() => {
-    if (user && username) {
-      setIsCurrentUser(user.username === username);
-      setIsLoading(false);
-    }
+    const loadProfileData = async () => {
+      if (!username) return;
+      
+      setIsLoading(true);
+      
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('username', username)
+          .single();
+          
+        if (error) throw error;
+        
+        setProfileUser(data);
+        
+        // Check if this is the current user's profile
+        if (user && user.username === username) {
+          setIsCurrentUser(true);
+        }
+        
+        // Check if user is a friend
+        if (user && user.id && data.id && user.id !== data.id) {
+          const { data: friendData } = await supabase
+            .from('friends')
+            .select('*')
+            .or(`and(user_id.eq.${user.id},friend_id.eq.${data.id}),and(friend_id.eq.${user.id},user_id.eq.${data.id})`)
+            .eq('status', 'accepted');
+            
+          setIsFriend(friendData && friendData.length > 0);
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadProfileData();
   }, [user, username]);
+
+  const handleAddFriend = async () => {
+    if (!user || !profileUser) return;
+    
+    try {
+      // Send friend request
+      await supabase
+        .from('friends')
+        .insert([
+          { user_id: user.id, friend_id: profileUser.id, status: 'pending' }
+        ]);
+    } catch (error) {
+      console.error('Error sending friend request:', error);
+    }
+  };
+
+  const handleRemoveFriend = async () => {
+    if (!user || !profileUser) return;
+    
+    try {
+      // Remove friend relationship
+      await supabase
+        .from('friends')
+        .delete()
+        .or(`and(user_id.eq.${user.id},friend_id.eq.${profileUser.id}),and(friend_id.eq.${user.id},user_id.eq.${profileUser.id})`);
+        
+      setIsFriend(false);
+    } catch (error) {
+      console.error('Error removing friend:', error);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -69,22 +134,13 @@ const Profile: React.FC = () => {
             </div>
           </Card>
           <Card>
-            <Tabs defaultValue="posts" className="w-full">
-              <TabsList>
-                <TabsTrigger value="posts"><Skeleton className="h-6 w-20" /></TabsTrigger>
-                <TabsTrigger value="about"><Skeleton className="h-6 w-20" /></TabsTrigger>
-                <TabsTrigger value="friends"><Skeleton className="h-6 w-20" /></TabsTrigger>
-              </TabsList>
-              <TabsContent value="posts">
-                <Skeleton className="h-64 w-full" />
-              </TabsContent>
-              <TabsContent value="about">
-                <Skeleton className="h-48 w-full" />
-              </TabsContent>
-              <TabsContent value="friends">
-                <Skeleton className="h-48 w-full" />
-              </TabsContent>
-            </Tabs>
+            <div className="p-4">
+              <div className="flex justify-between mb-4">
+                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-8 w-24" />
+              </div>
+              <Skeleton className="h-64 w-full" />
+            </div>
           </Card>
         </div>
       </AppLayout>
@@ -110,78 +166,25 @@ const Profile: React.FC = () => {
               <div className="h-24 md:h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20"></div>
               <div className="px-4 pb-4 -mt-12 relative">
                 <ProfileHeader 
-                  user={user || { id: '', username: username || '', displayName: username || '' }}
+                  user={profileUser || { id: '', username: username || '', displayName: username || '' }}
                   isCurrentUser={isCurrentUser}
-                  isFriend={false}
-                  onAddFriend={() => {}}
-                  onRemoveFriend={() => {}}
+                  isFriend={isFriend}
+                  onAddFriend={handleAddFriend}
+                  onRemoveFriend={handleRemoveFriend}
                   loading={false} 
                 />
-                
-                <div className="mt-4">
-                  <div className="flex items-center mb-3">
-                    <Sparkles className="h-4 w-4 mr-2 text-primary" />
-                    <h3 className="font-medium text-sm">Badges</h3>
-                  </div>
-                  <ProfileBadges badges={getUserBadges()} />
-                </div>
               </div>
             </Card>
           </div>
         )}
 
-        <Card className="border border-primary/10 overflow-hidden">
-          <Tabs defaultValue="posts" className="w-full">
-            <TabsList className="w-full grid grid-cols-5 md:w-auto md:inline-flex">
-              <TabsTrigger value="posts" className="flex items-center">
-                <Star className="h-4 w-4 mr-2 hidden sm:block" />
-                Posts
-              </TabsTrigger>
-              <TabsTrigger value="liked" className="flex items-center">
-                <Heart className="h-4 w-4 mr-2 hidden sm:block" />
-                Liked
-              </TabsTrigger>
-              <TabsTrigger value="saved" className="flex items-center">
-                <BookMarked className="h-4 w-4 mr-2 hidden sm:block" />
-                Saved
-              </TabsTrigger>
-              <TabsTrigger value="about" className="flex items-center">
-                <Award className="h-4 w-4 mr-2 hidden sm:block" />
-                About
-              </TabsTrigger>
-              <TabsTrigger value="friends" className="flex items-center">
-                <Shield className="h-4 w-4 mr-2 hidden sm:block" />
-                Friends
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value="posts" className="focus:outline-none">
-              <ProfilePosts username={username} />
-            </TabsContent>
-            <TabsContent value="liked" className="focus:outline-none">
-              <div className="p-4 text-center text-muted-foreground">
-                <Heart className="mx-auto h-12 w-12 mb-2 text-muted-foreground/50" />
-                <p>Posts liked by {username}</p>
-                {isCurrentUser && user?.settings?.publicLikedPosts === false && (
-                  <p className="text-xs mt-2">Your liked posts are private. You can change this in settings.</p>
-                )}
-              </div>
-            </TabsContent>
-            <TabsContent value="saved" className="focus:outline-none">
-              <div className="p-4 text-center text-muted-foreground">
-                <BookMarked className="mx-auto h-12 w-12 mb-2 text-muted-foreground/50" />
-                <p>Saved posts</p>
-                {isCurrentUser && (
-                  <p className="text-xs mt-2">Only you can see your saved posts.</p>
-                )}
-              </div>
-            </TabsContent>
-            <TabsContent value="about" className="focus:outline-none">
-              <ProfileAbout username={username} />
-            </TabsContent>
-            <TabsContent value="friends" className="focus:outline-none">
-              <ProfileFriends username={username} />
-            </TabsContent>
-          </Tabs>
+        <Card>
+          <CardContent className="p-4 md:p-6">
+            <ProfileTabs 
+              username={username || ''} 
+              isOwnProfile={isCurrentUser}
+            />
+          </CardContent>
         </Card>
       </div>
     </AppLayout>

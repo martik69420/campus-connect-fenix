@@ -7,6 +7,9 @@ export interface UserBadge {
   backgroundColor: string;
   color: string;
   earned: boolean;
+  requirementDescription?: string;
+  progressCurrent?: number;
+  progressTarget?: number;
 }
 
 export interface UserAchievement {

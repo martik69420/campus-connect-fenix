@@ -1,323 +1,391 @@
 
-import React, { useState } from "react";
-import AppLayout from "@/components/layout/AppLayout";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useAuth } from "@/context/auth";
-import { useToast } from "@/hooks/use-toast";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Progress } from "@/components/ui/progress";
-import { MessageSquare, Trophy, Star, Clock, GiftIcon, Coins } from "lucide-react";
-
-// Define the reward types
-interface Reward {
-  id: string;
-  name: string;
-  description: string;
-  cost: number;
-  image: string;
-  available: boolean;
-  category: "gift-card" | "digital" | "physical" | "exclusive";
-}
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import AppLayout from '@/components/layout/AppLayout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/auth';
+import { useAchievements } from '@/context/AchievementContext';
+import { Clock, Award, Gamepad2, CheckCircle, Coins, Gift, CheckCheck, Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 const Earn = () => {
-  const { user, addCoins } = useAuth();
   const { toast } = useToast();
-  const [isClaimingDaily, setIsClaimingDaily] = useState(false);
-  const [lastClaimedDaily, setLastClaimedDaily] = useState<Date | null>(null);
+  const navigate = useNavigate();
+  const { user, addCoins } = useAuth();
+  const { badges, userAchievements, earnBadge } = useAchievements();
+  const [dailyRewardClaimed, setDailyRewardClaimed] = useState(false);
+  const [rewardLoading, setRewardLoading] = useState(false);
   
-  // Claim daily reward
-  const claimDailyReward = async () => {
-    if (!user) return;
+  const handleDailyRewardClaim = async () => {
+    if (rewardLoading || dailyRewardClaimed || !addCoins) return;
     
-    setIsClaimingDaily(true);
+    setRewardLoading(true);
+    
     try {
-      // In a real app, you would check server-side if the user has already claimed today
-      const success = await addCoins(10, "Daily login reward");
+      // Add coins for daily reward
+      await addCoins(20, 'Daily reward');
       
-      if (success) {
-        setLastClaimedDaily(new Date());
-        toast({
-          title: "Daily Reward Claimed!",
-          description: "You've earned 10 coins for logging in today.",
-        });
-      }
-    } catch (error) {
+      setDailyRewardClaimed(true);
+      
       toast({
-        title: "Error",
-        description: "Could not claim daily reward. Try again later.",
-        variant: "destructive",
+        title: "Daily Reward Claimed!",
+        description: "You've received 20 coins as your daily reward."
+      });
+      
+    } catch (error) {
+      console.error('Error claiming daily reward:', error);
+      
+      toast({
+        title: "Failed to claim reward",
+        description: "There was an issue claiming your daily reward.",
+        variant: "destructive"
       });
     } finally {
-      setIsClaimingDaily(false);
+      setRewardLoading(false);
     }
-  };
-  
-  // Example rewards data
-  const rewards: Reward[] = [
-    {
-      id: "1",
-      name: "5€ Amazon Gift Card",
-      description: "Redeem for a 5€ Amazon gift card code",
-      cost: 500,
-      image: "/placeholder.svg",
-      available: true,
-      category: "gift-card"
-    },
-    {
-      id: "2",
-      name: "10€ Google Play Gift Card",
-      description: "Redeem for a 10€ Google Play gift card code",
-      cost: 1000,
-      image: "/placeholder.svg",
-      available: true,
-      category: "gift-card"
-    },
-    {
-      id: "3",
-      name: "Campus Fenix T-shirt",
-      description: "Show your school spirit with this exclusive t-shirt",
-      cost: 2500,
-      image: "/placeholder.svg",
-      available: true,
-      category: "physical"
-    },
-    {
-      id: "4",
-      name: "Premium Membership (1 month)",
-      description: "Upgrade to premium for exclusive features",
-      cost: 1500,
-      image: "/placeholder.svg",
-      available: true,
-      category: "digital"
-    },
-    {
-      id: "5",
-      name: "Custom Profile Badge",
-      description: "Add a unique badge to your profile",
-      cost: 750,
-      image: "/placeholder.svg",
-      available: true,
-      category: "exclusive"
-    },
-  ];
-  
-  // Filter rewards by category
-  const filterRewardsByCategory = (category: string) => {
-    if (category === "all") return rewards;
-    return rewards.filter(reward => reward.category === category);
   };
 
-  const canRedeemReward = (cost: number) => {
-    return user && user.coins >= cost;
-  };
-  
-  const handleRedeemReward = (reward: Reward) => {
-    if (!canRedeemReward(reward.cost)) {
-      toast({
-        title: "Not enough coins",
-        description: `You need ${reward.cost - (user?.coins || 0)} more coins to redeem this reward.`,
-        variant: "destructive",
-      });
-      return;
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { 
+        staggerChildren: 0.1,
+      }
     }
-    
-    // Here you would make an API call to process the redemption
-    toast({
-      title: "Redemption requested",
-      description: `Your request for ${reward.name} has been submitted.`,
-    });
   };
   
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <AppLayout>
       <div className="container py-6">
-        <div className="flex flex-col gap-6">
-          {/* Coin balance card */}
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-2xl font-bold">Your Balance</h2>
-                  <div className="flex items-center mt-2">
-                    <Coins className="h-6 w-6 text-yellow-500 mr-2" />
-                    <span className="text-3xl font-bold">{user?.coins || 0}</span>
-                    <span className="ml-2 text-muted-foreground">coins</span>
-                  </div>
-                </div>
-                <Button onClick={claimDailyReward} disabled={isClaimingDaily || !!lastClaimedDaily}>
-                  {isClaimingDaily ? "Claiming..." : "Claim Daily Reward"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+        <motion.div 
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+          className="space-y-6"
+        >
+          {/* Header */}
+          <motion.div variants={itemVariants}>
+            <h1 className="text-3xl font-bold mb-2">Earn Coins & Badges</h1>
+            <p className="text-muted-foreground mb-6">Complete activities to earn coins and unlock badges</p>
+          </motion.div>
           
-          {/* Ways to earn coins */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Ways to Earn Coins</CardTitle>
-              <CardDescription>
-                Complete these activities to earn more coins
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+          {/* Daily Reward Card */}
+          <motion.div variants={itemVariants}>
+            <Card className="overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-transparent to-transparent z-0 opacity-70"></div>
+              <CardHeader className="relative z-10">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <Clock className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Daily Login</h4>
-                      <p className="text-sm text-muted-foreground">Log in every day to claim 10 coins</p>
-                    </div>
+                  <div>
+                    <CardTitle className="flex items-center">
+                      <Clock className="h-5 w-5 mr-2 text-primary" />
+                      Daily Reward
+                    </CardTitle>
+                    <CardDescription>Claim your daily reward of 20 coins</CardDescription>
                   </div>
-                  <Badge variant="outline">10 coins</Badge>
+                  <Button 
+                    onClick={handleDailyRewardClaim}
+                    disabled={dailyRewardClaimed || rewardLoading}
+                    className={cn(
+                      "relative overflow-hidden",
+                      dailyRewardClaimed && "bg-green-600 hover:bg-green-700"
+                    )}
+                  >
+                    {dailyRewardClaimed ? (
+                      <>
+                        <CheckCheck className="h-4 w-4 mr-2" />
+                        Claimed
+                      </>
+                    ) : (
+                      <>
+                        <Gift className="h-4 w-4 mr-2" />
+                        Claim 20 Coins
+                      </>
+                    )}
+                    {rewardLoading && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-primary">
+                        Loading...
+                      </span>
+                    )}
+                  </Button>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <MessageSquare className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Post a Comment</h4>
-                      <p className="text-sm text-muted-foreground">Earn coins for active participation</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline">5 coins</Badge>
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <p className="text-sm mb-4">Come back every day to claim more coins!</p>
+                <div className="flex items-center text-sm">
+                  <Coins className="h-4 w-4 mr-1 text-amber-500" />
+                  <span>You currently have {user?.coins || 0} coins</span>
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <Trophy className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Win Games</h4>
-                      <p className="text-sm text-muted-foreground">Earn coins by winning mini-games</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline">20-50 coins</Badge>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="bg-primary/10 p-2 rounded-full">
-                      <Star className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Complete Achievements</h4>
-                      <p className="text-sm text-muted-foreground">Unlock achievements to earn bonus coins</p>
-                    </div>
-                  </div>
-                  <Badge variant="outline">Varies</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Rewards section */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Rewards</CardTitle>
-              <CardDescription>
-                Redeem your coins for these exciting rewards
-              </CardDescription>
-            </CardHeader>
-            
-            <Tabs defaultValue="all">
-              <div className="px-6">
-                <TabsList className="w-full justify-start overflow-x-auto mb-4">
-                  <TabsTrigger value="all">All Rewards</TabsTrigger>
-                  <TabsTrigger value="gift-card">Gift Cards</TabsTrigger>
-                  <TabsTrigger value="digital">Digital</TabsTrigger>
-                  <TabsTrigger value="physical">Physical</TabsTrigger>
-                  <TabsTrigger value="exclusive">Exclusive</TabsTrigger>
-                </TabsList>
-              </div>
-              
-              <CardContent>
-                <TabsContent value="all" className="mt-0">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {rewards.map((reward) => (
-                      <RewardCard 
-                        key={reward.id} 
-                        reward={reward} 
-                        canRedeem={canRedeemReward(reward.cost)}
-                        onRedeem={() => handleRedeemReward(reward)}
-                      />
-                    ))}
-                  </div>
-                </TabsContent>
-                
-                {["gift-card", "digital", "physical", "exclusive"].map((category) => (
-                  <TabsContent key={category} value={category} className="mt-0">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {filterRewardsByCategory(category).map((reward) => (
-                        <RewardCard 
-                          key={reward.id} 
-                          reward={reward} 
-                          canRedeem={canRedeemReward(reward.cost)}
-                          onRedeem={() => handleRedeemReward(reward)}
-                        />
-                      ))}
-                    </div>
-                  </TabsContent>
-                ))}
               </CardContent>
-            </Tabs>
-          </Card>
-        </div>
+            </Card>
+          </motion.div>
+          
+          {/* Achievements Section */}
+          <motion.div variants={itemVariants}>
+            <h2 className="text-xl font-semibold mb-3 flex items-center">
+              <Award className="h-5 w-5 mr-2 text-primary" />
+              Achievements
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {userAchievements.map(achievement => {
+                const isCompleted = achievement.progress >= achievement.maxProgress;
+                return (
+                  <Card key={achievement.id} className={cn(
+                    "border",
+                    isCompleted ? "border-green-500/30" : "border-primary/10"
+                  )}>
+                    <CardContent className="p-4">
+                      <div className="flex justify-between items-center mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="text-3xl">{achievement.icon}</div>
+                          <div>
+                            <h3 className="font-medium">{achievement.name}</h3>
+                            <p className="text-sm text-muted-foreground">{achievement.description}</p>
+                          </div>
+                        </div>
+                        {isCompleted && (
+                          <div className="rounded-full bg-green-500/20 p-1">
+                            <CheckCircle className="h-5 w-5 text-green-500" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-sm">
+                          <span>Progress: {achievement.progress} / {achievement.maxProgress}</span>
+                          {achievement.reward && (
+                            <span className="text-amber-500 font-medium">Reward: {achievement.reward}</span>
+                          )}
+                        </div>
+                        <Progress
+                          value={(achievement.progress / achievement.maxProgress) * 100}
+                          className={cn(
+                            "h-2",
+                            isCompleted ? "bg-green-200" : "bg-secondary/50"
+                          )}
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </motion.div>
+          
+          {/* Badges Section */}
+          <motion.div variants={itemVariants}>
+            <h2 className="text-xl font-semibold mb-3 flex items-center">
+              <Award className="h-5 w-5 mr-2 text-primary" />
+              Badges
+            </h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+              {badges.map(badge => {
+                const earned = badge.earned;
+                return (
+                  <Card 
+                    key={badge.id} 
+                    className={cn(
+                      "relative overflow-hidden border-2",
+                      earned ? `border-${badge.backgroundColor}/50` : "border-muted"
+                    )}
+                  >
+                    <div className={cn(
+                      "absolute inset-0 opacity-20",
+                      earned ? `bg-${badge.backgroundColor}/10` : "bg-muted/10"
+                    )} />
+                    <CardContent className="p-4 flex flex-col items-center justify-center text-center relative z-10">
+                      {/* Badge icon */}
+                      <div 
+                        className={cn(
+                          "text-4xl mb-2 p-3 rounded-full",
+                          earned ? `text-${badge.color} bg-${badge.backgroundColor}/20` : "text-muted-foreground bg-muted/20"
+                        )}
+                      >
+                        {badge.icon === 'admin' ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/>
+                          </svg>
+                        ) : (
+                          badge.icon
+                        )}
+                      </div>
+                      
+                      {/* Badge name */}
+                      <h3 className={cn(
+                        "font-medium",
+                        earned ? "text-foreground" : "text-muted-foreground"
+                      )}>
+                        {badge.name}
+                      </h3>
+                      
+                      {/* Badge status */}
+                      <div className="mt-2 flex items-center justify-center">
+                        {earned ? (
+                          <span className="text-xs inline-flex items-center px-2 py-1 rounded-full bg-green-500/20 text-green-500">
+                            <CheckCircle className="h-3 w-3 mr-1" /> Earned
+                          </span>
+                        ) : (
+                          <span className="text-xs inline-flex items-center px-2 py-1 rounded-full bg-muted text-muted-foreground">
+                            <Lock className="h-3 w-3 mr-1" /> Locked
+                          </span>
+                        )}
+                      </div>
+                      
+                      {/* Badge description */}
+                      <p className="text-xs text-muted-foreground mt-2">{badge.description}</p>
+                      
+                      {/* Progress bar for badge (if applicable) */}
+                      {!earned && badge.progressCurrent !== undefined && badge.progressTarget !== undefined && (
+                        <div className="w-full mt-2">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span>{badge.progressCurrent}/{badge.progressTarget}</span>
+                            <span>{Math.round((badge.progressCurrent / badge.progressTarget) * 100)}%</span>
+                          </div>
+                          <Progress
+                            value={(badge.progressCurrent / badge.progressTarget) * 100}
+                            className="h-1 bg-muted"
+                          />
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </motion.div>
+          
+          {/* Game Rewards Section */}
+          <motion.div variants={itemVariants}>
+            <h2 className="text-xl font-semibold mb-3 flex items-center">
+              <Gamepad2 className="h-5 w-5 mr-2 text-primary" />
+              Games & Activities
+            </h2>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Card className="border-primary/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg">
+                    <Gamepad2 className="h-5 w-5 mr-2 text-emerald-500" />
+                    Snake Game
+                  </CardTitle>
+                  <CardDescription>Earn up to 50 coins per game</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                      <span>Score 20+: 5 coins</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                      <span>Score 50+: 25 coins</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-emerald-500" />
+                      <span>Score 100+: 50 coins</span>
+                    </li>
+                  </ul>
+                  <Button onClick={() => navigate('/snake')} className="w-full">
+                    Play Snake
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-primary/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg">
+                    <BrainIcon className="h-5 w-5 mr-2 text-indigo-500" />
+                    Trivia Challenge
+                  </CardTitle>
+                  <CardDescription>Test your knowledge and earn coins</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-indigo-500" />
+                      <span>40% correct: 10 coins</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-indigo-500" />
+                      <span>60% correct: 30 coins</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-indigo-500" />
+                      <span>80%+ correct: 50 coins</span>
+                    </li>
+                  </ul>
+                  <Button onClick={() => navigate('/trivia')} className="w-full">
+                    Play Trivia
+                  </Button>
+                </CardContent>
+              </Card>
+              
+              <Card className="border-primary/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center text-lg">
+                    <Award className="h-5 w-5 mr-2 text-amber-500" />
+                    Complete Your Profile
+                  </CardTitle>
+                  <CardDescription>Earn coins by updating your profile</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <ul className="space-y-2 text-sm">
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-amber-500" />
+                      <span>Add profile picture: 10 coins</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-amber-500" />
+                      <span>Write a bio: 10 coins</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-amber-500" />
+                      <span>Add school details: 20 coins</span>
+                    </li>
+                  </ul>
+                  <Button onClick={() => navigate('/settings')} className="w-full">
+                    Update Profile
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </motion.div>
+        </motion.div>
       </div>
     </AppLayout>
   );
 };
 
-interface RewardCardProps {
-  reward: Reward;
-  canRedeem: boolean;
-  onRedeem: () => void;
-}
-
-const RewardCard = ({ reward, canRedeem, onRedeem }: RewardCardProps) => {
+const BrainIcon = (props: React.SVGProps<SVGSVGElement>) => {
   return (
-    <Card className="overflow-hidden">
-      <div className="aspect-video relative overflow-hidden bg-muted">
-        <img 
-          src={reward.image} 
-          alt={reward.name}
-          className="w-full h-full object-cover"
-        />
-      </div>
-      <CardContent className="p-4">
-        <h3 className="font-semibold text-lg">{reward.name}</h3>
-        <p className="text-sm text-muted-foreground">{reward.description}</p>
-        <div className="flex items-center mt-2">
-          <Coins className="h-4 w-4 text-yellow-500 mr-1" />
-          <span className="font-bold">{reward.cost}</span>
-          <span className="text-xs ml-1 text-muted-foreground">coins</span>
-        </div>
-      </CardContent>
-      <CardFooter className="p-4 pt-0">
-        <Button 
-          onClick={onRedeem}
-          disabled={!canRedeem}
-          className="w-full"
-          variant={canRedeem ? "default" : "outline"}
-        >
-          {canRedeem ? (
-            <>
-              <GiftIcon className="mr-2 h-4 w-4" /> Redeem Now
-            </>
-          ) : (
-            "Not Enough Coins"
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 8.2A4 4 0 0 1 8.24 4.96a4.27 4.27 0 0 1 .32-1.93A4 4 0 0 1 6 .5a4 4 0 0 0 2.85 3.96A4 4 0 0 1 10 4.2a4 4 0 0 1 1.98.26 4.14 4.14 0 0 1 .32-1.91A3.95 3.95 0 0 1 9.72.28a4 4 0 0 0 4.56 0 3.95 3.95 0 0 1-2.58 2.27 4.14 4.14 0 0 1 .32 1.91A4 4 0 0 1 14 4.2a4 4 0 0 1 1.15.16A4 4 0 0 0 18 .5a4 4 0 0 1-2.56 2.53 4.27 4.27 0 0 1 .32 1.93A4 4 0 0 1 12 8.2Z"></path>
+      <path d="M13.95 13.25a3.94 3.94 0 0 0-.2-1.3 4 4 0 0 0-7.5 0 3.94 3.94 0 0 0-.2 1.3 3.89 3.89 0 0 0 1.88 3.2c.38.18.78.32 1.2.4a3.95 3.95 0 0 0 1.74 0c.42-.08.82-.22 1.2-.4a3.89 3.89 0 0 0 1.88-3.2Z"></path>
+      <path d="M18 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"></path>
+      <path d="M6 8a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z"></path>
+      <path d="m12.7 19.71-.7 3.87a1 1 0 0 1-2 0l-.7-3.87a1.5 1.5 0 1 1 3.4 0Z"></path>
+      <path d="m18.16 20.15 1.14 3.71a1 1 0 0 0 1.9-.58l-1.14-3.71a1.5 1.5 0 1 0-1.9.58Z"></path>
+      <path d="m5.84 20.15-1.14 3.71a1 1 0 0 1-1.9-.58l1.14-3.71a1.5 1.5 0 1 1 1.9.58Z"></path>
+    </svg>
   );
 };
 

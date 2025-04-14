@@ -1,288 +1,331 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Award, Trophy, Star, Target, Gift, BookOpen, MessageSquare, Heart, UserPlus, Calendar, Gem, Shield, Flame, Crown, Medal } from 'lucide-react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 import { useAuth } from '@/context/auth';
-import { supabase } from '@/integrations/supabase/client';
 import { UserAchievement, UserBadge } from '@/types/user';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface AchievementContextType {
-  achievements: UserAchievement[];
+  userAchievements: UserAchievement[];
   badges: UserBadge[];
-  earnedAchievements: UserAchievement[];
   earnedBadges: UserBadge[];
   isLoading: boolean;
   refreshAchievements: () => Promise<void>;
-  claimAchievementReward: (achievementId: string) => Promise<boolean>;
+  earnBadge: (badgeId: string) => Promise<boolean>;
+  updateAchievementProgress: (achievementId: string, progress: number) => Promise<void>;
 }
 
-const AchievementContext = createContext<AchievementContextType | undefined>(undefined);
+const AchievementContext = createContext<AchievementContextType>({
+  userAchievements: [],
+  badges: [],
+  earnedBadges: [],
+  isLoading: true,
+  refreshAchievements: async () => {},
+  earnBadge: async () => false,
+  updateAchievementProgress: async () => {},
+});
+
+export const useAchievements = () => useContext(AchievementContext);
 
 export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const auth = useAuth(); // Use auth object instead of destructuring to avoid early access
-  const [achievements, setAchievements] = useState<UserAchievement[]>([]);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [userAchievements, setUserAchievements] = useState<UserAchievement[]>([]);
   const [badges, setBadges] = useState<UserBadge[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  
-  // Load achievements and badges
-  useEffect(() => {
-    if (auth.user) {
-      refreshAchievements();
-    }
-  }, [auth.user]);
 
-  const refreshAchievements = async () => {
-    if (!auth.user) return;
+  const defaultBadges: UserBadge[] = [
+    {
+      id: 'early-adopter',
+      name: 'Early Adopter',
+      description: 'Joined in the early days of Campus Connect',
+      icon: '🚀',
+      backgroundColor: '#4F46E5',
+      color: 'white',
+      earned: false,
+    },
+    {
+      id: 'social-butterfly',
+      name: 'Social Butterfly',
+      description: 'Added 10 or more friends',
+      icon: '🦋',
+      backgroundColor: '#7C3AED',
+      color: 'white',
+      earned: false,
+      requirementDescription: 'Add 10 friends',
+      progressCurrent: 0,
+      progressTarget: 10
+    },
+    {
+      id: 'content-creator',
+      name: 'Content Creator',
+      description: 'Posted 5 times',
+      icon: '✍️',
+      backgroundColor: '#0EA5E9',
+      color: 'white',
+      earned: false,
+      requirementDescription: 'Create 5 posts',
+      progressCurrent: 0,
+      progressTarget: 5
+    },
+    {
+      id: 'snake-master',
+      name: 'Snake Master',
+      description: 'Scored over 100 in Snake game',
+      icon: '🐍',
+      backgroundColor: '#10B981',
+      color: 'white',
+      earned: false,
+      requirementDescription: 'Score over 100 in Snake game',
+      progressCurrent: 0,
+      progressTarget: 100
+    },
+    {
+      id: 'trivia-whiz',
+      name: 'Trivia Whiz',
+      description: 'Got a perfect score in Trivia',
+      icon: '🧠',
+      backgroundColor: '#F59E0B',
+      color: 'white',
+      earned: false,
+      requirementDescription: 'Get all questions right in a trivia game',
+    },
+    {
+      id: 'popular-post',
+      name: 'Popular Post',
+      description: 'Created a post with 10+ likes',
+      icon: '⭐',
+      backgroundColor: '#EC4899',
+      color: 'white',
+      earned: false,
+      requirementDescription: 'Get 10 likes on a single post',
+      progressCurrent: 0, 
+      progressTarget: 10
+    },
+    {
+      id: 'verified-student',
+      name: 'Verified Student',
+      description: 'Verified as a student at your school',
+      icon: '🎓',
+      backgroundColor: '#2563EB',
+      color: 'white',
+      earned: false,
+    }
+  ];
+
+  const loadUserAchievements = async () => {
+    if (!user?.id) return;
     
     setIsLoading(true);
+    
     try {
       // In a real app, fetch from database
-      // For now, we'll use mock data
-      const mockAchievements: UserAchievement[] = [
+      // For now, we'll check some conditions for badges
+      const updatedBadges = [...defaultBadges];
+      
+      // Check join date for Early Adopter badge
+      const earlyAdopterIndex = updatedBadges.findIndex(b => b.id === 'early-adopter');
+      if (earlyAdopterIndex !== -1 && user.createdAt) {
+        const joinDate = new Date(user.createdAt);
+        const earlyDate = new Date('2023-12-31');
+        if (joinDate <= earlyDate) {
+          updatedBadges[earlyAdopterIndex].earned = true;
+        }
+      }
+      
+      // Check friend count for Social Butterfly badge
+      const { count: friendCount, error: friendError } = await supabase
+        .from('friends')
+        .select('*', { count: 'exact', head: false })
+        .or(`user_id.eq.${user.id},friend_id.eq.${user.id}`)
+        .eq('status', 'accepted');
+        
+      if (!friendError) {
+        const socialButterflyIndex = updatedBadges.findIndex(b => b.id === 'social-butterfly');
+        if (socialButterflyIndex !== -1) {
+          updatedBadges[socialButterflyIndex].progressCurrent = friendCount || 0;
+          updatedBadges[socialButterflyIndex].earned = (friendCount || 0) >= 10;
+        }
+      }
+      
+      // Check post count for Content Creator
+      const { count: postCount, error: postError } = await supabase
+        .from('posts')
+        .select('*', { count: 'exact', head: false })
+        .eq('user_id', user.id);
+        
+      if (!postError) {
+        const contentCreatorIndex = updatedBadges.findIndex(b => b.id === 'content-creator');
+        if (contentCreatorIndex !== -1) {
+          updatedBadges[contentCreatorIndex].progressCurrent = postCount || 0;
+          updatedBadges[contentCreatorIndex].earned = (postCount || 0) >= 5;
+        }
+      }
+      
+      // Check for snake score
+      const { data: snakeScores, error: snakeError } = await supabase
+        .from('game_history')
+        .select('score')
+        .eq('user_id', user.id)
+        .eq('game_type', 'snake')
+        .order('score', { ascending: false })
+        .limit(1);
+        
+      if (!snakeError && snakeScores && snakeScores.length > 0) {
+        const bestSnakeScore = snakeScores[0].score;
+        const snakeMasterIndex = updatedBadges.findIndex(b => b.id === 'snake-master');
+        if (snakeMasterIndex !== -1) {
+          updatedBadges[snakeMasterIndex].progressCurrent = bestSnakeScore;
+          updatedBadges[snakeMasterIndex].earned = bestSnakeScore >= 100;
+        }
+      }
+      
+      // Check for posts with 10+ likes
+      const { data: popularPosts, error: likeError } = await supabase
+        .from('posts')
+        .select(`
+          id,
+          likes:likes (user_id)
+        `)
+        .eq('user_id', user.id);
+        
+      if (!likeError && popularPosts) {
+        const maxLikes = popularPosts.reduce((max, post) => {
+          const likesCount = post.likes ? post.likes.length : 0;
+          return Math.max(max, likesCount);
+        }, 0);
+        
+        const popularPostIndex = updatedBadges.findIndex(b => b.id === 'popular-post');
+        if (popularPostIndex !== -1) {
+          updatedBadges[popularPostIndex].progressCurrent = maxLikes;
+          updatedBadges[popularPostIndex].earned = maxLikes >= 10;
+        }
+      }
+      
+      // Set school verification badge
+      const verifiedStudentIndex = updatedBadges.findIndex(b => b.id === 'verified-student');
+      if (verifiedStudentIndex !== -1) {
+        updatedBadges[verifiedStudentIndex].earned = !!user.school;
+      }
+      
+      setBadges(updatedBadges);
+      
+      // Set some achievements based on badges
+      const achievements: UserAchievement[] = [
         {
-          id: 'welcome',
-          name: 'Welcome Aboard',
-          description: 'Join our community',
-          icon: 'award',
-          progress: 1,
-          maxProgress: 1,
+          id: 'social-network',
+          name: 'Build Your Network',
+          description: 'Add friends from your school',
+          progress: friendCount || 0,
+          maxProgress: 10,
+          icon: '👥',
+          completedAt: friendCount && friendCount >= 10 ? new Date().toISOString() : undefined,
           unlocked: true,
-          category: 'profile',
-          rarity: 'common',
-          reward: 50
+          reward: '50 coins'
         },
         {
-          id: 'first-post',
-          name: 'First Words',
-          description: 'Create your first post',
-          icon: 'message-square',
-          progress: auth.user ? 1 : 0,
-          maxProgress: 1,
-          unlocked: true,
-          category: 'engagement',
-          rarity: 'common',
-          reward: 100
-        },
-        {
-          id: 'profile-complete',
-          name: 'Identity Established',
-          description: 'Complete your profile information',
-          icon: 'user',
-          progress: auth.user?.bio ? 1 : 0,
-          maxProgress: 1,
-          unlocked: auth.user?.bio ? true : false,
-          category: 'profile',
-          rarity: 'uncommon',
-          reward: 150
-        },
-        {
-          id: 'friend-maker',
-          name: 'Friend Maker',
-          description: 'Add 5 friends',
-          icon: 'user-plus',
-          progress: 0,
+          id: 'post-creator',
+          name: 'Content Creator',
+          description: 'Share your thoughts with the community',
+          progress: postCount || 0,
           maxProgress: 5,
-          unlocked: false,
-          category: 'social',
-          rarity: 'uncommon',
-          reward: 200
+          icon: '✍️',
+          completedAt: postCount && postCount >= 5 ? new Date().toISOString() : undefined,
+          unlocked: true,
+          reward: '30 coins'
         },
         {
-          id: 'snake-master',
-          name: 'Snake Charmer',
-          description: 'Score over 100 in Snake game',
-          icon: 'target',
-          progress: 0,
-          maxProgress: 100,
-          unlocked: false,
-          category: 'games',
-          rarity: 'rare',
-          reward: 300
-        },
-        {
-          id: 'trivia-wizard',
-          name: 'Trivia Wizard',
-          description: 'Answer 20 trivia questions correctly',
-          icon: 'book-open',
-          progress: 0,
-          maxProgress: 20,
-          unlocked: false,
-          category: 'games',
-          rarity: 'rare',
-          reward: 300
-        },
-        {
-          id: 'popular-post',
-          name: 'Trending Topic',
-          description: 'Get 50 likes on a post',
-          icon: 'heart',
-          progress: 0,
-          maxProgress: 50,
-          unlocked: false,
-          category: 'engagement',
-          rarity: 'epic',
-          reward: 500
-        },
-        {
-          id: 'active-user',
-          name: 'Dedicated Member',
-          description: 'Log in for 30 consecutive days',
-          icon: 'calendar',
-          progress: 1,
-          maxProgress: 30,
-          unlocked: false,
-          category: 'engagement',
-          rarity: 'legendary',
-          reward: 1000
+          id: 'game-master',
+          name: 'Game Master',
+          description: 'Achieve high scores in campus games',
+          progress: snakeScores && snakeScores.length > 0 ? Math.min(Math.floor(snakeScores[0].score / 10), 10) : 0,
+          maxProgress: 10,
+          icon: '🎮',
+          completedAt: snakeScores && snakeScores.length > 0 && snakeScores[0].score >= 100 ? new Date().toISOString() : undefined,
+          unlocked: true,
+          reward: '100 coins'
         }
       ];
-
-      // Mock badges
-      const mockBadges: UserBadge[] = [
-        {
-          id: 'early-adopter',
-          name: 'Early Adopter',
-          description: 'One of the first users on the platform',
-          icon: 'rocket',
-          color: '#ffffff',
-          backgroundColor: '#5865F2',
-          earned: true
-        },
-        {
-          id: 'verified',
-          name: 'Verified',
-          description: 'Identity verified',
-          icon: 'verified',
-          color: '#ffffff',
-          backgroundColor: '#3BA55C',
-          earned: Math.random() > 0.5 // Random for demo
-        },
-        {
-          id: 'premium',
-          name: 'Premium',
-          description: 'Premium membership',
-          icon: 'crown',
-          color: '#ffffff',
-          backgroundColor: '#FF73FA',
-          earned: Math.random() > 0.5 // Random for demo
-        },
-        {
-          id: 'contributor',
-          name: 'Contributor',
-          description: 'Community contributor',
-          icon: 'gem',
-          color: '#ffffff',
-          backgroundColor: '#9B59B6',
-          earned: true
-        },
-        {
-          id: 'veteran',
-          name: 'Veteran',
-          description: 'Active for more than a year',
-          icon: 'medal',
-          color: '#ffffff',
-          backgroundColor: '#F1C40F',
-          earned: false
-        },
-        {
-          id: 'developer',
-          name: 'Developer',
-          description: 'Contributed to the platform',
-          icon: 'code',
-          color: '#ffffff',
-          backgroundColor: '#F57C00',
-          earned: false
-        },
-        {
-          id: 'bug-hunter',
-          name: 'Bug Hunter',
-          description: 'Found and reported bugs',
-          icon: 'bug',
-          color: '#ffffff',
-          backgroundColor: '#ED4245',
-          earned: false
-        },
-        {
-          id: 'supporter',
-          name: 'Supporter',
-          description: 'Supported the platform',
-          icon: 'heart',
-          color: '#ffffff',
-          backgroundColor: '#FFA500',
-          earned: true
-        }
-      ];
-
-      setAchievements(mockAchievements);
-      setBadges(mockBadges);
+      
+      setUserAchievements(achievements);
+      
     } catch (error) {
-      console.error("Error fetching achievements:", error);
+      console.error('Error loading achievements:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const claimAchievementReward = async (achievementId: string): Promise<boolean> => {
-    if (!auth.user) return false;
+  const earnBadge = async (badgeId: string): Promise<boolean> => {
+    if (!user) return false;
     
-    const achievement = achievements.find(a => a.id === achievementId);
-    if (!achievement || !achievement.unlocked) return false;
+    const badgeIndex = badges.findIndex(b => b.id === badgeId);
+    if (badgeIndex === -1 || badges[badgeIndex].earned) return false;
     
-    try {
-      // Convert the reward to a number to fix the type error
-      const rewardAmount = typeof achievement.reward === 'string' 
-        ? parseInt(achievement.reward, 10) 
-        : achievement.reward;
-      
-      if (isNaN(rewardAmount)) {
-        console.error("Invalid reward amount:", achievement.reward);
-        return false;
-      }
-      
-      const success = await auth.addCoins(
-        rewardAmount,
-        `Achievement reward: ${achievement.name}`
-      );
-      
-      if (success) {
-        // Optimistically update the local state to mark it as claimed
-        setAchievements(prevAchievements => 
-          prevAchievements.map(a => 
-            a.id === achievementId ? { ...a, claimed: true } : a
-          )
-        );
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error claiming achievement reward:", error);
-      return false;
-    }
+    // In a real app, you'd update the database
+    const updatedBadges = [...badges];
+    updatedBadges[badgeIndex].earned = true;
+    setBadges(updatedBadges);
+    
+    toast({
+      title: "Badge Earned!",
+      description: `You've earned the ${badges[badgeIndex].name} badge!`,
+    });
+    
+    return true;
   };
 
-  const earnedAchievements = achievements.filter(a => a.unlocked);
-  const earnedBadges = badges.filter(b => b.earned);
+  const updateAchievementProgress = async (achievementId: string, progress: number): Promise<void> => {
+    if (!user) return;
+    
+    const achievementIndex = userAchievements.findIndex(a => a.id === achievementId);
+    if (achievementIndex === -1) return;
+    
+    const updatedAchievements = [...userAchievements];
+    const achievement = updatedAchievements[achievementIndex];
+    
+    // Update progress
+    achievement.progress = Math.min(progress, achievement.maxProgress);
+    
+    // Check if completed
+    if (achievement.progress >= achievement.maxProgress && !achievement.completedAt) {
+      achievement.completedAt = new Date().toISOString();
+      
+      toast({
+        title: "Achievement Completed!",
+        description: `You've completed the "${achievement.name}" achievement!`,
+      });
+    }
+    
+    setUserAchievements(updatedAchievements);
+  };
+
+  const refreshAchievements = async (): Promise<void> => {
+    await loadUserAchievements();
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadUserAchievements();
+    }
+  }, [user]);
+
+  // Derived state for earned badges
+  const earnedBadges = badges.filter(badge => badge.earned);
 
   return (
-    <AchievementContext.Provider 
-      value={{ 
-        achievements, 
-        badges, 
-        earnedAchievements, 
+    <AchievementContext.Provider
+      value={{
+        userAchievements,
+        badges,
         earnedBadges,
-        isLoading, 
+        isLoading,
         refreshAchievements,
-        claimAchievementReward
+        earnBadge,
+        updateAchievementProgress,
       }}
     >
       {children}
     </AchievementContext.Provider>
   );
-};
-
-export const useAchievements = () => {
-  const context = useContext(AchievementContext);
-  if (context === undefined) {
-    throw new Error('useAchievements must be used within an AchievementProvider');
-  }
-  return context;
 };
