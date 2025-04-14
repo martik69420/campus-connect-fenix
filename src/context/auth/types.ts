@@ -1,3 +1,4 @@
+
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface User {
@@ -26,6 +27,8 @@ export interface User {
       dataSharing: boolean;
       showEmail: boolean;
     };
+    publicLikedPosts?: boolean;
+    publicSavedPosts?: boolean;
   };
 }
 
@@ -48,6 +51,8 @@ export interface ProfileUpdateData {
       dataSharing: boolean;
       showEmail: boolean;
     };
+    publicLikedPosts?: boolean;
+    publicSavedPosts?: boolean;
   };
 }
 

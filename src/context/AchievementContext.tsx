@@ -219,8 +219,18 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
     
     try {
       // In a real app, you'd mark this achievement as claimed in the database
+      // Convert the reward to a number to fix the type error
+      const rewardAmount = typeof achievement.reward === 'string' 
+        ? parseInt(achievement.reward, 10) 
+        : achievement.reward;
+      
+      if (isNaN(rewardAmount)) {
+        console.error("Invalid reward amount:", achievement.reward);
+        return false;
+      }
+      
       const success = await auth.addCoins(
-        achievement.reward,
+        rewardAmount,
         `Achievement reward: ${achievement.name}`
       );
       
