@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -53,12 +54,32 @@
   * {
     @apply border-border;
   }
+  
+  html, body {
+    @apply antialiased;
+    min-height: 100%;
+    height: 100%;
+  }
+  
   body {
     @apply bg-background text-foreground;
-    /* Added viewport-fit to handle notches and safe areas */
     min-height: 100vh;
     min-height: -webkit-fill-available;
     width: 100%;
+    overflow-x: hidden;
+  }
+  
+  #root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Fix page content to fill height without extra space */
+  main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
   }
   
   /* Enhanced responsive layout adjustments */
@@ -68,121 +89,30 @@
     }
     
     body {
-      padding-bottom: 4.5rem; /* Increased padding for mobile bottom nav */
+      padding-bottom: env(safe-area-inset-bottom, 0);
       overflow-x: hidden; /* Prevent horizontal scrolling */
     }
     
     .container {
-      padding-left: 0.75rem;
-      padding-right: 0.75rem;
+      padding-left: max(1rem, env(safe-area-inset-left));
+      padding-right: max(1rem, env(safe-area-inset-right));
       width: 100% !important;
       max-width: 100% !important;
     }
     
     /* Fix for iPhone notch/dynamic island */
     .safe-top {
-      padding-top: env(safe-area-inset-top, 0px);
+      padding-top: env(safe-area-inset-top, 0);
     }
     
     .safe-bottom {
-      padding-bottom: env(safe-area-inset-bottom, 0px);
+      padding-bottom: env(safe-area-inset-bottom, 0);
     }
-  }
-  
-  /* Improved game specific mobile styles */
-  @media (max-width: 768px) {
-    .game-container {
-      width: 100% !important;
-      max-width: 100vw;
-      padding: 0.5rem;
-      margin: 0 auto;
-    }
-    
-    .game-controls {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0.5rem;
-    }
-    
-    /* Make buttons larger and easier to tap on mobile */
-    .game-button {
-      min-height: 44px;
-      min-width: 44px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-  }
-  
-  /* Enhanced chat system styles */
-  .chat-layout {
-    display: grid;
-    height: calc(100vh - 200px);
-    gap: 1rem;
-  }
-  
-  @media (min-width: 768px) {
-    .chat-layout {
-      grid-template-columns: 280px 1fr;
-    }
-  }
-  
-  .chat-message {
-    @apply relative p-3 rounded-lg mb-2 max-w-[80%];
-  }
-  
-  .chat-message.incoming {
-    @apply bg-secondary ml-2;
-  }
-  
-  .chat-message.outgoing {
-    @apply bg-primary/10 ml-auto mr-2;
-  }
-  
-  .chat-input {
-    @apply flex items-center gap-2 p-2 border-t;
-  }
-  
-  /* Enhanced chat bubble styling */
-  .chat-bubble {
-    @apply p-3 rounded-2xl;
-  }
-  
-  .chat-bubble-sender {
-    @apply bg-primary text-primary-foreground rounded-tr-none;
-  }
-  
-  .chat-bubble-receiver {
-    @apply bg-secondary rounded-tl-none;
-  }
-  
-  .message-time {
-    @apply text-xs text-muted-foreground mt-1;
-  }
-  
-  /* Better chat scrollbars */
-  .chat-scrollbar::-webkit-scrollbar {
-    width: 6px;
-  }
-  
-  .chat-scrollbar::-webkit-scrollbar-track {
-    @apply bg-transparent;
-  }
-  
-  .chat-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-muted-foreground/30 rounded-full;
-  }
-}
 
-@layer utilities {
-  /* Improved utility classes for mobile spacing */
-  .pb-safe {
-    padding-bottom: max(1rem, env(safe-area-inset-bottom, 0px));
-  }
-  
-  .mobile-nav-height {
-    height: calc(3.75rem + env(safe-area-inset-bottom, 0px));
+    /* Remove extra space at bottom of pages */
+    .min-h-screen {
+      min-height: calc(100vh - env(safe-area-inset-bottom, 0)) !important;
+    }
   }
   
   /* Twitter-like mention highlights */
@@ -192,7 +122,7 @@
   
   /* Mention suggestions positioning */
   .mention-suggestions {
-    @apply absolute z-50 w-64 max-h-60 overflow-auto bg-popover text-popover-foreground shadow-lg rounded-lg border border-border;
+    @apply absolute z-50 overflow-auto bg-popover text-popover-foreground shadow-lg rounded-lg border border-border;
   }
   
   /* Mobile-specific mention suggestions */
@@ -210,64 +140,13 @@
       min-width: 280px;
     }
   }
-  
-  /* Enhanced notification menu */
-  .notification-menu {
-    @apply w-[280px] sm:w-[320px] lg:w-[350px] max-h-[85vh] overflow-y-auto;
-  }
-  
-  .notification-item {
-    @apply hover:bg-muted/40 transition-colors;
-  }
-  
-  /* Improved responsive gaming layout */
-  .game-responsive-grid {
-    @apply grid gap-4;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  }
-  
-  /* Notification badge with animation */
-  .notification-badge {
-    @apply absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-xs font-medium;
-    animation: pulse 2s infinite;
-  }
-  
-  @keyframes pulse {
-    0% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
-    }
-    
-    70% {
-      transform: scale(1);
-      box-shadow: 0 0 0 6px rgba(220, 38, 38, 0);
-    }
-    
-    100% {
-      transform: scale(0.95);
-      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
-    }
-  }
-  
-  /* Profile page enhancements */
+
+  /* Profile styling */
   .profile-card {
-    @apply border-2 hover:border-primary/60 transition-all duration-300;
+    @apply border-2 hover:border-primary/30 transition-all duration-300;
   }
   
   .profile-header {
     @apply bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 dark:from-primary/10 dark:to-primary/30;
-  }
-  
-  .profile-avatar-border {
-    @apply border-4 border-background shadow-xl;
-  }
-  
-  .stats-card {
-    @apply border-2 hover:border-primary transition-all duration-200 hover:shadow-md;
-  }
-  
-  /* Glass effect for profile sections */
-  .glass-panel {
-    @apply bg-background/50 dark:bg-background/20 backdrop-blur-sm border border-border/50 rounded-xl;
   }
 }
