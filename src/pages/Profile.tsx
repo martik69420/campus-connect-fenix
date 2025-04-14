@@ -28,7 +28,7 @@ const Profile: React.FC = () => {
     {
       id: '1',
       name: 'Early Adopter',
-      description: 'Joined during the platform's beta phase',
+      description: 'Joined during the platform\'s beta phase',
       icon: 'star',
       backgroundColor: '#FFD700',
       color: '#000000',
@@ -204,3 +204,4 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
+
