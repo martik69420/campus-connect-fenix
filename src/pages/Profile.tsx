@@ -176,7 +176,7 @@ const Profile: React.FC = () => {
               <div className="p-4 text-center text-muted-foreground">
                 <Heart className="mx-auto h-12 w-12 mb-2 text-muted-foreground/50" />
                 <p>Posts liked by {username}</p>
-                {isCurrentUser && !user?.settings?.publicLikedPosts && (
+                {isCurrentUser && user?.settings?.publicLikedPosts === false && (
                   <p className="text-xs mt-2">Your liked posts are private. You can change this in settings.</p>
                 )}
               </div>
@@ -204,4 +204,3 @@ const Profile: React.FC = () => {
 };
 
 export default Profile;
-

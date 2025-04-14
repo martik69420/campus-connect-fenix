@@ -17,4 +17,8 @@ export interface UserAchievement {
   maxProgress: number;
   completedAt?: string;
   icon: string;
+  unlocked?: boolean;
+  reward?: string | number;
+  category?: string;
+  rarity?: string;
 }
