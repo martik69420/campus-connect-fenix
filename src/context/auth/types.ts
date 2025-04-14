@@ -1,3 +1,4 @@
+
 import { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface User {
@@ -16,8 +17,6 @@ export interface User {
   location?: string;
   lastActive?: string;
   isAdmin?: boolean;
-  badges?: string[];
-  achievements?: string[];
   settings?: {
     privacy: {
       profileVisibility: string;
