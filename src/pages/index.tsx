@@ -16,6 +16,8 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useViewport } from '@/hooks/use-viewport';
+import AdminFeatures from '@/components/admin/AdminFeatures';
+import { MentionsProvider } from '@/components/common/MentionsProvider';
 
 // Add window.adsbygoogle type declaration if not already defined
 declare global {
@@ -135,102 +137,112 @@ const Index = () => {
     : "No recent posts found";
 
   return (
-    <div className="container mx-auto py-4 md:py-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-        {/* Left sidebar - Friends For You */}
-        <div className="hidden md:block">
-          <Card className="sticky top-20 overflow-hidden border-primary/10 shadow-sm">
-            <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-2">
-              <CardTitle className="flex items-center text-lg">
-                <UserPlus className="h-5 w-5 mr-2 text-primary" />
-                People You May Know
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4">
-              <FriendsForYou key={`friends-${friendsLoaded ? 'loaded' : 'loading'}`} />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Main content */}
-        <div className="md:col-span-2">
-          {user && (
-            <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-3">
-                <CardTitle className="text-lg">Create Post</CardTitle>
+    <MentionsProvider>
+      <div className="container mx-auto py-4 md:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          {/* Left sidebar - Friends For You and Admin Features */}
+          <div className="hidden md:flex md:flex-col gap-6">
+            <Card className="sticky top-20 overflow-hidden border-primary/10 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-2">
+                <CardTitle className="flex items-center text-lg">
+                  <UserPlus className="h-5 w-5 mr-2 text-primary" />
+                  People You May Know
+                </CardTitle>
               </CardHeader>
               <CardContent className="p-4">
-                <PostForm />
+                <FriendsForYou key={`friends-${friendsLoaded ? 'loaded' : 'loading'}`} />
               </CardContent>
             </Card>
-          )}
-
-          <Tabs defaultValue="for-you" onValueChange={handleTabChange}>
-            <div className="flex items-center justify-between mb-4">
-              <TabsList className="grid grid-cols-2 w-[200px] md:w-[300px]">
-                <TabsTrigger value="for-you" className="text-sm flex items-center">
-                  <TrendingUp className="h-4 w-4 mr-2" />
-                  For You
-                </TabsTrigger>
-                <TabsTrigger value="latest" className="text-sm flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
-                  Latest
-                </TabsTrigger>
-              </TabsList>
-              <motion.div whileTap={{ rotate: 360 }} transition={{ duration: 0.5 }}>
-                <Button 
-                  variant="outline" 
-                  size={isMobile ? "sm" : "default"} 
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className={cn("gap-2", isRefreshing && "opacity-70")}
-                >
-                  <RefreshCw className={cn(
-                    "h-4 w-4", 
-                    isRefreshing && "animate-spin"
-                  )} />
-                  {!isMobile && "Refresh"}
-                </Button>
-              </motion.div>
-            </div>
             
-            {loadError && (
-              <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center">
-                <AlertCircle className="h-4 w-4 mr-2" />
-                <span className="flex-1">{loadError}</span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRefresh} 
-                  className="ml-2"
-                >
-                  Try Again
-                </Button>
-              </div>
+            {user?.isAdmin && (
+              <Card className="overflow-hidden border-primary/10 shadow-sm">
+                <CardContent className="p-4">
+                  <AdminFeatures />
+                </CardContent>
+              </Card>
             )}
-            
-            <Separator className="mb-4" />
-            <TabsContent value="for-you" className="focus-visible:outline-none">
-              <PostList 
-                posts={displayedPosts} 
-                isLoading={postsLoading || isRefreshing} 
-                emptyMessage={emptyMessage}
-              />
-            </TabsContent>
-            <TabsContent value="latest" className="focus-visible:outline-none">
-              <PostList 
-                posts={displayedPosts} 
-                isLoading={postsLoading || isRefreshing} 
-                emptyMessage={emptyMessage}
-              />
-            </TabsContent>
-          </Tabs>
+          </div>
+
+          {/* Main content */}
+          <div className="md:col-span-2">
+            {user && (
+              <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-3">
+                  <CardTitle className="text-lg">Create Post</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <PostForm />
+                </CardContent>
+              </Card>
+            )}
+
+            <Tabs defaultValue="for-you" onValueChange={handleTabChange}>
+              <div className="flex items-center justify-between mb-4">
+                <TabsList className="grid grid-cols-2 w-[200px] md:w-[300px]">
+                  <TabsTrigger value="for-you" className="text-sm flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    For You
+                  </TabsTrigger>
+                  <TabsTrigger value="latest" className="text-sm flex items-center">
+                    <Clock className="h-4 w-4 mr-2" />
+                    Latest
+                  </TabsTrigger>
+                </TabsList>
+                <motion.div whileTap={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+                  <Button 
+                    variant="outline" 
+                    size={isMobile ? "sm" : "default"} 
+                    onClick={handleRefresh}
+                    disabled={isRefreshing}
+                    className={cn("gap-2", isRefreshing && "opacity-70")}
+                  >
+                    <RefreshCw className={cn(
+                      "h-4 w-4", 
+                      isRefreshing && "animate-spin"
+                    )} />
+                    {!isMobile && "Refresh"}
+                  </Button>
+                </motion.div>
+              </div>
+              
+              {loadError && (
+                <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center">
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  <span className="flex-1">{loadError}</span>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={handleRefresh} 
+                    className="ml-2"
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              )}
+              
+              <Separator className="mb-4" />
+              <TabsContent value="for-you" className="focus-visible:outline-none">
+                <PostList 
+                  posts={displayedPosts} 
+                  isLoading={postsLoading || isRefreshing} 
+                  emptyMessage={emptyMessage}
+                />
+              </TabsContent>
+              <TabsContent value="latest" className="focus-visible:outline-none">
+                <PostList 
+                  posts={displayedPosts} 
+                  isLoading={postsLoading || isRefreshing} 
+                  emptyMessage={emptyMessage}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
+        
+        {/* AdSense banner */}
+        <AdBanner adSlot="2813542194" className="mt-8" />
       </div>
-      
-      {/* AdSense banner */}
-      <AdBanner adSlot="2813542194" className="mt-8" />
-    </div>
+    </MentionsProvider>
   );
 };
 

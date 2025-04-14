@@ -22,3 +22,11 @@ export interface UserAchievement {
   category?: string;
   rarity?: string;
 }
+
+export interface AdminFeature {
+  id: string;
+  name: string;
+  description: string;
+  path: string;
+  icon: string;
+}

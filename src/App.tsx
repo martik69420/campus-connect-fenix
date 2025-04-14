@@ -1,98 +1,91 @@
 
-import { Routes, Route, Navigate } from "react-router-dom";
-import { useAuth } from "./context/auth";
-import { ThemeProvider } from "./context/ThemeContext";
-import { PostProvider } from "./context/PostContext";
-import { NotificationProvider } from "./context/NotificationContext";
-import { AchievementProvider } from './context/AchievementContext';
-import { AuthProvider } from './context/auth';
-import { LanguageProvider } from './context/LanguageContext';
-import { GameProvider } from './context/GameContext';
-import { Toaster } from "./components/ui/toaster";
+import * as React from 'react';
+import { Route, Routes } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from "@/components/ui/toaster";
+import { ThemeProvider } from '@/context/ThemeContext';
+import { AuthProvider } from '@/context/auth/AuthProvider';
+import { LanguageProvider } from '@/context/LanguageContext';
+import { NotificationProvider } from '@/context/NotificationContext';
+import { PostProvider } from '@/context/PostContext';
+import { AchievementProvider } from '@/context/AchievementContext';
+import { MentionsProvider } from '@/components/common/MentionsProvider';
+import { GameProvider } from '@/context/GameContext';
 
 // Pages
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Profile from "./pages/Profile";
-import Settings from "./pages/Settings";
-import Friends from "./pages/Friends";
-import FriendRequests from "./pages/FriendRequests";
-import Messages from "./pages/Messages";
-import Notifications from "./pages/Notifications";
-import Games from "./pages/Games";
-import Snake from "./pages/games/Snake";
-import Trivia from "./pages/games/Trivia";
-import TicTacToe from "./pages/games/TicTacToe";
-import Reports from "./pages/Reports";
-import Achievements from "./pages/Achievements";
-import Earn from "./pages/Earn";
-import Leaderboard from "./pages/Leaderboard";
-import NotFound from "./pages/NotFound";
-import Search from "./pages/Search";
-import Table from "./pages/Table";
-import AddFriends from "./pages/AddFriends";
-import AppLayout from "./components/layout/AppLayout";
+import Home from '@/pages/Home';
+import Login from '@/pages/Login';
+import Profile from '@/pages/Profile';
+import Settings from '@/pages/Settings';
+import NotFound from '@/pages/NotFound';
+import FriendRequests from '@/pages/FriendRequests';
+import Messages from '@/pages/Messages';
+import Notifications from '@/pages/Notifications';
+import Friends from '@/pages/Friends';
+import AddFriends from '@/pages/AddFriends';
+import Search from '@/pages/Search';
+import Games from '@/pages/Games';
+import Snake from '@/pages/games/Snake';
+import Trivia from '@/pages/games/Trivia';
+import TicTacToe from '@/pages/games/TicTacToe';
+import Reports from '@/pages/Reports';
+import Table from '@/pages/Table';
+import Earn from '@/pages/Earn';
+import Achievements from '@/pages/Achievements';
+import Leaderboard from '@/pages/Leaderboard';
 
-// Protected route component
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-};
+// Initialize React Query client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <LanguageProvider>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <AuthProvider>
           <NotificationProvider>
-            <PostProvider>
-              <AchievementProvider>
+            <LanguageProvider>
+              <PostProvider>
                 <GameProvider>
-                  <Routes>
-                    <Route path="/login" element={<Login />} />
-                    
-                    <Route path="/" element={<ProtectedRoute><AppLayout><Home /></AppLayout></ProtectedRoute>} />
-                    <Route path="/profile/:username" element={<ProtectedRoute><AppLayout><Profile /></AppLayout></ProtectedRoute>} />
-                    <Route path="/settings" element={<ProtectedRoute><AppLayout><Settings /></AppLayout></ProtectedRoute>} />
-                    <Route path="/friends" element={<ProtectedRoute><AppLayout><Friends /></AppLayout></ProtectedRoute>} />
-                    <Route path="/add-friends" element={<ProtectedRoute><AppLayout><AddFriends /></AppLayout></ProtectedRoute>} />
-                    <Route path="/friend-requests" element={<ProtectedRoute><AppLayout><FriendRequests /></AppLayout></ProtectedRoute>} />
-                    <Route path="/messages" element={<ProtectedRoute><AppLayout><Messages /></AppLayout></ProtectedRoute>} />
-                    <Route path="/notifications" element={<ProtectedRoute><AppLayout><Notifications /></AppLayout></ProtectedRoute>} />
-                    <Route path="/search" element={<ProtectedRoute><AppLayout><Search /></AppLayout></ProtectedRoute>} />
-                    <Route path="/table" element={<ProtectedRoute><AppLayout><Table /></AppLayout></ProtectedRoute>} />
-                    <Route path="/games" element={<ProtectedRoute><AppLayout><Games /></AppLayout></ProtectedRoute>} />
-                    <Route path="/games/snake" element={<ProtectedRoute><AppLayout><Snake /></AppLayout></ProtectedRoute>} />
-                    <Route path="/games/trivia" element={<ProtectedRoute><AppLayout><Trivia /></AppLayout></ProtectedRoute>} />
-                    <Route path="/games/tic-tac-toe" element={<ProtectedRoute><AppLayout><TicTacToe /></AppLayout></ProtectedRoute>} />
-                    <Route path="/reports" element={<ProtectedRoute><AppLayout><Reports /></AppLayout></ProtectedRoute>} />
-                    <Route path="/achievements" element={<ProtectedRoute><AppLayout><Achievements /></AppLayout></ProtectedRoute>} />
-                    <Route path="/earn" element={<ProtectedRoute><AppLayout><Earn /></AppLayout></ProtectedRoute>} />
-                    <Route path="/leaderboard" element={<ProtectedRoute><AppLayout><Leaderboard /></AppLayout></ProtectedRoute>} />
-                    
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                  <Toaster />
+                  <AchievementProvider>
+                    <MentionsProvider>
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/profile/:username" element={<Profile />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/friend-requests" element={<FriendRequests />} />
+                        <Route path="/messages" element={<Messages />} />
+                        <Route path="/notifications" element={<Notifications />} />
+                        <Route path="/friends" element={<Friends />} />
+                        <Route path="/add-friends" element={<AddFriends />} />
+                        <Route path="/search" element={<Search />} />
+                        <Route path="/games" element={<Games />} />
+                        <Route path="/games/snake" element={<Snake />} />
+                        <Route path="/games/trivia" element={<Trivia />} />
+                        <Route path="/games/tictactoe" element={<TicTacToe />} />
+                        <Route path="/reports" element={<Reports />} />
+                        <Route path="/table" element={<Table />} />
+                        <Route path="/earn" element={<Earn />} />
+                        <Route path="/achievements" element={<Achievements />} />
+                        <Route path="/leaderboard" element={<Leaderboard />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                      <Toaster />
+                    </MentionsProvider>
+                  </AchievementProvider>
                 </GameProvider>
-              </AchievementProvider>
-            </PostProvider>
+              </PostProvider>
+            </LanguageProvider>
           </NotificationProvider>
-        </LanguageProvider>
-      </AuthProvider>
-    </ThemeProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

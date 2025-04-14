@@ -12,9 +12,10 @@ import ProfilePosts from '@/components/profile/ProfilePosts';
 import ProfileFriends from '@/components/profile/ProfileFriends';
 import ProfileAbout from '@/components/profile/ProfileAbout';
 import ProfilePictureUpload from '@/components/profile/ProfilePictureUpload';
-import { Shield, Star, Award, BookMarked, Heart } from 'lucide-react';
+import { Shield, Star, Award, BookMarked, Heart, Sparkles } from 'lucide-react';
 import ProfileBadges from '@/components/profile/ProfileBadges';
 import { UserBadge } from '@/types/user';
+import { useAchievements } from '@/context/AchievementContext';
 
 const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
@@ -22,46 +23,30 @@ const Profile: React.FC = () => {
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const { earnedBadges, badges } = useAchievements();
 
-  // Example badges for demonstration - in a real app, these would come from your database
-  const userBadges: UserBadge[] = [
-    {
-      id: '1',
-      name: 'Early Adopter',
-      description: 'Joined during the platform\'s beta phase',
-      icon: 'star',
-      backgroundColor: '#FFD700',
-      color: '#000000',
-      earned: true
-    },
-    {
-      id: '2',
-      name: 'Conversation Starter',
-      description: 'Started 10 conversations that received replies',
-      icon: 'award',
-      backgroundColor: '#9b87f5',
-      color: '#FFFFFF',
-      earned: true
-    },
-    {
-      id: '3',
-      name: 'Content Creator',
-      description: 'Created 25 posts that received likes',
-      icon: 'trophy',
-      backgroundColor: '#7E69AB',
-      color: '#FFFFFF',
-      earned: false
-    },
-    {
-      id: '4',
-      name: 'Popular',
-      description: 'Has more than 50 friends',
-      icon: 'heart',
-      backgroundColor: '#FF6B6B',
-      color: '#FFFFFF',
-      earned: true
+  // Combine achievement badges with admin badge if user is admin
+  const getUserBadges = (): UserBadge[] => {
+    const allBadges = [...earnedBadges];
+    
+    // Add admin badge if user is an admin
+    if (user?.isAdmin && isCurrentUser) {
+      const adminBadge: UserBadge = {
+        id: 'admin',
+        name: 'Administrator',
+        description: 'This user is a platform administrator',
+        icon: 'admin',
+        backgroundColor: '#FF6B4A',
+        color: '#FFFFFF',
+        earned: true
+      };
+      
+      // Insert admin badge at the beginning
+      allBadges.unshift(adminBadge);
     }
-  ];
+    
+    return allBadges;
+  };
 
   useEffect(() => {
     if (user && username) {
@@ -135,10 +120,10 @@ const Profile: React.FC = () => {
                 
                 <div className="mt-4">
                   <div className="flex items-center mb-3">
-                    <Award className="h-4 w-4 mr-2 text-primary" />
+                    <Sparkles className="h-4 w-4 mr-2 text-primary" />
                     <h3 className="font-medium text-sm">Badges</h3>
                   </div>
-                  <ProfileBadges badges={userBadges} />
+                  <ProfileBadges badges={getUserBadges()} />
                 </div>
               </div>
             </Card>
@@ -161,7 +146,7 @@ const Profile: React.FC = () => {
                 Saved
               </TabsTrigger>
               <TabsTrigger value="about" className="flex items-center">
-                <Shield className="h-4 w-4 mr-2 hidden sm:block" />
+                <Award className="h-4 w-4 mr-2 hidden sm:block" />
                 About
               </TabsTrigger>
               <TabsTrigger value="friends" className="flex items-center">

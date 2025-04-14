@@ -1,5 +1,6 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Award, Trophy, Star, Target, Gift, BookOpen, MessageSquare, Heart, UserPlus, Calendar } from 'lucide-react';
+import { Award, Trophy, Star, Target, Gift, BookOpen, MessageSquare, Heart, UserPlus, Calendar, Gem, Shield, Flame, Crown, Medal } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { UserAchievement, UserBadge } from '@/types/user';
@@ -150,10 +151,10 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
           id: 'verified',
           name: 'Verified',
           description: 'Identity verified',
-          icon: 'check',
+          icon: 'verified',
           color: '#ffffff',
           backgroundColor: '#3BA55C',
-          earned: false
+          earned: Math.random() > 0.5 // Random for demo
         },
         {
           id: 'premium',
@@ -162,15 +163,24 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
           icon: 'crown',
           color: '#ffffff',
           backgroundColor: '#FF73FA',
-          earned: false
+          earned: Math.random() > 0.5 // Random for demo
         },
         {
-          id: 'moderator',
-          name: 'Moderator',
-          description: 'Community moderator',
-          icon: 'shield',
+          id: 'contributor',
+          name: 'Contributor',
+          description: 'Community contributor',
+          icon: 'gem',
           color: '#ffffff',
-          backgroundColor: '#EB459E',
+          backgroundColor: '#9B59B6',
+          earned: true
+        },
+        {
+          id: 'veteran',
+          name: 'Veteran',
+          description: 'Active for more than a year',
+          icon: 'medal',
+          color: '#ffffff',
+          backgroundColor: '#F1C40F',
           earned: false
         },
         {
@@ -218,7 +228,6 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
     if (!achievement || !achievement.unlocked) return false;
     
     try {
-      // In a real app, you'd mark this achievement as claimed in the database
       // Convert the reward to a number to fix the type error
       const rewardAmount = typeof achievement.reward === 'string' 
         ? parseInt(achievement.reward, 10) 

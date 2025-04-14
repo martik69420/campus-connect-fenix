@@ -16,6 +16,7 @@ export interface User {
   isOnline?: boolean;
   location?: string;
   lastActive?: string;
+  isAdmin?: boolean;
   settings?: {
     privacy: {
       profileVisibility: string;
