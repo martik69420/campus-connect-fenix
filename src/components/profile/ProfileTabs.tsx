@@ -15,7 +15,7 @@ interface ProfileTabsProps {
 }
 
 const ProfileTabs: React.FC<ProfileTabsProps> = ({ username, isOwnProfile }) => {
-  const { badges, userAchievements } = useAchievements();
+  const { badges } = useAchievements();
   
   const earnedBadges = badges.filter(badge => badge.earned);
   

@@ -3,18 +3,21 @@ import React, { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { CalendarIcon, BookIcon, MapPinIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { CalendarIcon, BookIcon, MapPinIcon, Pencil } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import type { User } from '@/context/auth/types';
 
 interface ProfileAboutProps {
   username?: string;
+  isEditable?: boolean;
 }
 
-const ProfileAbout: React.FC<ProfileAboutProps> = ({ username }) => {
+const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = false }) => {
   const { user } = useAuth();
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     // In a real app, this would fetch the user data from the API
@@ -41,6 +44,10 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username }) => {
     
     return () => clearTimeout(timer);
   }, [username, user]);
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
 
   if (isLoading) {
     return (
@@ -74,12 +81,18 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username }) => {
     <Card>
       <CardContent className="p-6">
         <div className="space-y-4">
-          <div>
+          <div className="flex justify-between items-start">
             <h3 className="text-lg font-medium">About</h3>
-            <p className="text-muted-foreground mt-2">
-              {profileUser.bio || `No bio available for ${profileUser.displayName || profileUser.username}.`}
-            </p>
+            {isEditable && !isEditing && (
+              <Button variant="ghost" size="sm" onClick={handleEdit}>
+                <Pencil className="h-4 w-4 mr-1" /> Edit
+              </Button>
+            )}
           </div>
+          
+          <p className="text-muted-foreground mt-2">
+            {profileUser.bio || `No bio available for ${profileUser.displayName || profileUser.username}.`}
+          </p>
           
           <div className="flex flex-wrap gap-2 pt-2">
             {profileUser.school && (

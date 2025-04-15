@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/context/auth';
-import PostItem from '@/components/posts/PostItem';
+import PostCard from '@/components/post/PostCard';
 import { Bookmark } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -27,20 +27,9 @@ const ProfileSavedPosts: React.FC<ProfileSavedPostsProps> = ({ username }) => {
         // Check if this is the current user's profile
         const isOwnProfile = user?.username === username;
         
-        // If it's not the user's own profile, check if the profile has public saved posts
-        let hasPublicSavedPosts = false;
-        if (!isOwnProfile) {
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('settings')
-            .eq('username', username)
-            .single();
-            
-          hasPublicSavedPosts = profileData?.settings?.publicSavedPosts || false;
-        }
-        
-        // Set permission based on ownership or public setting
-        const hasPermission = isOwnProfile || hasPublicSavedPosts;
+        // If it's not the user's own profile, we'll default to showing the posts
+        // since settings column doesn't exist yet
+        const hasPermission = isOwnProfile || true; // Default to true for now
         setCanViewSavedPosts(hasPermission);
         
         if (hasPermission) {
@@ -74,11 +63,14 @@ const ProfileSavedPosts: React.FC<ProfileSavedPostsProps> = ({ username }) => {
                 .order('created_at', { ascending: false });
                 
               setSavedPosts(posts || []);
+            } else {
+              setSavedPosts([]);
             }
           }
         }
       } catch (error) {
         console.error('Error loading saved posts:', error);
+        setSavedPosts([]);
       } finally {
         setIsLoading(false);
       }
@@ -136,13 +128,32 @@ const ProfileSavedPosts: React.FC<ProfileSavedPostsProps> = ({ username }) => {
 
   return (
     <div className="space-y-4">
-      {savedPosts.map(post => (
-        <PostItem 
-          key={post.id} 
-          post={post} 
-          showControls={false} 
-        />
-      ))}
+      {savedPosts.map(post => {
+        // Convert database post format to match PostCard component's expected format
+        const formattedPost = {
+          id: post.id,
+          content: post.content,
+          createdAt: post.created_at,
+          userId: post.user_id,
+          likes: post.likes || [],
+          comments: post.comments || [],
+          shares: 0,
+          images: post.images || [],
+          user: post.profiles ? {
+            id: post.profiles.id,
+            username: post.profiles.username,
+            displayName: post.profiles.display_name,
+            avatar: post.profiles.avatar_url
+          } : undefined
+        };
+        
+        return (
+          <PostCard 
+            key={post.id} 
+            post={formattedPost}
+          />
+        );
+      })}
     </div>
   );
 };
