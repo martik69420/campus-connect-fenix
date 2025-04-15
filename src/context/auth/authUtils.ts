@@ -209,7 +209,8 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           coins: profileData?.coins || 0,
           isAdmin: profileData?.is_admin || false,
           interests: profileData?.interests || [],
-          location: profileData?.location || '',
+          // Fix: Check if location exists in the profileData
+          location: '',  // Set default value, will be updated below
           createdAt: profileData?.created_at || data.user.created_at,
           settings: typeof profileData?.settings === 'object' ? profileData?.settings as any : {}
         };
@@ -263,7 +264,8 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           coins: profileData?.coins || 0,
           isAdmin: profileData?.is_admin || false,
           interests: profileData?.interests || [],
-          location: profileData?.location || '',
+          // Fix: Use empty string as default for location
+          location: '',  // Set default value
           createdAt: profileData?.created_at || data.user.created_at,
           settings: typeof profileData?.settings === 'object' ? profileData?.settings as any : {}
         };
@@ -373,7 +375,8 @@ export async function getCurrentUser(): Promise<User | null> {
       coins: profile.coins || 0,
       isAdmin: profile.is_admin || false,
       interests: profile.interests || [],
-      location: profile.location || '',
+      // Fix: Use empty string as default for location
+      location: '',  // Set default value
       createdAt: profile.created_at || session.user.created_at,
       settings: typeof profile.settings === 'object' ? profile.settings as any : {}
     };
