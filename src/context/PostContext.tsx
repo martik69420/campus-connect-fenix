@@ -22,7 +22,16 @@ export type Post = {
   comments: Comment[];
   shares: number;
   images?: string[];
-  user?: User;
+  user?: {
+    id: string;
+    username: string; 
+    displayName: string;
+    avatar: string;
+    email: string;
+    school: string;
+    coins: number;
+    isAdmin: boolean;
+  };
 };
 
 // Define the context type
@@ -150,9 +159,9 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           displayName: post.profiles.display_name,
           avatar: post.profiles.avatar_url || '/placeholder.svg',
           coins: 0,
-          createdAt: new Date().toISOString(),
           email: '',
           school: '',
+          isAdmin: false
         } : undefined,
       }));
 
@@ -220,7 +229,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           coins: currentUser.coins,
           email: currentUser.email || '',
           school: currentUser.school,
-          createdAt: currentUser.createdAt || new Date().toISOString(),
+          isAdmin: currentUser.isAdmin
         },
       };
 

@@ -1,4 +1,3 @@
-
 import { Session } from '@supabase/supabase-js';
 
 export interface User {
@@ -13,6 +12,8 @@ export interface User {
   level?: number;
   isAdmin: boolean;
   interests?: string[];
+  location?: string;
+  createdAt?: string;
   settings?: {
     privacy?: {
       profileVisibility?: string;

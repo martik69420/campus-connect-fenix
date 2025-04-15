@@ -28,12 +28,16 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
       // For demo purposes, create a mock user
       setProfileUser({
         id: '123',
+        email: '',
         username: username,
         displayName: username,
+        avatar: '/placeholder.svg',
         bio: `This is the bio for ${username}. In a real application, this would be fetched from the database.`,
         school: 'Example University',
         location: 'New York, NY',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        coins: 0,
+        isAdmin: false
       });
     }
     
@@ -91,25 +95,25 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
           </div>
           
           <p className="text-muted-foreground mt-2">
-            {profileUser.bio || `No bio available for ${profileUser.displayName || profileUser.username}.`}
+            {profileUser?.bio || `No bio available for ${profileUser?.displayName || profileUser?.username}.`}
           </p>
           
           <div className="flex flex-wrap gap-2 pt-2">
-            {profileUser.school && (
+            {profileUser?.school && (
               <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1">
                 <BookIcon className="w-3.5 h-3.5" />
                 <span>{profileUser.school}</span>
               </Badge>
             )}
             
-            {profileUser.location && (
+            {profileUser?.location && (
               <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1">
                 <MapPinIcon className="w-3.5 h-3.5" />
                 <span>{profileUser.location}</span>
               </Badge>
             )}
             
-            {profileUser.createdAt && (
+            {profileUser?.createdAt && (
               <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1">
                 <CalendarIcon className="w-3.5 h-3.5" />
                 <span>

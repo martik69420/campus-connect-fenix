@@ -391,10 +391,14 @@ export type Database = {
           display_name: string
           email: string | null
           id: string
+          interests: string[] | null
           invite_code: string | null
           is_admin: boolean
+          is_online: boolean | null
           password_hash: string | null
           school: string
+          settings: Json | null
+          updated_at: string | null
           username: string
         }
         Insert: {
@@ -405,10 +409,14 @@ export type Database = {
           display_name: string
           email?: string | null
           id: string
+          interests?: string[] | null
           invite_code?: string | null
           is_admin?: boolean
+          is_online?: boolean | null
           password_hash?: string | null
           school: string
+          settings?: Json | null
+          updated_at?: string | null
           username: string
         }
         Update: {
@@ -419,10 +427,14 @@ export type Database = {
           display_name?: string
           email?: string | null
           id?: string
+          interests?: string[] | null
           invite_code?: string | null
           is_admin?: boolean
+          is_online?: boolean | null
           password_hash?: string | null
           school?: string
+          settings?: Json | null
+          updated_at?: string | null
           username?: string
         }
         Relationships: []

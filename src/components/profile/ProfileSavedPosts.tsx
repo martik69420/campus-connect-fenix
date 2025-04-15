@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -143,7 +142,11 @@ const ProfileSavedPosts: React.FC<ProfileSavedPostsProps> = ({ username }) => {
             id: post.profiles.id,
             username: post.profiles.username,
             displayName: post.profiles.display_name,
-            avatar: post.profiles.avatar_url
+            avatar: post.profiles.avatar_url,
+            email: '',
+            school: '',
+            coins: 0,
+            isAdmin: false
           } : undefined
         };
         

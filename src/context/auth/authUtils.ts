@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData } from './types';
 
@@ -83,6 +82,8 @@ export function formatUser(authUser: any): User | null {
     coins: authUser.user_metadata?.coins || 0,
     isAdmin: authUser.user_metadata?.isAdmin || false,
     interests: authUser.user_metadata?.interests || [],
+    location: authUser.user_metadata?.location || '',
+    createdAt: authUser.created_at || new Date().toISOString()
   };
 }
 
@@ -132,7 +133,7 @@ export async function updateOnlineStatus(userId: string, isOnline: boolean) {
       .from('profiles')
       .update({ 
         is_online: isOnline,
-        // Using last_active as a timestamp field in the profiles table
+        // Using updated_at as a timestamp field in the profiles table
         updated_at: new Date().toISOString()
       })
       .eq('id', userId);
@@ -208,6 +209,8 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           coins: profileData?.coins || 0,
           isAdmin: profileData?.is_admin || false,
           interests: profileData?.interests || [],
+          location: profileData?.location || '',
+          createdAt: profileData?.created_at || data.user.created_at,
           settings: profileData?.settings || {}
         };
         
@@ -260,6 +263,8 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           coins: profileData?.coins || 0,
           isAdmin: profileData?.is_admin || false,
           interests: profileData?.interests || [],
+          location: profileData?.location || '',
+          createdAt: profileData?.created_at || data.user.created_at,
           settings: profileData?.settings || {}
         };
         
@@ -368,6 +373,8 @@ export async function getCurrentUser(): Promise<User | null> {
       coins: profile.coins || 0,
       isAdmin: profile.is_admin || false,
       interests: profile.interests || [],
+      location: profile.location || '',
+      createdAt: profile.created_at || session.user.created_at,
       settings: profile.settings || {}
     };
     

@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -214,16 +213,86 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
       
-      const result = await registerUser(email, password, username, displayName, school);
+      // First, register with Supabase Auth
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            username,
+            displayName,
+            school,
+          },
+        },
+      });
       
-      if (result.success && result.user) {
-        setUser(result.user);
-        setIsAuthenticated(true);
-        return true;
+      if (error) {
+        setAuthError(error.message);
+        console.error("Registration error:", error);
+        return false;
       }
       
-      setAuthError("Registration failed");
-      return false;
+      if (data?.user) {
+        try {
+          // Create profile after successful signup
+          const { error: profileError } = await supabase.from('profiles').insert([
+            {
+              id: data.user.id,
+              username, 
+              display_name: displayName,
+              email: email,
+              school,
+              avatar_url: '/placeholder.svg',
+              coins: 100, // Starting coins
+              is_admin: false,
+              settings: {
+                publicLikedPosts: false,
+                publicSavedPosts: false,
+                emailNotifications: true,
+                pushNotifications: true,
+                theme: 'system'
+              }
+            }
+          ]);
+          
+          if (profileError) {
+            console.error("Error creating profile:", profileError);
+            setAuthError("Account created but profile setup failed. Please contact support.");
+            return false;
+          }
+          
+          // Create user from the data
+          const newUser: User = {
+            id: data.user.id,
+            email: email,
+            username: username,
+            displayName: displayName,
+            avatar: '/placeholder.svg',
+            school: school,
+            coins: 100,
+            isAdmin: false,
+            interests: [],
+            settings: {
+              publicLikedPosts: false,
+              publicSavedPosts: false,
+              emailNotifications: true,
+              pushNotifications: true,
+              theme: 'system'
+            }
+          };
+          
+          setUser(newUser);
+          setIsAuthenticated(true);
+          return true;
+        } catch (error: any) {
+          console.error("Error in profile creation:", error);
+          setAuthError(error.message || "Account created but profile setup failed");
+          return false;
+        }
+      } else {
+        setAuthError("Registration failed - no user data returned");
+        return false;
+      }
     } catch (error: any) {
       console.error("Registration error:", error);
       setAuthError(error.message || "Registration failed");
