@@ -16,7 +16,7 @@ export interface FriendRequest {
   created_at: string;
   user?: FriendProfile;
   friend?: FriendProfile;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: string; // Changed from 'pending' | 'accepted' | 'rejected' to string
 }
 
 export interface FriendProfile {

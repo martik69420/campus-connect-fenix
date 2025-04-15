@@ -1,4 +1,3 @@
-
 export interface UserBadge {
   id: string;
   name: string;
@@ -24,6 +23,7 @@ export interface UserAchievement {
   reward?: string | number;
   category?: string;
   rarity?: string;
+  claimed?: boolean;
 }
 
 export interface AdminFeature {
