@@ -12,6 +12,10 @@ interface AchievementContextType {
   fetchAchievements: () => Promise<void>;
   fetchBadges: () => Promise<void>;
   claimAchievementReward: (achievementId: string) => Promise<void>;
+  // Add properties that are being used elsewhere but were missing
+  userAchievements: UserAchievement[];
+  earnedBadges: UserBadge[];
+  earnBadge?: (badgeId: string) => Promise<void>;
 }
 
 // Create context
@@ -138,11 +142,41 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
     }
   };
 
+  // Earn a badge - implement the missing function
+  const earnBadge = async (badgeId: string) => {
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_badges')
+        .update({ earned: true })
+        .eq('user_id', user.id)
+        .eq('badge_id', badgeId);
+
+      if (error) {
+        console.error('Error earning badge:', error);
+        return;
+      }
+
+      // Update local state
+      setBadges(prevBadges =>
+        prevBadges.map(badge =>
+          badge.id === badgeId ? { ...badge, earned: true } : badge
+        )
+      );
+    } catch (error) {
+      console.error('Error earning badge:', error);
+    }
+  };
+
   // Fetch achievements and badges on mount
   useEffect(() => {
     fetchAchievements();
     fetchBadges();
   }, [fetchAchievements, fetchBadges]);
+
+  // Calculate earned badges for access elsewhere in the app
+  const earnedBadges = badges.filter(badge => badge.earned);
 
   const value: AchievementContextType = {
     achievements,
@@ -151,6 +185,10 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
     fetchAchievements,
     fetchBadges,
     claimAchievementReward,
+    // Add the properties that were missing
+    userAchievements: achievements,
+    earnedBadges,
+    earnBadge
   };
 
   return (

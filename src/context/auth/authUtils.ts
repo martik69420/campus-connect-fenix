@@ -211,7 +211,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           interests: profileData?.interests || [],
           location: profileData?.location || '',
           createdAt: profileData?.created_at || data.user.created_at,
-          settings: profileData?.settings || {}
+          settings: typeof profileData?.settings === 'object' ? profileData?.settings as any : {}
         };
         
         return user;
@@ -265,7 +265,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           interests: profileData?.interests || [],
           location: profileData?.location || '',
           createdAt: profileData?.created_at || data.user.created_at,
-          settings: profileData?.settings || {}
+          settings: typeof profileData?.settings === 'object' ? profileData?.settings as any : {}
         };
         
         return user;
@@ -375,7 +375,7 @@ export async function getCurrentUser(): Promise<User | null> {
       interests: profile.interests || [],
       location: profile.location || '',
       createdAt: profile.created_at || session.user.created_at,
-      settings: profile.settings || {}
+      settings: typeof profile.settings === 'object' ? profile.settings as any : {}
     };
     
     return user;

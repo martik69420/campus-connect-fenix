@@ -77,13 +77,15 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setCurrentUser({
               id: profileData.id,
               username: profileData.username,
-              email: profileData.email,
+              email: profileData.email || '',
               displayName: profileData.display_name,
               avatar: profileData.avatar_url,
-              bio: profileData.bio,
+              bio: profileData.bio || '',
               school: profileData.school,
               coins: profileData.coins || 0,
-              createdAt: profileData.created_at
+              createdAt: profileData.created_at,
+              isAdmin: profileData.is_admin || false, // Add the missing isAdmin property
+              interests: profileData.interests || []
             });
           }
         } catch (error) {
