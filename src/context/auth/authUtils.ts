@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData } from './types';
 
@@ -209,10 +210,9 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           coins: profileData?.coins || 0,
           isAdmin: profileData?.is_admin || false,
           interests: profileData?.interests || [],
-          // Fix: Check if location exists in the profileData
-          location: '',  // Set default value, will be updated below
+          location: '',  // Set default value
           createdAt: profileData?.created_at || data.user.created_at,
-          settings: typeof profileData?.settings === 'object' ? profileData?.settings as any : {}
+          settings: typeof profileData?.settings === 'object' ? profileData?.settings : {}
         };
         
         return user;
@@ -222,20 +222,20 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
     } else {
       // Sign in with username
       // First get the email for this username
-      const { data: profiles, error: profileError } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('email')
         .eq('username', usernameOrEmail)
         .single();
         
-      if (profileError || !profiles?.email) {
-        console.error('Login error: Username not found');
+      if (profileError || !profileData?.email) {
+        console.error('Login error: Username not found', profileError);
         throw new Error('Invalid username or password');
       }
       
       // Then sign in with the found email
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: profiles.email,
+        email: profileData.email,
         password,
       });
       
@@ -246,7 +246,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       
       if (data?.user) {
         // Get user profile data
-        const { data: profileData } = await supabase
+        const { data: completeProfile } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
@@ -256,18 +256,17 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
         const user: User = {
           id: data.user.id,
           email: data.user.email || '',
-          username: profileData?.username || '',
-          displayName: profileData?.display_name || '',
-          avatar: profileData?.avatar_url || '/placeholder.svg',
-          school: profileData?.school || 'Unknown School',
-          bio: profileData?.bio || '',
-          coins: profileData?.coins || 0,
-          isAdmin: profileData?.is_admin || false,
-          interests: profileData?.interests || [],
-          // Fix: Use empty string as default for location
+          username: completeProfile?.username || '',
+          displayName: completeProfile?.display_name || '',
+          avatar: completeProfile?.avatar_url || '/placeholder.svg',
+          school: completeProfile?.school || 'Unknown School',
+          bio: completeProfile?.bio || '',
+          coins: completeProfile?.coins || 0,
+          isAdmin: completeProfile?.is_admin || false,
+          interests: completeProfile?.interests || [],
           location: '',  // Set default value
-          createdAt: profileData?.created_at || data.user.created_at,
-          settings: typeof profileData?.settings === 'object' ? profileData?.settings as any : {}
+          createdAt: completeProfile?.created_at || data.user.created_at,
+          settings: typeof completeProfile?.settings === 'object' ? completeProfile?.settings : {}
         };
         
         return user;
@@ -326,11 +325,21 @@ export async function registerUser(
           school: school,
           coins: 100, // Starting coins
           isAdmin: false,
-          interests: []
+          interests: [],
+          location: '',
+          createdAt: new Date().toISOString(),
+          settings: {
+            publicLikedPosts: false,
+            publicSavedPosts: false,
+            emailNotifications: true,
+            pushNotifications: true,
+            theme: 'system'
+          }
         };
         
         return { success: true, user };
       } catch (profileError) {
+        console.error('Profile creation error:', profileError);
         throw new Error('Account created but failed to set up profile');
       }
     }
@@ -375,10 +384,9 @@ export async function getCurrentUser(): Promise<User | null> {
       coins: profile.coins || 0,
       isAdmin: profile.is_admin || false,
       interests: profile.interests || [],
-      // Fix: Use empty string as default for location
       location: '',  // Set default value
       createdAt: profile.created_at || session.user.created_at,
-      settings: typeof profile.settings === 'object' ? profile.settings as any : {}
+      settings: typeof profile.settings === 'object' ? profile.settings : {}
     };
     
     return user;
