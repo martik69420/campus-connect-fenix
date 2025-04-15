@@ -15,7 +15,8 @@ import { toast } from '@/components/ui/use-toast';
 
 // Form schema for registration
 const registerSchema = z.object({
-  username: z.string().min(2, { message: "Username must be at least 2 characters" }),
+  username: z.string().min(2, { message: "Username must be at least 2 characters" })
+    .regex(/^[a-zA-Z0-9_-]+$/, { message: "Username can only contain letters, numbers, underscores and hyphens" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
   displayName: z.string().min(2, { message: "Display name is required" }),
   school: z.string().min(2, { message: "School name is required" }),
@@ -64,14 +65,21 @@ const RegisterForm = () => {
       if (success) {
         toast({
           title: "Registration successful",
-          description: "Welcome to Campus Fenix!",
+          description: "Welcome to Campus Connect!",
         });
         navigate('/', { replace: true });
       } else {
         setRegisterError("Registration failed. Please try again.");
       }
     } catch (error: any) {
-      setRegisterError(error.message || "An error occurred during registration");
+      // Create a user-friendly error message
+      if (error.message?.includes('duplicate key')) {
+        setRegisterError("This username or email is already taken. Please try another one.");
+      } else if (error.message?.includes('profile')) {
+        setRegisterError("There was an issue setting up your profile. Please try again.");
+      } else {
+        setRegisterError(error.message || "An error occurred during registration");
+      }
     } finally {
       setIsLoading(false);
     }

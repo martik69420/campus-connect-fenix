@@ -5,17 +5,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { UserPlus, UserCheck, Search, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import AdBanner from '@/components/ads/AdBanner';
+import AppLayout from '@/components/layout/AppLayout';
 
 const AddFriends = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -23,7 +23,7 @@ const AddFriends = () => {
   const [sentRequests, setSentRequests] = useState<{[key: string]: boolean}>({});
   
   useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
+    if (!isAuthenticated && !authLoading) {
       navigate('/login');
       return;
     }
@@ -32,7 +32,7 @@ const AddFriends = () => {
     if (user) {
       fetchSentRequests();
     }
-  }, [isAuthenticated, isLoading, navigate, user]);
+  }, [isAuthenticated, authLoading, navigate, user]);
   
   const fetchSentRequests = async () => {
     if (!user) return;
@@ -206,136 +206,142 @@ const AddFriends = () => {
       });
     }
   };
+
+  if (authLoading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center h-screen">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </AppLayout>
+    );
+  }
   
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      {/* AdSense Ad */}
-      <AdBanner adSlot="5082313008" />
-      
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold">Find New Friends</h1>
-          <p className="text-muted-foreground">Connect with people from your school and expand your network</p>
-        </div>
-        <Button onClick={() => navigate('/friends')} className="bg-primary hover:bg-primary/90">
-          <UserCheck className="mr-2 h-4 w-4" />
-          View Friends
-        </Button>
-      </div>
-      
-      <Card className="shadow-lg border-primary/10">
-        <CardHeader className="bg-gradient-to-r from-primary/5 to-secondary/5">
-          <CardTitle>Search for Friends</CardTitle>
-          <CardDescription>Enter a username or display name to find people</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-6">
-            <div className="flex items-center mt-2">
-              <Input
-                type="search"
-                placeholder="Search by username or display name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                onKeyDown={handleKeyPress}
-                className="rounded-r-none focus-visible:ring-1 focus-visible:ring-primary"
-              />
-              <Button 
-                className="ml-0 rounded-l-none"
-                onClick={handleSearch}
-                disabled={loading || !searchTerm.trim()}
-              >
-                <Search className="mr-2 h-4 w-4" />
-                Search
-              </Button>
-            </div>
-            
-            {loading ? (
-              <div className="flex justify-center p-8">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <AnimatePresence>
-                {searchResults.length > 0 ? (
-                  <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    exit={{ opacity: 0 }}
-                    className="space-y-4"
-                  >
-                    {searchResults.map((result, index) => (
-                      <motion.div 
-                        key={result.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="flex items-center justify-between p-4 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarImage src={result.avatar_url || "/placeholder.svg"} />
-                            <AvatarFallback>
-                              {result.display_name?.substring(0, 2).toUpperCase() || 'U'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <h3 className="font-medium">{result.display_name}</h3>
-                            <p className="text-sm text-muted-foreground">@{result.username}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant={result.requestSent ? "outline" : "default"}
-                            size="sm"
-                            onClick={() => !result.requestSent && handleAddFriend(result.id)}
-                            disabled={result.requestSent}
-                            className={result.requestSent ? "border-green-500/30 text-green-500" : ""}
-                          >
-                            {result.requestSent ? (
-                              <>
-                                <UserCheck className="mr-2 h-4 w-4" />
-                                Request Sent
-                              </>
-                            ) : (
-                              <>
-                                <UserPlus className="mr-2 h-4 w-4" />
-                                Add Friend
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/profile/${result.username}`)}
-                          >
-                            View Profile
-                          </Button>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </motion.div>
-                ) : searchTerm && !loading && (
-                  <motion.div 
-                    initial={{ opacity: 0 }} 
-                    animate={{ opacity: 1 }} 
-                    exit={{ opacity: 0 }}
-                    className="text-center py-10"
-                  >
-                    <UserPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">No users found</h3>
-                    <p className="text-muted-foreground mt-1 max-w-md mx-auto">
-                      We couldn't find any users matching "{searchTerm}". Try using a different name or username.
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            )}
+    <AppLayout>
+      <div className="max-w-4xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Find New Friends</h1>
+            <p className="text-muted-foreground">Connect with people from your school and expand your network</p>
           </div>
-        </CardContent>
-      </Card>
-      
-      {/* AdSense Ad */}
-      <AdBanner adSlot="2813542194" className="mt-6" />
-    </div>
+          <Button onClick={() => navigate('/friends')} className="bg-primary hover:bg-primary/90">
+            <UserCheck className="mr-2 h-4 w-4" />
+            View Friends
+          </Button>
+        </div>
+        
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>Search for Friends</CardTitle>
+            <CardDescription>Enter a username or display name to find people</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-6">
+              <div className="flex items-center mt-2">
+                <Input
+                  type="search"
+                  placeholder="Search by username or display name..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  className="rounded-r-none focus-visible:ring-1 focus-visible:ring-primary"
+                />
+                <Button 
+                  className="ml-0 rounded-l-none"
+                  onClick={handleSearch}
+                  disabled={loading || !searchTerm.trim()}
+                >
+                  <Search className="mr-2 h-4 w-4" />
+                  Search
+                </Button>
+              </div>
+              
+              {loading ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              ) : (
+                <AnimatePresence>
+                  {searchResults.length > 0 ? (
+                    <motion.div 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }}
+                      className="space-y-4"
+                    >
+                      {searchResults.map((result, index) => (
+                        <motion.div 
+                          key={result.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.05 }}
+                          className="flex items-center justify-between p-4 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Avatar>
+                              <AvatarImage src={result.avatar_url || "/placeholder.svg"} />
+                              <AvatarFallback>
+                                {result.display_name?.substring(0, 2).toUpperCase() || 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <h3 className="font-medium">{result.display_name}</h3>
+                              <p className="text-sm text-muted-foreground">@{result.username}</p>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant={result.requestSent ? "outline" : "default"}
+                              size="sm"
+                              onClick={() => !result.requestSent && handleAddFriend(result.id)}
+                              disabled={result.requestSent}
+                              className={result.requestSent ? "border-green-500/30 text-green-500" : ""}
+                            >
+                              {result.requestSent ? (
+                                <>
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Request Sent
+                                </>
+                              ) : (
+                                <>
+                                  <UserPlus className="mr-2 h-4 w-4" />
+                                  Add Friend
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/profile/${result.username}`)}
+                            >
+                              View Profile
+                            </Button>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </motion.div>
+                  ) : searchTerm && !loading && (
+                    <motion.div 
+                      initial={{ opacity: 0 }} 
+                      animate={{ opacity: 1 }} 
+                      exit={{ opacity: 0 }}
+                      className="text-center py-10"
+                    >
+                      <UserPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg font-medium">No users found</h3>
+                      <p className="text-muted-foreground mt-1 max-w-md mx-auto">
+                        We couldn't find any users matching "{searchTerm}". Try using a different name or username.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </AppLayout>
   );
 };
 

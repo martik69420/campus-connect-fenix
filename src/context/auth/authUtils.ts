@@ -1,405 +1,167 @@
 import { supabase } from '@/integrations/supabase/client';
-import type { User, ProfileUpdateData } from './types';
+import { User } from './types';
 
-// Get the current user session and profile data
-export const getCurrentUser = async (): Promise<User | null> => {
+// Function to create user profile in the public.profiles table
+export async function createProfile(userId: string, username: string, displayName: string, school: string = 'Unknown School', avatarUrl: string = '/placeholder.svg') {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
-    
-    if (error || !session) {
-      console.error("Error getting session:", error);
-      return null;
-    }
-    
-    // Get user profile data
-    let { data: profileData, error: profileError } = await supabase
+    // Check if profile already exists to prevent duplication
+    const { data: existingProfile } = await supabase
       .from('profiles')
-      .select('*')
-      .eq('id', session.user.id)
-      .maybeSingle();
-    
-    if (profileError) {
-      console.error("Error getting profile:", profileError);
-      return null;
-    }
-    
-    if (!profileData) {
-      console.log("No profile found for user:", session.user.id);
-      return null;
-    }
-    
-    // Get user status data (online status, last active)
-    const { data: statusData } = await supabase
-      .from('user_status')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .maybeSingle();
-    
-    // Map database fields to our User interface
-    return {
-      id: profileData.id,
-      username: profileData.username,
-      email: profileData.email,
-      displayName: profileData.display_name,
-      avatar: profileData.avatar_url,
-      bio: profileData.bio,
-      school: profileData.school,
-      location: null,
-      createdAt: profileData.created_at,
-      lastActive: statusData?.last_active || null,
-      isOnline: statusData?.is_online || false,
-      coins: profileData.coins || 0
-    };
-  } catch (error) {
-    console.error("Error in getCurrentUser:", error);
-    return null;
-  }
-};
-
-// Login function that only supports username login
-export const loginUser = async (username: string, password: string): Promise<User | null> => {
-  try {
-    console.log(`Attempting login for user: ${username}`);
-    
-    // Find the email associated with this username
-    const { data: userData, error: userError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('username', username)
-      .maybeSingle();
-        
-    if (userError) {
-      console.error("Error finding user by username:", userError);
-      throw new Error("Error looking up user account");
-    }
-    
-    if (!userData || !userData.email) {
-      console.error("User not found with username:", username);
-      throw new Error("No account found with that username");
-    }
-    
-    // Use signInWithPassword to securely validate credentials
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: userData.email,
-      password: password
-    });
-    
-    if (error) {
-      console.error("Login authentication failed:", error);
-      throw new Error(error.message || "Invalid login credentials");
-    }
-    
-    if (!data.session) {
-      console.error("No session returned after login");
-      throw new Error("Authentication failed");
-    }
-    
-    // Get the complete user profile after successful authentication
-    const user = await getCurrentUser();
-    if (!user) {
-      throw new Error("Successfully authenticated but failed to retrieve user profile");
-    }
-    
-    console.log("Login successful for user:", user.username);
-    return user;
-  } catch (error: any) {
-    console.error("Login process failed:", error);
-    throw error;
-  }
-};
-
-// Register a new user with complete profile
-export const registerUser = async (
-  email: string, 
-  password: string,
-  username: string, 
-  displayName: string, 
-  school: string
-): Promise<{ success: boolean; user: User | null }> => {
-  try {
-    // Check if username is already taken
-    const { data: existingUser, error: existingUserError } = await supabase
-      .from('profiles')
-      .select('username')
-      .eq('username', username)
-      .maybeSingle();
-      
-    if (existingUser) {
-      console.error("Username already taken");
-      throw new Error("This username is already taken. Please choose another one.");
-    }
-    
-    // Check if email is already taken in profiles table
-    const { data: existingEmail, error: existingEmailError } = await supabase
-      .from('profiles')
-      .select('email')
-      .eq('email', email)
-      .maybeSingle();
-      
-    if (existingEmail) {
-      console.error("Email already taken");
-      throw new Error("This email is already registered. Please use a different email or log in.");
-    }
-    
-    // Sign up with Supabase Auth
-    const { data: { user: authUser }, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password
-    });
-    
-    if (signUpError || !authUser) {
-      console.error("Error signing up:", signUpError);
-      throw new Error(signUpError?.message || "Registration failed");
-    }
-    
-    // Create profile entry
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .insert({
-        id: authUser.id,
-        username,
-        email,
-        display_name: displayName,
-        school,
-        avatar_url: '',
-        bio: '',
-        coins: 100 // Starting coins
-      });
-      
-    if (profileError) {
-      console.error("Error creating profile:", profileError);
-      throw new Error("Account created but failed to set up profile");
-    }
-    
-    // Return the new user
-    const newUser: User = {
-      id: authUser.id,
-      username,
-      email,
-      displayName,
-      school,
-      avatar: '',
-      bio: '',
-      location: null,
-      createdAt: new Date().toISOString(),
-      lastActive: null,
-      isOnline: true,
-      coins: 100
-    };
-    
-    return { success: true, user: newUser };
-  } catch (error: any) {
-    console.error("Error in registerUser:", error);
-    throw error;
-  }
-};
-
-export const updateUserProfile = async (userId: string, data: ProfileUpdateData): Promise<boolean> => {
-  try {
-    const updateData: any = {};
-    
-    if (data.displayName !== undefined) updateData.display_name = data.displayName;
-    if (data.avatar !== undefined) updateData.avatar_url = data.avatar;
-    if (data.bio !== undefined) updateData.bio = data.bio;
-    if (data.school !== undefined) updateData.school = data.school;
-    // Don't include location as it doesn't exist in the database
-    
-    const { error } = await supabase
-      .from('profiles')
-      .update(updateData)
-      .eq('id', userId);
-      
-    if (error) {
-      console.error("Error updating profile:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in updateUserProfile:", error);
-    return false;
-  }
-};
-
-export const changePassword = async (newPassword: string): Promise<boolean> => {
-  try {
-    const { error } = await supabase.auth.updateUser({
-      password: newPassword
-    });
-    
-    if (error) {
-      console.error("Error changing password:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in changePassword:", error);
-    return false;
-  }
-};
-
-export const validateCurrentPassword = async (email: string, password: string): Promise<boolean> => {
-  try {
-    // Try to sign in with current credentials
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    // If no error, password is valid
-    return !signInError;
-  } catch (error) {
-    console.error("Error validating password:", error);
-    return false;
-  }
-};
-
-export const updateOnlineStatus = async (userId: string, isOnline: boolean): Promise<boolean> => {
-  try {
-    // For offline status updates during page unload, we want this to complete quickly
-    const options = isOnline ? {} : { timeout: 1000 };
-    
-    // Check if user_status entry exists
-    const { data: existingStatus } = await supabase
-      .from('user_status')
       .select('id')
-      .eq('user_id', userId)
-      .single();
-    
-    const updateData = {
-      is_online: isOnline,
-      last_active: new Date().toISOString(),
-      user_id: userId
-    };
-    
-    let error;
-    
-    if (existingStatus?.id) {
-      // Update existing status
-      const result = await supabase
-        .from('user_status')
-        .update({ is_online: isOnline, last_active: new Date().toISOString() })
-        .eq('user_id', userId);
-      
-      error = result.error;
-    } else {
-      // Insert new status
-      const result = await supabase
-        .from('user_status')
-        .insert(updateData);
-      
-      error = result.error;
-    }
-    
-    if (error) {
-      console.error("Error updating online status:", error);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    console.error("Error in updateOnlineStatus:", error);
-    return false;
-  }
-};
-
-export const blockUser = async (userId: string, blockedUserId: string): Promise<boolean> => {
-  try {
-    // Check if block already exists
-    const { data: existingBlock, error: checkError } = await supabase
-      .from('user_blocks')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('blocked_user_id', blockedUserId)
+      .eq('id', userId)
       .single();
       
-    if (checkError && checkError.code !== 'PGRST116') {
-      console.error("Error checking existing block:", checkError);
-      return false;
-    }
-    
-    // If block already exists, return success
-    if (existingBlock) {
+    // If profile already exists, just return success
+    if (existingProfile) {
+      console.log('Profile already exists, skipping creation');
       return true;
     }
     
-    // Create new block
-    const { error } = await supabase
-      .from('user_blocks')
-      .insert({
-        user_id: userId,
-        blocked_user_id: blockedUserId
-      });
-      
+    // Create new profile
+    const { error } = await supabase.from('profiles').insert([
+      {
+        id: userId,
+        username, 
+        display_name: displayName,
+        school,
+        avatar_url: avatarUrl,
+        coins: 100, // Starting coins
+        settings: {
+          publicLikedPosts: false,
+          publicSavedPosts: false,
+          emailNotifications: true,
+          pushNotifications: true,
+          theme: 'system'
+        }
+      }
+    ]);
+    
     if (error) {
-      console.error("Error blocking user:", error);
-      return false;
+      console.error('Error creating profile:', error);
+      throw error;
     }
     
     return true;
   } catch (error) {
-    console.error("Error in blockUser:", error);
-    return false;
+    console.error('Error creating profile:', error);
+    throw error;
   }
-};
+}
 
-export const unblockUser = async (userId: string, blockedUserId: string): Promise<boolean> => {
+// Sanitize username - remove non-alphanumeric characters, replace spaces with underscores
+export function sanitizeUsername(input: string): string {
+  // Remove special characters, leave alphanumeric, dash, underscore
+  let sanitized = input.toLowerCase().replace(/[^\w-]/g, '');
+  
+  // Ensure it starts with a letter or number
+  if (!/^[a-z0-9]/.test(sanitized) && sanitized.length > 0) {
+    sanitized = 'user_' + sanitized;
+  }
+  
+  // If empty after sanitization, generate a random username
+  if (!sanitized) {
+    const randomString = Math.random().toString(36).substring(2, 10);
+    sanitized = 'user_' + randomString;
+  }
+  
+  return sanitized;
+}
+
+// Format user data from Supabase auth to our app's User type
+export function formatUser(authUser: any): User | null {
+  if (!authUser) return null;
+  
+  return {
+    id: authUser.id,
+    email: authUser.email || '',
+    username: authUser.user_metadata?.username || '',
+    displayName: authUser.user_metadata?.displayName || authUser.user_metadata?.name || '',
+    avatar: authUser.user_metadata?.avatar_url || '/placeholder.svg',
+    school: authUser.user_metadata?.school || 'Unknown School',
+    coins: authUser.user_metadata?.coins || 0,
+    level: authUser.user_metadata?.level || 1,
+    isAdmin: authUser.user_metadata?.isAdmin || false,
+  };
+}
+
+// Function to check if a username is available
+export async function isUsernameAvailable(username: string): Promise<boolean> {
+  try {
+    const { data } = await supabase
+      .from('profiles')
+      .select('username')
+      .eq('username', username)
+      .limit(1);
+      
+    return !data || data.length === 0;
+  } catch (error) {
+    console.error('Error checking username availability:', error);
+    return false; // Assume username is taken if there's an error
+  }
+}
+
+// Generate a unique username based on the given name
+export async function generateUniqueUsername(baseName: string): Promise<string> {
+  let username = sanitizeUsername(baseName);
+  let isAvailable = await isUsernameAvailable(username);
+  let attempts = 0;
+  const maxAttempts = 5;
+  
+  // Try adding numbers if the username is taken
+  while (!isAvailable && attempts < maxAttempts) {
+    const randomSuffix = Math.floor(Math.random() * 1000);
+    username = `${sanitizeUsername(baseName)}${randomSuffix}`;
+    isAvailable = await isUsernameAvailable(username);
+    attempts++;
+  }
+  
+  // If we still can't find an available username, use a more random one
+  if (!isAvailable) {
+    username = `user_${Math.random().toString(36).substring(2, 10)}`;
+  }
+  
+  return username;
+}
+
+// Update online status for a user
+export async function updateOnlineStatus(userId: string, isOnline: boolean) {
   try {
     const { error } = await supabase
-      .from('user_blocks')
-      .delete()
-      .eq('user_id', userId)
-      .eq('blocked_user_id', blockedUserId);
+      .from('profiles')
+      .update({ last_active: new Date().toISOString(), is_online: isOnline })
+      .eq('id', userId);
       
     if (error) {
-      console.error("Error unblocking user:", error);
-      return false;
+      throw error;
     }
     
     return true;
   } catch (error) {
-    console.error("Error in unblockUser:", error);
+    console.error('Error updating online status:', error);
     return false;
   }
-};
+}
 
-export const getBlockedUsers = async (userId: string): Promise<string[]> => {
-  try {
-    const { data, error } = await supabase
-      .from('user_blocks')
-      .select('blocked_user_id')
-      .eq('user_id', userId);
-      
-    if (error) {
-      console.error("Error getting blocked users:", error);
-      return [];
-    }
-    
-    return data.map(block => block.blocked_user_id);
-  } catch (error) {
-    console.error("Error in getBlockedUsers:", error);
-    return [];
+// Parse error messages from Supabase auth errors
+export function parseAuthError(error: any): string {
+  if (!error) return 'An unknown error occurred';
+  
+  // Common Supabase auth error messages
+  const errorMsg = error.message || 'An unexpected error occurred';
+  
+  if (errorMsg.includes('Email already in use')) {
+    return 'This email is already registered. Please use a different email or try logging in.';
   }
-};
+  
+  if (errorMsg.includes('Invalid login credentials')) {
+    return 'Invalid email or password. Please check your credentials and try again.';
+  }
+  
+  if (errorMsg.includes('Email not confirmed')) {
+    return 'Please confirm your email address before logging in.';
+  }
+  
+  return errorMsg;
+}
 
-export const isUserBlocked = async (userId: string, otherUserId: string): Promise<boolean> => {
-  try {
-    const { data, error } = await supabase
-      .from('user_blocks')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('blocked_user_id', otherUserId)
-      .single();
-      
-    if (error && error.code !== 'PGRST116') {
-      console.error("Error checking if user is blocked:", error);
-      return false;
-    }
-    
-    return !!data;
-  } catch (error) {
-    console.error("Error in isUserBlocked:", error);
-    return false;
-  }
-};
+// Other utility functions can be added here
