@@ -1,6 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { useAuth } from './auth';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from './auth';
 import type { UserAchievement, UserBadge } from '@/types/user';
 
 // Define context type
@@ -124,7 +125,6 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
       );
 
       // Add coins to user balance (example)
-      // You might want to move this logic to a separate function
       const achievement = achievements.find(a => a.id === achievementId);
       if (achievement && typeof achievement.reward === 'number') {
         // Update coins in database
@@ -132,10 +132,6 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
           .from('profiles')
           .update({ coins: (user.coins || 0) + achievement.reward })
           .eq('id', user.id);
-
-        // Update local state
-        // Assuming you have a function to update user context
-        // updateUser({ coins: (user.coins || 0) + achievement.reward });
       }
     } catch (error) {
       console.error('Error claiming achievement reward:', error);
@@ -147,42 +143,6 @@ export const AchievementProvider: React.FC<{ children: React.ReactNode }> = ({ c
     fetchAchievements();
     fetchBadges();
   }, [fetchAchievements, fetchBadges]);
-
-  // Ensure we use the createdAt field properly when filtering achievement progress
-  const userJoinDate = user?.createdAt ? new Date(user.createdAt) : new Date();
-  const membershipDays = Math.floor((new Date().getTime() - userJoinDate.getTime()) / (1000 * 60 * 60 * 24));
-
-  // Example logic to unlock achievements based on user progress
-  useEffect(() => {
-    if (!user) return;
-
-    const updateAchievements = async () => {
-      // Example: Unlock "Active Member" achievement after 30 days of membership
-      const activeMemberAchievement = achievements.find(a => a.id === 'active_member');
-      if (activeMemberAchievement && !activeMemberAchievement.unlocked && membershipDays >= 30) {
-        // Update achievement to unlocked
-        const { error } = await supabase
-          .from('user_achievements')
-          .update({ unlocked: true })
-          .eq('user_id', user.id)
-          .eq('achievement_id', 'active_member');
-
-        if (error) {
-          console.error('Error unlocking achievement:', error);
-          return;
-        }
-
-        // Update local state
-        setAchievements(prevAchievements =>
-          prevAchievements.map(achievement =>
-            achievement.id === 'active_member' ? { ...achievement, unlocked: true } : achievement
-          )
-        );
-      }
-    };
-
-    updateAchievements();
-  }, [user, achievements, membershipDays]);
 
   const value: AchievementContextType = {
     achievements,

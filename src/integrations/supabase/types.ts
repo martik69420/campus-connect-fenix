@@ -475,6 +475,108 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          category: string
+          claimed: boolean
+          completed_at: string | null
+          created_at: string
+          description: string
+          icon: string
+          id: string
+          max_progress: number
+          name: string
+          progress: number
+          rarity: string
+          reward: number
+          unlocked: boolean
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          category: string
+          claimed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description: string
+          icon: string
+          id?: string
+          max_progress?: number
+          name: string
+          progress?: number
+          rarity: string
+          reward?: number
+          unlocked?: boolean
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          category?: string
+          claimed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          description?: string
+          icon?: string
+          id?: string
+          max_progress?: number
+          name?: string
+          progress?: number
+          rarity?: string
+          reward?: number
+          unlocked?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_badges: {
+        Row: {
+          background_color: string
+          badge_id: string
+          color: string
+          created_at: string
+          description: string
+          earned: boolean
+          icon: string
+          id: string
+          name: string
+          progress_current: number | null
+          progress_target: number | null
+          requirement_description: string | null
+          user_id: string
+        }
+        Insert: {
+          background_color: string
+          badge_id: string
+          color: string
+          created_at?: string
+          description: string
+          earned?: boolean
+          icon: string
+          id?: string
+          name: string
+          progress_current?: number | null
+          progress_target?: number | null
+          requirement_description?: string | null
+          user_id: string
+        }
+        Update: {
+          background_color?: string
+          badge_id?: string
+          color?: string
+          created_at?: string
+          description?: string
+          earned?: boolean
+          icon?: string
+          id?: string
+          name?: string
+          progress_current?: number | null
+          progress_target?: number | null
+          requirement_description?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_blocks: {
         Row: {
           blocked_user_id: string
