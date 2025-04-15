@@ -1,5 +1,6 @@
+
 import { supabase } from '@/integrations/supabase/client';
-import { User } from './types';
+import { User, ProfileUpdateData } from './types';
 
 // Function to create user profile in the public.profiles table
 export async function createProfile(userId: string, username: string, displayName: string, school: string = 'Unknown School', avatarUrl: string = '/placeholder.svg') {
@@ -78,9 +79,10 @@ export function formatUser(authUser: any): User | null {
     displayName: authUser.user_metadata?.displayName || authUser.user_metadata?.name || '',
     avatar: authUser.user_metadata?.avatar_url || '/placeholder.svg',
     school: authUser.user_metadata?.school || 'Unknown School',
+    bio: authUser.user_metadata?.bio || '',
     coins: authUser.user_metadata?.coins || 0,
-    level: authUser.user_metadata?.level || 1,
     isAdmin: authUser.user_metadata?.isAdmin || false,
+    interests: authUser.user_metadata?.interests || [],
   };
 }
 
@@ -128,7 +130,11 @@ export async function updateOnlineStatus(userId: string, isOnline: boolean) {
   try {
     const { error } = await supabase
       .from('profiles')
-      .update({ last_active: new Date().toISOString(), is_online: isOnline })
+      .update({ 
+        is_online: isOnline,
+        // Using last_active as a timestamp field in the profiles table
+        updated_at: new Date().toISOString()
+      })
       .eq('id', userId);
       
     if (error) {
@@ -164,4 +170,267 @@ export function parseAuthError(error: any): string {
   return errorMsg;
 }
 
-// Other utility functions can be added here
+// Login user with username or email
+export async function loginUser(usernameOrEmail: string, password: string): Promise<User | null> {
+  try {
+    // Determine if input is email or username
+    const isEmail = usernameOrEmail.includes('@');
+    
+    if (isEmail) {
+      // Sign in with email
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: usernameOrEmail,
+        password,
+      });
+      
+      if (error) {
+        console.error('Login authentication failed:', error);
+        throw new Error(error.message);
+      }
+      
+      if (data?.user) {
+        // Get user profile data
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        
+        // Combine auth and profile data
+        const user: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          username: profileData?.username || '',
+          displayName: profileData?.display_name || '',
+          avatar: profileData?.avatar_url || '/placeholder.svg',
+          school: profileData?.school || 'Unknown School',
+          bio: profileData?.bio || '',
+          coins: profileData?.coins || 0,
+          isAdmin: profileData?.is_admin || false,
+          interests: profileData?.interests || [],
+          settings: profileData?.settings || {}
+        };
+        
+        return user;
+      }
+      
+      return null;
+    } else {
+      // Sign in with username
+      // First get the email for this username
+      const { data: profiles, error: profileError } = await supabase
+        .from('profiles')
+        .select('email')
+        .eq('username', usernameOrEmail)
+        .single();
+        
+      if (profileError || !profiles?.email) {
+        console.error('Login error: Username not found');
+        throw new Error('Invalid username or password');
+      }
+      
+      // Then sign in with the found email
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: profiles.email,
+        password,
+      });
+      
+      if (error) {
+        console.error('Login authentication failed:', error);
+        throw new Error('Invalid username or password');
+      }
+      
+      if (data?.user) {
+        // Get user profile data
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        
+        // Combine auth and profile data
+        const user: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          username: profileData?.username || '',
+          displayName: profileData?.display_name || '',
+          avatar: profileData?.avatar_url || '/placeholder.svg',
+          school: profileData?.school || 'Unknown School',
+          bio: profileData?.bio || '',
+          coins: profileData?.coins || 0,
+          isAdmin: profileData?.is_admin || false,
+          interests: profileData?.interests || [],
+          settings: profileData?.settings || {}
+        };
+        
+        return user;
+      }
+      
+      return null;
+    }
+  } catch (error) {
+    console.error('Login process failed:', error);
+    throw error;
+  }
+}
+
+// Register a new user
+export async function registerUser(
+  email: string,
+  password: string,
+  username: string,
+  displayName: string,
+  school: string
+) {
+  try {
+    // Check if username is already taken
+    const isUsernameValid = await isUsernameAvailable(username);
+    if (!isUsernameValid) {
+      throw new Error('Username is already taken. Please choose another one.');
+    }
+    
+    // Register with Supabase Auth
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          username,
+          displayName,
+          school,
+        },
+      },
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    if (data?.user) {
+      try {
+        await createProfile(data.user.id, username, displayName, school);
+        
+        const user: User = {
+          id: data.user.id,
+          email: data.user.email || '',
+          username: username,
+          displayName: displayName,
+          avatar: '/placeholder.svg',
+          school: school,
+          coins: 100, // Starting coins
+          isAdmin: false,
+          interests: []
+        };
+        
+        return { success: true, user };
+      } catch (profileError) {
+        throw new Error('Account created but failed to set up profile');
+      }
+    }
+    
+    return { success: false, user: null };
+  } catch (error) {
+    console.error('Error in registerUser:', error);
+    throw error;
+  }
+}
+
+// Get current logged in user
+export async function getCurrentUser(): Promise<User | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user) {
+      return null;
+    }
+    
+    // Get user profile data from profiles table
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+      
+    if (error || !profile) {
+      console.error('Error getting user profile:', error);
+      return null;
+    }
+    
+    // Create User object from session and profile data
+    const user: User = {
+      id: session.user.id,
+      email: session.user.email || '',
+      username: profile.username || '',
+      displayName: profile.display_name || '',
+      avatar: profile.avatar_url || '/placeholder.svg',
+      school: profile.school || 'Unknown School',
+      bio: profile.bio || '',
+      coins: profile.coins || 0,
+      isAdmin: profile.is_admin || false,
+      interests: profile.interests || [],
+      settings: profile.settings || {}
+    };
+    
+    return user;
+  } catch (error) {
+    console.error('Error in getCurrentUser:', error);
+    return null;
+  }
+}
+
+// Update user profile
+export async function updateUserProfile(userId: string, data: ProfileUpdateData): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('profiles').update({
+      display_name: data.displayName,
+      username: data.username,
+      avatar_url: data.avatar,
+      school: data.school,
+      bio: data.bio,
+      interests: data.interests,
+      settings: data.settings,
+    }).eq('id', userId);
+    
+    if (error) {
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error updating user profile:', error);
+    return false;
+  }
+}
+
+// Validate current password
+export async function validateCurrentPassword(email: string, password: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    
+    return !error;
+  } catch (error) {
+    console.error('Error validating password:', error);
+    return false;
+  }
+}
+
+// Change password
+export async function changePassword(newPassword: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+    
+    if (error) {
+      throw error;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error changing password:', error);
+    return false;
+  }
+}

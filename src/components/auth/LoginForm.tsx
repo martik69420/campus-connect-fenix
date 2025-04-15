@@ -13,9 +13,9 @@ import { useAuth } from '@/context/auth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 
-// Form schema for login - only using username
+// Form schema for login - only using username or email
 const loginSchema = z.object({
-  username: z.string().min(2, { message: "Username is required" }),
+  username: z.string().min(2, { message: "Username or email is required" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
 });
 
@@ -23,7 +23,7 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { login, authError: contextAuthError } = useAuth();
+  const { login, authError } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -50,7 +50,7 @@ const LoginForm = () => {
         });
         navigate('/', { replace: true });
       } else {
-        setLoginError(contextAuthError || "Login failed. Please check your credentials and try again.");
+        setLoginError(authError || "Login failed. Please check your credentials and try again.");
       }
     } catch (error: any) {
       setLoginError(error.message || "An error occurred during login");
@@ -73,12 +73,12 @@ const LoginForm = () => {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Username or Email</FormLabel>
               <FormControl>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-5 w-5 text-muted-foreground" />
                   <Input
-                    placeholder="Enter your username"
+                    placeholder="Enter your username or email"
                     className="pl-10"
                     autoComplete="username"
                     disabled={isLoading}

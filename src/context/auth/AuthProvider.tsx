@@ -1,15 +1,19 @@
+
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import type { User, AuthContextType, ProfileUpdateData } from "./types";
 import { 
-  loginUser, 
-  registerUser, 
-  changePassword as changePasswordUtil, 
-  validateCurrentPassword, 
-  updateOnlineStatus, 
-  getCurrentUser, 
-  updateUserProfile as updateUserProfileUtil 
+  createProfile,
+  formatUser,
+  updateOnlineStatus,
+  loginUser,
+  registerUser,
+  getCurrentUser,
+  updateUserProfile,
+  changePassword,
+  validateCurrentPassword,
+  parseAuthError
 } from "./authUtils";
 // Import the standalone toast function, not the hook
 import { toast } from "@/components/ui/use-toast";
@@ -20,7 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [authError, setAuthError] = React.useState<string | null>(null);
-  const [sessionChecked, setSessionChecked] = React.useState(false);
+  const [session, setSession] = React.useState<any>(null);
 
   // Check for existing session first
   React.useEffect(() => {
@@ -30,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         // Check for existing session
         const { data: sessionData } = await supabase.auth.getSession();
+        setSession(sessionData.session);
         
         if (sessionData.session) {
           const currentUser = await getCurrentUser();
@@ -48,13 +53,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(null);
           setIsAuthenticated(false);
         }
-        
-        setSessionChecked(true);
       } catch (error) {
         console.error("Error initializing auth:", error);
         setUser(null);
         setIsAuthenticated(false);
-        setSessionChecked(true);
       } finally {
         setIsLoading(false);
       }
@@ -70,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log("Auth state changed:", event);
+        setSession(session);
         
         // Skip processing for the initial session event since we already handled it
         if (event === "INITIAL_SESSION") {
@@ -129,7 +132,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         );
         
         // As a fallback, also directly update status in Supabase
-        // This will execute asynchronously and might be interrupted
         try {
           updateOnlineStatus(user.id, false);
         } catch (e) {
@@ -258,7 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!user) return false;
       
       setIsLoading(true);
-      const success = await updateUserProfileUtil(user.id, profileData);
+      const success = await updateUserProfile(user.id, profileData);
       
       if (success && user) {
         // Update local user state with new profile data
@@ -295,7 +297,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       // Then change to the new password
-      const success = await changePasswordUtil(newPassword);
+      const success = await changePassword(newPassword);
       return success;
     } catch (error: any) {
       console.error("Password change error:", error);
@@ -333,7 +335,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const avatarUrl = data.publicUrl;
 
       // Update user profile with new avatar URL
-      const success = await updateUserProfileUtil(user.id, {
+      const success = await updateUserProfile(user.id, {
         avatar: avatarUrl
       });
 
@@ -464,9 +466,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     isLoading,
     isAuthenticated,
+    session,
     login,
     logout,
     register,
+    updateProfile: handleUpdateUserProfile,
     updateUserProfile: handleUpdateUserProfile,
     changePassword: handleChangePassword,
     uploadProfilePicture,
