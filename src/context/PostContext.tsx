@@ -91,7 +91,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: profileData.created_at,
               isAdmin: profileData.is_admin || false,
               interests: profileData.interests || [],
-              // Add location with a fallback
+              // Handle location property safely
               location: profileData.location || profileData.school || '',
               settings: {
                 publicLikedPosts: false,
