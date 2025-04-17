@@ -1,4 +1,3 @@
-import { Session } from '@supabase/supabase-js';
 
 export interface User {
   id: string;
@@ -9,27 +8,28 @@ export interface User {
   school: string;
   bio?: string;
   coins: number;
-  level?: number;
   isAdmin: boolean;
-  interests?: string[];
-  location?: string;
-  createdAt?: string;
-  settings?: {
-    privacy?: {
-      profileVisibility?: string;
-      onlineStatus?: boolean;
-      friendRequests?: boolean;
-      showActivity?: boolean;
-      allowMessages?: string;
-      allowTags?: boolean;
-      dataSharing?: boolean;
-      showEmail?: boolean;
-    };
-    publicLikedPosts?: boolean;
-    publicSavedPosts?: boolean;
-    theme?: string;
-    emailNotifications?: boolean;
-    pushNotifications?: boolean;
+  interests: string[];
+  location: string;
+  createdAt: string;
+  settings: UserSettings;
+}
+
+export interface UserSettings {
+  publicLikedPosts: boolean;
+  publicSavedPosts: boolean;
+  emailNotifications: boolean;
+  pushNotifications: boolean;
+  theme: string;
+  privacy: {
+    profileVisibility: string;
+    onlineStatus: boolean;
+    friendRequests: boolean;
+    showActivity: boolean;
+    allowMessages: string;
+    allowTags: boolean;
+    dataSharing: boolean;
+    showEmail: boolean;
   };
 }
 
@@ -40,42 +40,31 @@ export interface ProfileUpdateData {
   school?: string;
   bio?: string;
   interests?: string[];
-  settings?: {
-    privacy?: {
-      profileVisibility?: string;
-      onlineStatus?: boolean;
-      friendRequests?: boolean;
-      showActivity?: boolean;
-      allowMessages?: string;
-      allowTags?: boolean;
-      dataSharing?: boolean;
-      showEmail?: boolean;
-    };
-    publicLikedPosts?: boolean;
-    publicSavedPosts?: boolean;
-    theme?: string;
-    emailNotifications?: boolean;
-    pushNotifications?: boolean;
-  };
+  settings?: UserSettings;
 }
 
 export interface AuthContextType {
   user: User | null;
-  isLoading: boolean;
   isAuthenticated: boolean;
-  session: Session | null;
+  isLoading: boolean;
+  session: any;
   authError: string | null;
-  login: (username: string, password: string) => Promise<boolean>;
-  register: (email: string, password: string, username: string, displayName: string, school: string) => Promise<boolean>;
+  login: (usernameOrEmail: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    username: string,
+    displayName: string,
+    school: string
+  ) => Promise<boolean>;
   updateProfile: (data: ProfileUpdateData) => Promise<boolean>;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
-  refreshUser: () => Promise<void>;
-  // Additional methods needed by components
   updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
   uploadProfilePicture: (file: File) => Promise<string | null>;
   updateUser: (userData: Partial<User>) => void;
   addCoins: (amount: number, reason?: string) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
 }

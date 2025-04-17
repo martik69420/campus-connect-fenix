@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { User, ProfileUpdateData } from './types';
+import { User, ProfileUpdateData, UserSettings } from './types';
 
 // Function to create user profile in the public.profiles table
 export async function createProfile(userId: string, username: string, displayName: string, school: string = 'Unknown School', avatarUrl: string = '/placeholder.svg') {
@@ -78,9 +78,9 @@ export function sanitizeUsername(input: string): string {
 }
 
 // Helper function to parse settings object from database
-function parseUserSettings(settingsData: any): User['settings'] {
+function parseUserSettings(settingsData: any): UserSettings {
   // Default settings if none exist
-  const defaultSettings = {
+  const defaultSettings: UserSettings = {
     publicLikedPosts: false,
     publicSavedPosts: false,
     emailNotifications: true,
@@ -115,22 +115,25 @@ function parseUserSettings(settingsData: any): User['settings'] {
 }
 
 // Format user data from Supabase auth to our app's User type
-export function formatUser(authUser: any): User | null {
+export function formatUser(authUser: any, profileData?: any): User | null {
   if (!authUser) return null;
+  
+  const profile = profileData || authUser.user_metadata || {};
   
   return {
     id: authUser.id,
     email: authUser.email || '',
-    username: authUser.user_metadata?.username || '',
-    displayName: authUser.user_metadata?.displayName || authUser.user_metadata?.name || '',
-    avatar: authUser.user_metadata?.avatar_url || '/placeholder.svg',
-    school: authUser.user_metadata?.school || 'Unknown School',
-    bio: authUser.user_metadata?.bio || '',
-    coins: authUser.user_metadata?.coins || 0,
-    isAdmin: authUser.user_metadata?.isAdmin || false,
-    interests: authUser.user_metadata?.interests || [],
-    location: '',  // Set default empty string for location
-    createdAt: authUser.created_at || new Date().toISOString()
+    username: profile.username || sanitizeUsername(authUser.email?.split('@')[0] || ''),
+    displayName: profile.display_name || profile.displayName || authUser.email?.split('@')[0] || '',
+    avatar: profile.avatar_url || '/placeholder.svg',
+    school: profile.school || 'Unknown School',
+    bio: profile.bio || '',
+    coins: profile.coins || 0,
+    isAdmin: profile.is_admin || false,
+    interests: profile.interests || [],
+    location: profile.location || '',
+    createdAt: profile.created_at || authUser.created_at || new Date().toISOString(),
+    settings: parseUserSettings(profile.settings)
   };
 }
 
@@ -180,7 +183,6 @@ export async function updateOnlineStatus(userId: string, isOnline: boolean) {
       .from('profiles')
       .update({ 
         is_online: isOnline,
-        // Using updated_at as a timestamp field in the profiles table
         updated_at: new Date().toISOString()
       })
       .eq('id', userId);
@@ -212,7 +214,7 @@ export function parseAuthError(error: any): string {
   }
   
   if (errorMsg.includes('Email not confirmed')) {
-    return 'Please confirm your email address before logging in.';
+    return 'Please confirm your email address before logging in. Check your inbox for a confirmation link.';
   }
   
   return errorMsg;
@@ -233,35 +235,34 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       
       if (error) {
         console.error('Login authentication failed:', error);
-        throw new Error(error.message);
+        throw error;
       }
       
       if (data?.user) {
         // Get user profile data
-        const { data: profileData } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
           .single();
         
-        // Combine auth and profile data
-        const user: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          username: profileData?.username || '',
-          displayName: profileData?.display_name || '',
-          avatar: profileData?.avatar_url || '/placeholder.svg',
-          school: profileData?.school || 'Unknown School',
-          bio: profileData?.bio || '',
-          coins: profileData?.coins || 0,
-          isAdmin: profileData?.is_admin || false,
-          interests: profileData?.interests || [],
-          location: '',  // Set default value
-          createdAt: profileData?.created_at || data.user.created_at,
-          settings: parseUserSettings(profileData?.settings)
-        };
+        if (profileError) {
+          console.warn('Could not find profile, attempting to create one');
+          const username = sanitizeUsername(data.user.email?.split('@')[0] || '');
+          const displayName = data.user.email?.split('@')[0] || '';
+          await createProfile(data.user.id, username, displayName);
+          
+          // Try to get the profile again
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', data.user.id)
+            .single();
+            
+          return formatUser(data.user, newProfile);
+        }
         
-        return user;
+        return formatUser(data.user, profileData);
       }
       
       return null;
@@ -298,24 +299,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           .eq('id', data.user.id)
           .single();
         
-        // Combine auth and profile data
-        const user: User = {
-          id: data.user.id,
-          email: data.user.email || '',
-          username: completeProfile?.username || '',
-          displayName: completeProfile?.display_name || '',
-          avatar: completeProfile?.avatar_url || '/placeholder.svg',
-          school: completeProfile?.school || 'Unknown School',
-          bio: completeProfile?.bio || '',
-          coins: completeProfile?.coins || 0,
-          isAdmin: completeProfile?.is_admin || false,
-          interests: completeProfile?.interests || [],
-          location: '',  // Set default value
-          createdAt: completeProfile?.created_at || data.user.created_at,
-          settings: parseUserSettings(completeProfile?.settings)
-        };
-        
-        return user;
+        return formatUser(data.user, completeProfile);
       }
       
       return null;
@@ -351,6 +335,7 @@ export async function registerUser(
           displayName,
           school,
         },
+        emailRedirectTo: window.location.origin,
       },
     });
     
@@ -424,28 +409,29 @@ export async function getCurrentUser(): Promise<User | null> {
       .single();
       
     if (error || !profile) {
-      console.error('Error getting user profile:', error);
+      console.warn('Profile not found for user, attempting to create one');
+      
+      const username = sanitizeUsername(session.user.email?.split('@')[0] || '');
+      const displayName = session.user.email?.split('@')[0] || '';
+      
+      await createProfile(session.user.id, username, displayName);
+      
+      // Try to get the profile again
+      const { data: newProfile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+        
+      if (newProfile) {
+        return formatUser(session.user, newProfile);
+      }
+      
       return null;
     }
     
     // Create User object from session and profile data
-    const user: User = {
-      id: session.user.id,
-      email: session.user.email || '',
-      username: profile.username || '',
-      displayName: profile.display_name || '',
-      avatar: profile.avatar_url || '/placeholder.svg',
-      school: profile.school || 'Unknown School',
-      bio: profile.bio || '',
-      coins: profile.coins || 0,
-      isAdmin: profile.is_admin || false,
-      interests: profile.interests || [],
-      location: '',  // Set default value
-      createdAt: profile.created_at || session.user.created_at,
-      settings: parseUserSettings(profile.settings)
-    };
-    
-    return user;
+    return formatUser(session.user, profile);
   } catch (error) {
     console.error('Error in getCurrentUser:', error);
     return null;
@@ -455,15 +441,20 @@ export async function getCurrentUser(): Promise<User | null> {
 // Update user profile
 export async function updateUserProfile(userId: string, data: ProfileUpdateData): Promise<boolean> {
   try {
-    const { error } = await supabase.from('profiles').update({
-      display_name: data.displayName,
-      username: data.username,
-      avatar_url: data.avatar,
-      school: data.school,
-      bio: data.bio,
-      interests: data.interests,
-      settings: data.settings,
-    }).eq('id', userId);
+    const updateData: any = {};
+    
+    if (data.displayName !== undefined) updateData.display_name = data.displayName;
+    if (data.username !== undefined) updateData.username = data.username;
+    if (data.avatar !== undefined) updateData.avatar_url = data.avatar;
+    if (data.school !== undefined) updateData.school = data.school;
+    if (data.bio !== undefined) updateData.bio = data.bio;
+    if (data.interests !== undefined) updateData.interests = data.interests;
+    if (data.settings !== undefined) updateData.settings = data.settings;
+    
+    const { error } = await supabase
+      .from('profiles')
+      .update(updateData)
+      .eq('id', userId);
     
     if (error) {
       throw error;

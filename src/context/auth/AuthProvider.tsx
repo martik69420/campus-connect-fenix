@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,53 +19,14 @@ import {
 import { toast } from "@/components/ui/use-toast";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Fixed useState usage
+  // State hooks for managing auth state
   const [user, setUser] = React.useState<User | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [session, setSession] = React.useState<any>(null);
 
-  // Check for existing session first
-  React.useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Check for existing session
-        const { data: sessionData } = await supabase.auth.getSession();
-        setSession(sessionData.session);
-        
-        if (sessionData.session) {
-          const currentUser = await getCurrentUser();
-          if (currentUser) {
-            setUser(currentUser);
-            setIsAuthenticated(true);
-            updateOnlineStatus(currentUser.id, true);
-          } else {
-            // User is logged in but doesn't have a profile - sign them out
-            console.log("User is logged in but doesn't have a profile - signing out");
-            await supabase.auth.signOut();
-            setUser(null);
-            setIsAuthenticated(false);
-          }
-        } else {
-          setUser(null);
-          setIsAuthenticated(false);
-        }
-      } catch (error) {
-        console.error("Error initializing auth:", error);
-        setUser(null);
-        setIsAuthenticated(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    initializeAuth();
-  }, []);
-  
-  // Set up auth listener in a separate effect
+  // Set up auth listener first, then check for existing session
   React.useEffect(() => {
     console.log("Setting up auth listener");
     
@@ -73,26 +35,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("Auth state changed:", event);
         setSession(session);
         
-        // Skip processing for the initial session event since we already handled it
-        if (event === "INITIAL_SESSION") {
-          return;
-        }
-        
-        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED")) {
+        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
           try {
-            const currentUser = await getCurrentUser();
-            if (currentUser) {
-              setUser(currentUser);
-              setIsAuthenticated(true);
-              updateOnlineStatus(currentUser.id, true);
-            } else {
-              // User signed in but profile not found
-              console.error("User signed in but profile not found");
-              await supabase.auth.signOut();
-              setUser(null);
-              setIsAuthenticated(false);
-              setAuthError("User profile not found. Please contact support.");
-            }
+            // Use setTimeout to prevent potential deadlocks in the auth state event handling
+            setTimeout(async () => {
+              const currentUser = await getCurrentUser();
+              if (currentUser) {
+                setUser(currentUser);
+                setIsAuthenticated(true);
+                updateOnlineStatus(currentUser.id, true);
+              } else {
+                // User signed in but profile not found - attempt to create profile
+                try {
+                  const username = session.user.email?.split('@')[0] || 'user';
+                  const displayName = session.user.user_metadata?.displayName || username;
+                  const school = session.user.user_metadata?.school || 'Unknown School';
+                  
+                  await createProfile(session.user.id, username, displayName, school);
+                  const newUser = await getCurrentUser();
+                  
+                  if (newUser) {
+                    setUser(newUser);
+                    setIsAuthenticated(true);
+                  } else {
+                    // Still couldn't get user profile, sign out
+                    await supabase.auth.signOut();
+                    setUser(null);
+                    setIsAuthenticated(false);
+                    setAuthError("Failed to set up user profile. Please try again or contact support.");
+                  }
+                } catch (profileError) {
+                  console.error("Error creating user profile:", profileError);
+                  await supabase.auth.signOut();
+                  setUser(null);
+                  setIsAuthenticated(false);
+                  setAuthError("Error setting up user profile. Please try again.");
+                }
+              }
+            }, 0);
           } catch (error) {
             console.error("Error getting user:", error);
             setAuthError("Error retrieving user profile");
@@ -103,6 +83,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       }
     );
+    
+    // Initial auth state check
+    const initializeAuth = async () => {
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (!sessionData.session) {
+          setIsLoading(false);
+          return;
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    initializeAuth();
     
     return () => {
       authListener.subscription.unsubscribe();
@@ -147,36 +145,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [user]);
 
-  const login = async (username: string, password: string): Promise<boolean> => {
+  const login = async (usernameOrEmail: string, password: string): Promise<boolean> => {
     try {
       setIsLoading(true);
       setAuthError(null);
       
-      if (!username.trim() || !password.trim()) {
-        setAuthError("Please enter both username and password");
+      if (!usernameOrEmail.trim() || !password.trim()) {
+        setAuthError("Please enter both username/email and password");
         return false;
       }
       
       console.log("Performing credential validation");
       
-      // Attempt to login with username validation
-      const user = await loginUser(username, password);
-      
-      if (user) {
-        setUser(user);
-        setIsAuthenticated(true);
+      try {
+        // Attempt to login
+        const user = await loginUser(usernameOrEmail, password);
         
-        // Using the standalone toast function
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${user.displayName || user.username}!`,
-        });
+        if (user) {
+          setUser(user);
+          setIsAuthenticated(true);
+          
+          toast({
+            title: "Login successful",
+            description: `Welcome back, ${user.displayName || user.username}!`,
+          });
+          
+          return true;
+        }
         
-        return true;
+        setAuthError("Invalid username or password. Please check your credentials and try again.");
+        return false;
+      } catch (error: any) {
+        // Handle specific auth errors
+        if (error.message?.includes('Email not confirmed')) {
+          setAuthError("Please confirm your email address before logging in. Check your inbox for a confirmation link.");
+        } else {
+          setAuthError(error.message || "Login failed. Please check your credentials and try again.");
+        }
+        return false;
       }
-      
-      setAuthError("Invalid username or password. Please check your credentials and try again.");
-      return false;
     } catch (error: any) {
       console.error("Login error:", error);
       setAuthError(error.message || "Login failed. Please check your credentials and try again.");
@@ -223,7 +230,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           toast({
             title: "Registration successful",
-            description: "Welcome to Campus Fenix!",
+            description: "Please check your email for a confirmation link to activate your account.",
+            duration: 6000,
           });
           
           return true;
@@ -305,6 +313,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const isCurrentPasswordValid = await validateCurrentPassword(user.email || "", currentPassword);
       
       if (!isCurrentPasswordValid) {
+        setAuthError("Current password is incorrect");
         return false;
       }
       
@@ -406,7 +415,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Implementing the missing methods
+  // Reset password
   const resetPassword = async (email: string): Promise<void> => {
     try {
       setIsLoading(true);
@@ -432,6 +441,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Update password (used after reset)
   const updatePassword = async (password: string): Promise<void> => {
     try {
       setIsLoading(true);
@@ -457,6 +467,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Refresh user data
   const refreshUser = async (): Promise<void> => {
     try {
       if (!user) return;
