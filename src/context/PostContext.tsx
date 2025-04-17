@@ -84,8 +84,26 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
               school: profileData.school,
               coins: profileData.coins || 0,
               createdAt: profileData.created_at,
-              isAdmin: profileData.is_admin || false, // Add the missing isAdmin property
-              interests: profileData.interests || []
+              isAdmin: profileData.is_admin || false,
+              interests: profileData.interests || [],
+              location: profileData.location || '',
+              settings: {
+                publicLikedPosts: false,
+                publicSavedPosts: false,
+                emailNotifications: true,
+                pushNotifications: true,
+                theme: 'system',
+                privacy: {
+                  profileVisibility: 'everyone',
+                  onlineStatus: true,
+                  friendRequests: true,
+                  showActivity: true,
+                  allowMessages: 'everyone',
+                  allowTags: true,
+                  dataSharing: false,
+                  showEmail: false
+                }
+              }
             });
           }
         } catch (error) {
@@ -231,7 +249,12 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           coins: currentUser.coins,
           email: currentUser.email || '',
           school: currentUser.school,
-          isAdmin: currentUser.isAdmin
+          isAdmin: currentUser.isAdmin,
+          // Add missing properties to match the User type
+          interests: currentUser.interests,
+          location: currentUser.location,
+          createdAt: currentUser.createdAt,
+          settings: currentUser.settings
         },
       };
 

@@ -37,7 +37,25 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
         location: 'New York, NY',
         createdAt: new Date().toISOString(),
         coins: 0,
-        isAdmin: false
+        isAdmin: false,
+        interests: [], // Add missing required properties
+        settings: {  // Add missing required properties
+          publicLikedPosts: false,
+          publicSavedPosts: false,
+          emailNotifications: true,
+          pushNotifications: true,
+          theme: 'system',
+          privacy: {
+            profileVisibility: 'everyone',
+            onlineStatus: true,
+            friendRequests: true,
+            showActivity: true,
+            allowMessages: 'everyone',
+            allowTags: true,
+            dataSharing: false,
+            showEmail: false
+          }
+        }
       });
     }
     

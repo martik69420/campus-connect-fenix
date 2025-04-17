@@ -43,6 +43,7 @@ export const PrivacySettings: React.FC = () => {
     try {
       const success = await updateUserProfile({
         settings: {
+          // Include all required properties for UserSettings
           privacy: {
             profileVisibility: privacySettings.profileVisibility,
             onlineStatus: privacySettings.onlineStatus,
@@ -55,6 +56,9 @@ export const PrivacySettings: React.FC = () => {
           },
           publicLikedPosts: privacySettings.publicLikedPosts,
           publicSavedPosts: privacySettings.publicSavedPosts,
+          emailNotifications: user.settings?.emailNotifications ?? true,
+          pushNotifications: user.settings?.pushNotifications ?? true,
+          theme: user.settings?.theme || 'system',
         }
       });
       
