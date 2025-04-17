@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { User, Key, Eye, EyeOff } from 'lucide-react';
+import { User, Key, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,10 +23,13 @@ type LoginFormValues = z.infer<typeof loginSchema>;
 
 const LoginForm = () => {
   const navigate = useNavigate();
-  const { login, authError } = useAuth();
+  const { login, authError, resetPassword } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [loginError, setLoginError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [showRecoveryField, setShowRecoveryField] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -50,12 +53,56 @@ const LoginForm = () => {
         });
         navigate('/', { replace: true });
       } else {
-        setLoginError(authError || "Login failed. Please check your credentials and try again.");
+        // Show a more specific error message if profile exists but auth failed
+        const errorMessage = authError || "Login failed. Please check your credentials and try again.";
+        setLoginError(errorMessage);
+        
+        // If the error suggests password reset is needed, show the recovery field
+        if (errorMessage.includes('reset') || errorMessage.includes('account needs reset')) {
+          setShowRecoveryField(true);
+          setRecoveryEmail(data.username.includes('@') ? data.username : '');
+        }
       }
     } catch (error: any) {
-      setLoginError(error.message || "An error occurred during login");
+      const errorMessage = error.message || "An error occurred during login";
+      setLoginError(errorMessage);
+      
+      // If the error suggests password reset is needed, show the recovery field
+      if (errorMessage.includes('reset') || errorMessage.includes('account needs reset')) {
+        setShowRecoveryField(true);
+        setRecoveryEmail(data.username.includes('@') ? data.username : '');
+      }
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handlePasswordReset() {
+    if (!recoveryEmail || !recoveryEmail.includes('@')) {
+      toast({
+        title: "Invalid email",
+        description: "Please provide a valid email address for password reset",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await resetPassword(recoveryEmail);
+      toast({
+        title: "Password Reset Email Sent",
+        description: "Check your inbox for instructions to reset your password",
+      });
+      setShowRecoveryField(false);
+    } catch (error: any) {
+      toast({
+        title: "Password Reset Failed",
+        description: error.message || "Failed to send reset email",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResetting(false);
     }
   }
 
@@ -122,6 +169,37 @@ const LoginForm = () => {
             </FormItem>
           )}
         />
+
+        {showRecoveryField && (
+          <div className="pt-2 pb-4">
+            <div className="bg-muted/50 p-4 rounded-md border">
+              <p className="text-sm font-medium mb-2">Need to reset your password?</p>
+              <div className="flex gap-2">
+                <Input
+                  type="email"
+                  placeholder="Enter your email address"
+                  value={recoveryEmail}
+                  onChange={(e) => setRecoveryEmail(e.target.value)}
+                  disabled={isResetting}
+                  className="flex-1"
+                />
+                <Button 
+                  type="button" 
+                  variant="secondary" 
+                  onClick={handlePasswordReset}
+                  disabled={isResetting}
+                >
+                  {isResetting ? (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      Sending...
+                    </>
+                  ) : "Reset"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
@@ -133,6 +211,16 @@ const LoginForm = () => {
             "Sign In"
           )}
         </Button>
+        
+        <div className="text-center">
+          <button
+            type="button"
+            className="text-sm text-primary hover:underline"
+            onClick={() => setShowRecoveryField(!showRecoveryField)}
+          >
+            Forgot your password?
+          </button>
+        </div>
       </form>
     </Form>
   );

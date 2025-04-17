@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData, UserSettings } from './types';
 
@@ -199,6 +198,29 @@ export async function updateOnlineStatus(userId: string, isOnline: boolean) {
   }
 }
 
+// Function to check if a profile exists without authentication
+export async function doesProfileExist(usernameOrEmail: string): Promise<boolean> {
+  try {
+    // Check if it's an email or username
+    const isEmail = usernameOrEmail.includes('@');
+    
+    const { data } = await supabase
+      .from('profiles')
+      .select('id')
+      .or(
+        isEmail 
+          ? `email.ilike.${usernameOrEmail}`
+          : `username.ilike.${usernameOrEmail}`
+      )
+      .limit(1);
+      
+    return !!data && data.length > 0;
+  } catch (error) {
+    console.error('Error checking profile existence:', error);
+    return false;
+  }
+}
+
 // Parse error messages from Supabase auth errors
 export function parseAuthError(error: any): string {
   if (!error) return 'An unknown error occurred';
@@ -238,6 +260,13 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       });
       
       if (error) {
+        // Check if profile exists but auth failed
+        const profileExists = await doesProfileExist(usernameOrEmail);
+        if (profileExists) {
+          console.error('Profile exists but auth failed:', error);
+          throw new Error('Profile found but password may be incorrect or account needs reset.');
+        }
+        
         console.error('Login authentication failed:', error);
         throw error;
       }
@@ -274,7 +303,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       // Sign in with username
       console.log("Login attempt using username:", usernameOrEmail);
       
-      // First find all profiles that match this username
+      // First find all profiles that match this username (case insensitive)
       const { data: profileMatches, error: matchError } = await supabase
         .from('profiles')
         .select('*')
@@ -287,8 +316,10 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       
       console.log(`Found ${profileMatches.length} matching profiles for username: ${usernameOrEmail}`);
       
+      // Check if any profile has an auth account linked
+      let foundAuthAccount = false;
+      
       // Try each matching profile (in case of duplicate usernames)
-      // This is a fallback mechanism to handle potential data inconsistency
       for (const profile of profileMatches) {
         if (!profile.email) {
           console.log(`Profile found but has no email: ${profile.id}`);
@@ -296,6 +327,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
         }
         
         console.log(`Attempting login with email from profile: ${profile.email}`);
+        foundAuthAccount = true;
         
         try {
           // Try to sign in with this profile's email
@@ -327,9 +359,15 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
         }
       }
       
-      // If we get here, none of the profiles matched
-      console.error('Login failed: No valid credential match found');
-      throw new Error('Invalid username or password. Please check your credentials and try again.');
+      // If we found auth accounts but none matched
+      if (foundAuthAccount) {
+        console.error('Login failed: No valid credential match found');
+        throw new Error('Invalid username or password. Please check your credentials and try again.');
+      } else {
+        // If profile exists but no auth account found
+        console.error('Login failed: Profile exists but no auth account linked');
+        throw new Error('Account exists but needs password reset. Please use the "Forgot Password" option.');
+      }
     }
   } catch (error: any) {
     console.error('Login process failed:', error);
