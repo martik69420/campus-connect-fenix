@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User } from "./auth/types";
 import { supabase } from '@/integrations/supabase/client';
@@ -92,8 +91,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: profileData.created_at,
               isAdmin: profileData.is_admin || false,
               interests: profileData.interests || [],
-              // Fixed: Use safe accessing for location field and provide default value
-              location: profileData.location || '',
+              // Safely handle location with a fallback
+              location: profileData.location ?? profileData.school ?? '',
               settings: {
                 publicLikedPosts: false,
                 publicSavedPosts: false,
