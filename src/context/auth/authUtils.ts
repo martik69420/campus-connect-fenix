@@ -271,7 +271,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       // First get the email for this username
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*') // We need the email, so change this from just 'email' to '*'
+        .select('email')
         .eq('username', usernameOrEmail)
         .single();
         
@@ -292,8 +292,14 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       }
       
       if (data?.user) {
-        // We already have the profile data from the username lookup
-        return formatUser(data.user, profileData);
+        // Get the complete profile data
+        const { data: completeProfile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+        
+        return formatUser(data.user, completeProfile);
       }
       
       return null;
