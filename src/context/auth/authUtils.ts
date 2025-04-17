@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData, UserSettings } from './types';
 
@@ -223,11 +224,14 @@ export function parseAuthError(error: any): string {
 // Login user with username or email
 export async function loginUser(usernameOrEmail: string, password: string): Promise<User | null> {
   try {
+    console.log(`Attempting to login with: ${usernameOrEmail}`);
+    
     // Determine if input is email or username
     const isEmail = usernameOrEmail.includes('@');
     
     if (isEmail) {
-      // Sign in with email
+      // Sign in with email directly
+      console.log("Login attempt using email");
       const { data, error } = await supabase.auth.signInWithPassword({
         email: usernameOrEmail,
         password,
@@ -268,43 +272,66 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       return null;
     } else {
       // Sign in with username
-      // First get the email for this username
-      const { data: profileData, error: profileError } = await supabase
+      console.log("Login attempt using username:", usernameOrEmail);
+      
+      // First find all profiles that match this username
+      const { data: profileMatches, error: matchError } = await supabase
         .from('profiles')
-        .select('email')
-        .eq('username', usernameOrEmail)
-        .single();
+        .select('*')
+        .ilike('username', usernameOrEmail);
+      
+      if (matchError || !profileMatches || profileMatches.length === 0) {
+        console.error('Login error: Username not found', matchError);
+        throw new Error('Username not found. Please check your username or use your email to login.');
+      }
+      
+      console.log(`Found ${profileMatches.length} matching profiles for username: ${usernameOrEmail}`);
+      
+      // Try each matching profile (in case of duplicate usernames)
+      // This is a fallback mechanism to handle potential data inconsistency
+      for (const profile of profileMatches) {
+        if (!profile.email) {
+          console.log(`Profile found but has no email: ${profile.id}`);
+          continue;
+        }
         
-      if (profileError || !profileData?.email) {
-        console.error('Login error: Username not found', profileError);
-        throw new Error('Invalid username or password');
-      }
-      
-      // Then sign in with the found email
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: profileData.email,
-        password,
-      });
-      
-      if (error) {
-        console.error('Login authentication failed:', error);
-        throw new Error('Invalid username or password');
-      }
-      
-      if (data?.user) {
-        // Get the complete profile data
-        const { data: completeProfile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
+        console.log(`Attempting login with email from profile: ${profile.email}`);
         
-        return formatUser(data.user, completeProfile);
+        try {
+          // Try to sign in with this profile's email
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: profile.email,
+            password,
+          });
+          
+          if (error) {
+            console.log(`Auth failed for email ${profile.email}:`, error.message);
+            continue; // Try next profile if available
+          }
+          
+          if (data?.user) {
+            console.log("Login successful for user:", data.user.id);
+            
+            // Get the complete and fresh profile data
+            const { data: completeProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', data.user.id)
+              .single();
+            
+            return formatUser(data.user, completeProfile || profile);
+          }
+        } catch (e) {
+          console.log("Auth attempt failed:", e);
+          // Continue trying with other potential matches
+        }
       }
       
-      return null;
+      // If we get here, none of the profiles matched
+      console.error('Login failed: No valid credential match found');
+      throw new Error('Invalid username or password. Please check your credentials and try again.');
     }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Login process failed:', error);
     throw error;
   }
