@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User } from "./auth/types";
 import { supabase } from '@/integrations/supabase/client';
@@ -31,6 +32,11 @@ export type Post = {
     school: string;
     coins: number;
     isAdmin: boolean;
+    // Add missing required properties from User type for consistency
+    interests?: string[];
+    location?: string;
+    createdAt?: string;
+    settings?: any;
   };
 };
 
@@ -86,6 +92,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: profileData.created_at,
               isAdmin: profileData.is_admin || false,
               interests: profileData.interests || [],
+              // Fixed: Use safe accessing for location field and provide default value
               location: profileData.location || '',
               settings: {
                 publicLikedPosts: false,
@@ -137,7 +144,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Return the post's embedded user if available
     const postWithUser = posts.find(post => post.userId === userId && post.user);
-    return postWithUser?.user;
+    return postWithUser?.user as User | undefined;
   }, [userCache, posts]);
 
   // Function to fetch posts
@@ -181,7 +188,28 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           coins: 0,
           email: '',
           school: '',
-          isAdmin: false
+          isAdmin: false,
+          // Added required User type properties
+          interests: [],
+          location: '',
+          createdAt: '',
+          settings: {
+            publicLikedPosts: false,
+            publicSavedPosts: false,
+            emailNotifications: true,
+            pushNotifications: true,
+            theme: 'system',
+            privacy: {
+              profileVisibility: 'everyone',
+              onlineStatus: true,
+              friendRequests: true,
+              showActivity: true,
+              allowMessages: 'everyone',
+              allowTags: true,
+              dataSharing: false,
+              showEmail: false
+            }
+          }
         } : undefined,
       }));
 
@@ -250,7 +278,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           email: currentUser.email || '',
           school: currentUser.school,
           isAdmin: currentUser.isAdmin,
-          // Add missing properties to match the User type
+          // Added missing User type properties
           interests: currentUser.interests,
           location: currentUser.location,
           createdAt: currentUser.createdAt,
