@@ -91,8 +91,8 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
               createdAt: profileData.created_at,
               isAdmin: profileData.is_admin || false,
               interests: profileData.interests || [],
-              // Handle location property safely
-              location: profileData.location || profileData.school || '',
+              // The issue is here - we need to use TypeScript's type assertion to handle the location property
+              location: (profileData as any).location || profileData.school || '',
               settings: {
                 publicLikedPosts: false,
                 publicSavedPosts: false,
