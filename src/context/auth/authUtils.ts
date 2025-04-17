@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData } from './types';
 
@@ -32,7 +31,17 @@ export async function createProfile(userId: string, username: string, displayNam
           publicSavedPosts: false,
           emailNotifications: true,
           pushNotifications: true,
-          theme: 'system'
+          theme: 'system',
+          privacy: {
+            profileVisibility: 'everyone',
+            onlineStatus: true,
+            friendRequests: true,
+            showActivity: true,
+            allowMessages: 'everyone',
+            allowTags: true,
+            dataSharing: false,
+            showEmail: false
+          }
         }
       }
     ]);
@@ -68,6 +77,43 @@ export function sanitizeUsername(input: string): string {
   return sanitized;
 }
 
+// Helper function to parse settings object from database
+function parseUserSettings(settingsData: any): User['settings'] {
+  // Default settings if none exist
+  const defaultSettings = {
+    publicLikedPosts: false,
+    publicSavedPosts: false,
+    emailNotifications: true,
+    pushNotifications: true,
+    theme: 'system',
+    privacy: {
+      profileVisibility: 'everyone',
+      onlineStatus: true,
+      friendRequests: true,
+      showActivity: true,
+      allowMessages: 'everyone',
+      allowTags: true,
+      dataSharing: false,
+      showEmail: false
+    }
+  };
+
+  // If settings is null or not an object, return defaults
+  if (!settingsData || typeof settingsData !== 'object' || Array.isArray(settingsData)) {
+    return defaultSettings;
+  }
+
+  // Otherwise merge with defaults to ensure type safety
+  return {
+    ...defaultSettings,
+    ...settingsData,
+    privacy: {
+      ...defaultSettings.privacy,
+      ...(settingsData.privacy || {})
+    }
+  };
+}
+
 // Format user data from Supabase auth to our app's User type
 export function formatUser(authUser: any): User | null {
   if (!authUser) return null;
@@ -83,7 +129,7 @@ export function formatUser(authUser: any): User | null {
     coins: authUser.user_metadata?.coins || 0,
     isAdmin: authUser.user_metadata?.isAdmin || false,
     interests: authUser.user_metadata?.interests || [],
-    location: authUser.user_metadata?.location || '',
+    location: '',  // Set default empty string for location
     createdAt: authUser.created_at || new Date().toISOString()
   };
 }
@@ -212,7 +258,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           interests: profileData?.interests || [],
           location: '',  // Set default value
           createdAt: profileData?.created_at || data.user.created_at,
-          settings: typeof profileData?.settings === 'object' ? profileData?.settings : {}
+          settings: parseUserSettings(profileData?.settings)
         };
         
         return user;
@@ -266,7 +312,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           interests: completeProfile?.interests || [],
           location: '',  // Set default value
           createdAt: completeProfile?.created_at || data.user.created_at,
-          settings: typeof completeProfile?.settings === 'object' ? completeProfile?.settings : {}
+          settings: parseUserSettings(completeProfile?.settings)
         };
         
         return user;
@@ -333,7 +379,17 @@ export async function registerUser(
             publicSavedPosts: false,
             emailNotifications: true,
             pushNotifications: true,
-            theme: 'system'
+            theme: 'system',
+            privacy: {
+              profileVisibility: 'everyone',
+              onlineStatus: true,
+              friendRequests: true,
+              showActivity: true,
+              allowMessages: 'everyone',
+              allowTags: true,
+              dataSharing: false,
+              showEmail: false
+            }
           }
         };
         
@@ -386,7 +442,7 @@ export async function getCurrentUser(): Promise<User | null> {
       interests: profile.interests || [],
       location: '',  // Set default value
       createdAt: profile.created_at || session.user.created_at,
-      settings: typeof profile.settings === 'object' ? profile.settings : {}
+      settings: parseUserSettings(profile.settings)
     };
     
     return user;
