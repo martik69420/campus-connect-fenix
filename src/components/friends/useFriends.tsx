@@ -10,6 +10,7 @@ import {
   rejectFriendRequest, 
   removeFriend 
 } from './friendsApi';
+import { supabase } from '@/integrations/supabase/client';
 
 export type { Friend, FriendRequest, FriendProfile } from './types';
 
@@ -43,6 +44,33 @@ export const useFriends = () => {
       setIsLoading(false);
     }
   }, [user?.id]);
+
+  // Set up real-time subscription for friend status updates
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Subscribe to friend status changes
+    const channel = supabase
+      .channel('friends-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'friends',
+          filter: `user_id=eq.${user.id},friend_id=eq.${user.id}`
+        },
+        () => {
+          // Refresh friends list when changes occur
+          fetchFriends();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchFriends]);
 
   // Handle sending friend request
   const handleSendFriendRequest = useCallback(async (friendId: string): Promise<void> => {

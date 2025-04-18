@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -37,42 +36,58 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
           try {
-            // Use setTimeout to prevent potential deadlocks in the auth state event handling
-            setTimeout(async () => {
-              const currentUser = await getCurrentUser();
-              if (currentUser) {
-                setUser(currentUser);
-                setIsAuthenticated(true);
-                updateOnlineStatus(currentUser.id, true);
-              } else {
-                // User signed in but profile not found - attempt to create profile
-                try {
-                  const username = session.user.email?.split('@')[0] || 'user';
-                  const displayName = session.user.user_metadata?.displayName || username;
-                  const school = session.user.user_metadata?.school || 'Unknown School';
-                  
-                  await createProfile(session.user.id, username, displayName, school);
-                  const newUser = await getCurrentUser();
-                  
-                  if (newUser) {
-                    setUser(newUser);
-                    setIsAuthenticated(true);
-                  } else {
-                    // Still couldn't get user profile, sign out
-                    await supabase.auth.signOut();
-                    setUser(null);
-                    setIsAuthenticated(false);
-                    setAuthError("Failed to set up user profile. Please try again or contact support.");
-                  }
-                } catch (profileError) {
-                  console.error("Error creating user profile:", profileError);
+            // Cache the user data in localStorage to prevent unnecessary fetches
+            const cachedUser = localStorage.getItem('cached_user');
+            const cachedTimestamp = localStorage.getItem('cached_user_timestamp');
+            const now = new Date().getTime();
+            
+            // Use cached data if it's less than 5 minutes old
+            if (cachedUser && cachedTimestamp && (now - parseInt(cachedTimestamp)) < 300000) {
+              const userData = JSON.parse(cachedUser);
+              setUser(userData);
+              setIsAuthenticated(true);
+              updateOnlineStatus(userData.id, true);
+              return;
+            }
+            
+            // If no valid cache, fetch fresh data
+            const currentUser = await getCurrentUser();
+            if (currentUser) {
+              setUser(currentUser);
+              setIsAuthenticated(true);
+              updateOnlineStatus(currentUser.id, true);
+              
+              // Cache the user data
+              localStorage.setItem('cached_user', JSON.stringify(currentUser));
+              localStorage.setItem('cached_user_timestamp', now.toString());
+            } else {
+              // User signed in but profile not found - attempt to create profile
+              try {
+                const username = session.user.email?.split('@')[0] || 'user';
+                const displayName = session.user.user_metadata?.displayName || username;
+                const school = session.user.user_metadata?.school || 'Unknown School';
+                
+                await createProfile(session.user.id, username, displayName, school);
+                const newUser = await getCurrentUser();
+                
+                if (newUser) {
+                  setUser(newUser);
+                  setIsAuthenticated(true);
+                } else {
+                  // Still couldn't get user profile, sign out
                   await supabase.auth.signOut();
                   setUser(null);
                   setIsAuthenticated(false);
-                  setAuthError("Error setting up user profile. Please try again.");
+                  setAuthError("Failed to set up user profile. Please try again or contact support.");
                 }
+              } catch (profileError) {
+                console.error("Error creating user profile:", profileError);
+                await supabase.auth.signOut();
+                setUser(null);
+                setIsAuthenticated(false);
+                setAuthError("Error setting up user profile. Please try again.");
               }
-            }, 0);
+            }
           } catch (error) {
             console.error("Error getting user:", error);
             setAuthError("Error retrieving user profile");
@@ -80,11 +95,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } else if (event === "SIGNED_OUT") {
           setUser(null);
           setIsAuthenticated(false);
+          localStorage.removeItem('cached_user');
+          localStorage.removeItem('cached_user_timestamp');
         }
       }
     );
     
-    // Initial auth state check
+    // Initial auth state check using cache if available
     const initializeAuth = async () => {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
@@ -92,6 +109,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (!sessionData.session) {
           setIsLoading(false);
           return;
+        }
+        
+        // Try to use cached data during initialization
+        const cachedUser = localStorage.getItem('cached_user');
+        const cachedTimestamp = localStorage.getItem('cached_user_timestamp');
+        const now = new Date().getTime();
+        
+        if (cachedUser && cachedTimestamp && (now - parseInt(cachedTimestamp)) < 300000) {
+          const userData = JSON.parse(cachedUser);
+          setUser(userData);
+          setIsAuthenticated(true);
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
