@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Send, Smile, Paperclip, Loader2, Image, Mic } from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 
 interface MessageInputProps {
@@ -84,56 +84,58 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
           rows={1}
         />
         <div className="flex gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isSending || isSubmitting || disabled}
-                onClick={handleFeatureNotReady}
-              >
-                <Image className="h-5 w-5" />
-                <span className="sr-only">Attach image</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Attach image</TooltipContent>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isSending || isSubmitting || disabled}
+                  onClick={handleFeatureNotReady}
+                >
+                  <Image className="h-5 w-5" />
+                  <span className="sr-only">Attach image</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Attach image</TooltipContent>
+            </Tooltip>
           
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isSending || isSubmitting || disabled}
-                onClick={handleFeatureNotReady}
-              >
-                <Paperclip className="h-5 w-5" />
-                <span className="sr-only">Attach file</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Attach file</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isSending || isSubmitting || disabled}
+                  onClick={handleFeatureNotReady}
+                >
+                  <Paperclip className="h-5 w-5" />
+                  <span className="sr-only">Attach file</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Attach file</TooltipContent>
+            </Tooltip>
           
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                type="button"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                disabled={isSending || isSubmitting || disabled}
-                onClick={handleFeatureNotReady}
-              >
-                <Smile className="h-5 w-5" />
-                <span className="sr-only">Add emoji</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Add emoji</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isSending || isSubmitting || disabled}
+                  onClick={handleFeatureNotReady}
+                >
+                  <Smile className="h-5 w-5" />
+                  <span className="sr-only">Add emoji</span>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Add emoji</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           
           <Button
             variant="default"
