@@ -2,7 +2,6 @@
 import React from 'react';
 import useOnlineStatus from '@/hooks/use-online-status';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { useLanguage } from '@/context/LanguageContext';
 import { formatDistanceToNow } from 'date-fns';
 import { Wifi, WifiOff, Clock } from 'lucide-react';
 
@@ -22,64 +21,56 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   showIcon = false
 }) => {
   const { isUserOnline, onlineStatuses, getUserStatus } = useOnlineStatus([userId]);
-  const { t } = useLanguage();
   
   if (!userId) return null;
   
-  // Get last active text from the hook
   const lastActive = onlineStatuses[userId]?.lastActive;
   const status = getUserStatus(userId);
   
-  // Determine what text to show for last active
   const getLastActiveText = () => {
-    if (!lastActive) return t('profile.neverActive');
+    if (!lastActive) return 'Never active';
     
     try {
       return formatDistanceToNow(new Date(lastActive), { addSuffix: true });
     } catch (error) {
       console.error("Error formatting last active time:", error);
-      return t('profile.neverActive');
+      return 'Never active';
     }
   };
   
   const isOnline = status === 'online';
   const isAway = status === 'away';
   
-  // Get color based on status
   const getStatusColor = () => {
     if (isOnline) return 'bg-green-500';
     if (isAway) return 'bg-yellow-500';
     return 'bg-gray-400';
   };
   
-  // Get animation based on status
   const getStatusAnimation = () => {
     if (isOnline) return 'animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75';
     if (isAway) return 'animate-pulse absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75';
     return '';
   };
   
-  // Get status text
   const getStatusText = () => {
-    if (isOnline) return t('profile.online');
-    if (isAway) return t('profile.away');
-    return t('profile.offline');
+    if (isOnline) return 'Online';
+    if (isAway) return 'Away';
+    return 'Offline';
   };
   
-  // Get icon based on status
   const getStatusIcon = () => {
     if (isOnline) return <Wifi className="h-3.5 w-3.5 text-green-500" />;
     if (isAway) return <Clock className="h-3.5 w-3.5 text-yellow-500" />;
     return <WifiOff className="h-3.5 w-3.5 text-gray-400" />;
   };
   
-  // Get tooltip text based on status
   const getTooltipText = () => {
-    if (isOnline) return t('profile.userOnline');
-    if (isAway) return t('profile.userAway') || 'User is away';
+    if (isOnline) return 'Online';
+    if (isAway) return 'Away';
     return lastActive 
-      ? `${t('profile.lastSeen')} ${getLastActiveText()}`
-      : t('profile.userOffline');
+      ? `Last seen ${getLastActiveText()}`
+      : 'Offline';
   };
   
   return (
