@@ -21,24 +21,24 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({ username, isOwnProfile }) => 
   
   return (
     <Tabs defaultValue="posts" className="w-full">
-      <TabsList className="grid grid-cols-2 sm:grid-cols-5 mb-4">
-        <TabsTrigger value="posts" className="flex gap-1 items-center">
+      <TabsList className="grid grid-cols-2 sm:grid-cols-5 mb-6 p-1.5 gap-1">
+        <TabsTrigger value="posts" className="flex gap-2 items-center py-2.5">
           <PencilLine className="h-4 w-4" />
           <span className="hidden sm:inline">Posts</span>
         </TabsTrigger>
-        <TabsTrigger value="liked" className="flex gap-1 items-center">
+        <TabsTrigger value="liked" className="flex gap-2 items-center py-2.5">
           <Heart className="h-4 w-4" />
           <span className="hidden sm:inline">Liked</span>
         </TabsTrigger>
-        <TabsTrigger value="saved" className="flex gap-1 items-center">
+        <TabsTrigger value="saved" className="flex gap-2 items-center py-2.5">
           <Bookmark className="h-4 w-4" />
           <span className="hidden sm:inline">Saved</span>
         </TabsTrigger>
-        <TabsTrigger value="about" className="flex gap-1 items-center">
+        <TabsTrigger value="about" className="flex gap-2 items-center py-2.5">
           <User className="h-4 w-4" />
           <span className="hidden sm:inline">About</span>
         </TabsTrigger>
-        <TabsTrigger value="badges" className="flex gap-1 items-center">
+        <TabsTrigger value="badges" className="flex gap-2 items-center py-2.5">
           <Award className="h-4 w-4" />
           <span className="hidden sm:inline">Badges</span>
           {earnedBadges.length > 0 && (
@@ -49,23 +49,23 @@ const ProfileTabs: React.FC<ProfileTabsProps> = ({ username, isOwnProfile }) => 
         </TabsTrigger>
       </TabsList>
 
-      <TabsContent value="posts">
+      <TabsContent value="posts" className="mt-4">
         <ProfilePosts username={username} />
       </TabsContent>
       
-      <TabsContent value="liked">
+      <TabsContent value="liked" className="mt-4">
         <ProfileLikedPosts username={username} />
       </TabsContent>
       
-      <TabsContent value="saved">
+      <TabsContent value="saved" className="mt-4">
         <ProfileSavedPosts username={username} />
       </TabsContent>
       
-      <TabsContent value="about">
+      <TabsContent value="about" className="mt-4">
         <ProfileAbout username={username} isEditable={isOwnProfile} />
       </TabsContent>
       
-      <TabsContent value="badges">
+      <TabsContent value="badges" className="mt-4">
         <ProfileBadges badges={badges} className="pt-4" />
       </TabsContent>
     </Tabs>

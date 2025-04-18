@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
@@ -122,21 +123,21 @@ const Profile: React.FC = () => {
   if (isLoading) {
     return (
       <AppLayout>
-        <div className="container py-6">
-          <Card className="mb-4">
-            <div className="flex items-center space-x-4 p-4">
-              <Skeleton className="h-12 w-12 rounded-full" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[250px]" />
+        <div className="container py-6 max-w-4xl mx-auto">
+          <Card className="mb-6 border-2 border-primary/10 shadow-sm">
+            <div className="flex items-center space-x-4 p-6">
+              <Skeleton className="h-16 w-16 rounded-full" />
+              <div className="space-y-3 flex-1">
+                <Skeleton className="h-5 w-[250px]" />
                 <Skeleton className="h-4 w-[200px]" />
               </div>
             </div>
           </Card>
-          <Card>
-            <div className="p-4">
-              <div className="flex justify-between mb-4">
-                <Skeleton className="h-8 w-24" />
-                <Skeleton className="h-8 w-24" />
+          <Card className="shadow-sm">
+            <div className="p-6">
+              <div className="flex justify-between mb-6">
+                <Skeleton className="h-10 w-32" />
+                <Skeleton className="h-10 w-32" />
               </div>
               <Skeleton className="h-64 w-full" />
             </div>
@@ -148,22 +149,22 @@ const Profile: React.FC = () => {
 
   return (
     <AppLayout>
-      <div className="container py-4 md:py-6">
+      <div className="container py-6 md:py-8 max-w-4xl mx-auto">
         {isEditingProfile ? (
-          <Card className="mb-6">
-            <CardContent className="p-4">
-              <h3 className="text-lg font-semibold mb-4">Edit Profile Picture</h3>
+          <Card className="mb-8 border-2 border-primary/10 shadow-md">
+            <CardContent className="p-6">
+              <h3 className="text-xl font-semibold mb-6">Edit Profile Picture</h3>
               <ProfilePictureUpload />
-              <Button variant="secondary" onClick={() => setIsEditingProfile(false)} className="mt-4">
+              <Button variant="secondary" onClick={() => setIsEditingProfile(false)} className="mt-6">
                 Cancel
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="mb-6">
-            <Card className="overflow-hidden border-2 border-primary/10 profile-card">
-              <div className="h-24 md:h-32 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20"></div>
-              <div className="px-4 pb-4 -mt-12 relative">
+          <div className="mb-8">
+            <Card className="overflow-hidden border-2 border-primary/10 profile-card shadow-md rounded-xl">
+              <div className="h-32 md:h-40 bg-gradient-to-r from-fenix/30 via-primary/20 to-fenix/30"></div>
+              <div className="px-6 pb-6 -mt-16 relative">
                 <ProfileHeader 
                   user={profileUser || { id: '', username: username || '', displayName: username || '' }}
                   isCurrentUser={isCurrentUser}
@@ -177,7 +178,7 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-        <Card>
+        <Card className="border shadow-sm rounded-xl">
           <CardContent className="p-4 md:p-6">
             <ProfileTabs 
               username={username || ''} 
