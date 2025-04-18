@@ -13,7 +13,6 @@ import { useAuth } from '@/context/auth';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 
-// Form schema for login - only using username or email
 const loginSchema = z.object({
   username: z.string().min(2, { message: "Username or email is required" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
@@ -48,7 +47,6 @@ const LoginForm = () => {
     try {
       // Handle temporary password case - check if this is a migrated user
       if (data.password === 'ChangeMe123!') {
-        // Show a special message for migrated users
         setPasswordNeedsReset(true);
         setLoginError("You're using a temporary password. Please reset your password after login.");
       }
@@ -72,11 +70,9 @@ const LoginForm = () => {
         
         navigate('/', { replace: true });
       } else {
-        // Show a more specific error message if profile exists but auth failed
         const errorMessage = authError || "Login failed. Please check your credentials and try again.";
         setLoginError(errorMessage);
         
-        // If the error suggests password reset is needed, show the recovery field
         if (errorMessage.includes('reset') || errorMessage.includes('account needs reset')) {
           setShowRecoveryField(true);
           setRecoveryEmail(data.username.includes('@') ? data.username : '');
@@ -86,7 +82,6 @@ const LoginForm = () => {
       const errorMessage = error.message || "An error occurred during login";
       setLoginError(errorMessage);
       
-      // If the error suggests password reset is needed, show the recovery field
       if (errorMessage.includes('reset') || errorMessage.includes('account needs reset')) {
         setShowRecoveryField(true);
         setRecoveryEmail(data.username.includes('@') ? data.username : '');
