@@ -30,6 +30,7 @@ const LoginForm = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [recoveryEmail, setRecoveryEmail] = useState("");
   const [showRecoveryField, setShowRecoveryField] = useState(false);
+  const [passwordNeedsReset, setPasswordNeedsReset] = useState(false);
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -42,15 +43,33 @@ const LoginForm = () => {
   async function onSubmit(data: LoginFormValues) {
     setLoginError(null);
     setIsLoading(true);
+    setPasswordNeedsReset(false);
     
     try {
+      // Handle temporary password case - check if this is a migrated user
+      if (data.password === 'ChangeMe123!') {
+        // Show a special message for migrated users
+        setPasswordNeedsReset(true);
+        setLoginError("You're using a temporary password. Please reset your password after login.");
+      }
+      
       const success = await login(data.username, data.password);
       
       if (success) {
-        toast({
-          title: "Login successful",
-          description: "Welcome back to Campus Fenix!",
-        });
+        // Show a toast for migrated users on successful login
+        if (data.password === 'ChangeMe123!') {
+          toast({
+            title: "Welcome back!",
+            description: "Your account was migrated from a previous system. Please update your password in settings.",
+            duration: 8000,
+          });
+        } else {
+          toast({
+            title: "Login successful",
+            description: "Welcome back to Campus Fenix!",
+          });
+        }
+        
         navigate('/', { replace: true });
       } else {
         // Show a more specific error message if profile exists but auth failed
@@ -110,7 +129,8 @@ const LoginForm = () => {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         {loginError && (
-          <Alert variant="destructive" className="mb-4 bg-destructive/10 border-destructive/30 text-destructive">
+          <Alert variant={passwordNeedsReset ? "default" : "destructive"} 
+                 className={`mb-4 ${passwordNeedsReset ? 'bg-blue-50 border-blue-200 text-blue-800' : 'bg-destructive/10 border-destructive/30 text-destructive'}`}>
             <AlertDescription>{loginError}</AlertDescription>
           </Alert>
         )}

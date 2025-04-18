@@ -14,7 +14,6 @@ import {
   validateCurrentPassword,
   parseAuthError
 } from "./authUtils";
-// Import the standalone toast function, not the hook
 import { toast } from "@/components/ui/use-toast";
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -73,6 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 if (newUser) {
                   setUser(newUser);
                   setIsAuthenticated(true);
+                  
+                  // Cache the new user data
+                  localStorage.setItem('cached_user', JSON.stringify(newUser));
+                  localStorage.setItem('cached_user_timestamp', now.toString());
                 } else {
                   // Still couldn't get user profile, sign out
                   await supabase.auth.signOut();
@@ -120,6 +123,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const userData = JSON.parse(cachedUser);
           setUser(userData);
           setIsAuthenticated(true);
+          
+          // Check if the user exists in the profiles table
+          const { data } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', userData.id)
+            .single();
+          
+          if (!data) {
+            // Profile doesn't exist, create it
+            console.log("Profile doesn't exist for user, creating it");
+            try {
+              const username = sessionData.session.user.email?.split('@')[0] || 'user';
+              const displayName = sessionData.session.user.user_metadata?.displayName || username;
+              const school = sessionData.session.user.user_metadata?.school || 'Unknown School';
+              
+              await createProfile(sessionData.session.user.id, username, displayName, school);
+              // Refresh user data after creating profile
+              const newUser = await getCurrentUser();
+              if (newUser) {
+                setUser(newUser);
+                localStorage.setItem('cached_user', JSON.stringify(newUser));
+                localStorage.setItem('cached_user_timestamp', now.toString());
+              }
+            } catch (error) {
+              console.error("Error creating profile during initialization:", error);
+            }
+          }
+        } else if (sessionData.session) {
+          // No valid cache, fetch fresh data
+          const currentUser = await getCurrentUser();
+          if (currentUser) {
+            setUser(currentUser);
+            setIsAuthenticated(true);
+            
+            // Cache the user data
+            localStorage.setItem('cached_user', JSON.stringify(currentUser));
+            localStorage.setItem('cached_user_timestamp', now.toString());
+          }
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -443,10 +485,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Reset password
+  // Reset password with better error handling
   const resetPassword = async (email: string): Promise<void> => {
     try {
       setIsLoading(true);
+      setAuthError(null);
+      
+      if (!email || !email.includes('@')) {
+        setAuthError("Please enter a valid email address");
+        return;
+      }
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + '/reset-password',
       });
@@ -495,16 +544,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Refresh user data
+  // Refresh user data from the database
   const refreshUser = async (): Promise<void> => {
     try {
-      if (!user) return;
+      if (!user?.id) return;
       
       setIsLoading(true);
       const currentUser = await getCurrentUser();
       
       if (currentUser) {
         setUser(currentUser);
+        
+        // Update cache
+        const now = new Date().getTime();
+        localStorage.setItem('cached_user', JSON.stringify(currentUser));
+        localStorage.setItem('cached_user_timestamp', now.toString());
+        
+        console.log("User data refreshed successfully");
       }
     } catch (error: any) {
       console.error("Refresh user error:", error);
