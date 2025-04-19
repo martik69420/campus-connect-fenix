@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 // Define the shape of the translation object for each language
@@ -420,6 +419,79 @@ const translations: Translations = {
     nl: 'resultaten',
     fr: 'résultats',
   },
+  // Adding missing message translations
+  'messages.conversations': {
+    en: 'Conversations',
+    nl: 'Gesprekken',
+    fr: 'Conversations',
+  },
+  'messages.searchContacts': {
+    en: 'Search contacts...',
+    nl: 'Zoek contacten...',
+    fr: 'Rechercher des contacts...',
+  },
+  'messages.new': {
+    en: 'New',
+    nl: 'Nieuw',
+    fr: 'Nouveau',
+  },
+  'messages.noMessages': {
+    en: 'No messages yet',
+    nl: 'Nog geen berichten',
+    fr: 'Pas encore de messages',
+  },
+  'messages.noConversations': {
+    en: 'No conversations yet',
+    nl: 'Nog geen gesprekken',
+    fr: 'Pas encore de conversations',
+  },
+  'messages.startNewConversation': {
+    en: 'Start a new conversation',
+    nl: 'Begin een nieuw gesprek',
+    fr: 'Commencer une nouvelle conversation',
+  },
+  'messages.typeMessage': {
+    en: 'Type a message...',
+    nl: 'Typ een bericht...',
+    fr: 'Tapez un message...',
+  },
+  'messages.send': {
+    en: 'Send',
+    nl: 'Verstuur',
+    fr: 'Envoyer',
+  },
+  'messages.today': {
+    en: 'Today',
+    nl: 'Vandaag',
+    fr: "Aujourd'hui",
+  },
+  'messages.yesterday': {
+    en: 'Yesterday',
+    nl: 'Gisteren',
+    fr: 'Hier',
+  },
+  
+  // Adding profile related translations
+  'profile.userOnline': {
+    en: 'Online',
+    nl: 'Online',
+    fr: 'En ligne',
+  },
+  'profile.userOffline': {
+    en: 'Offline',
+    nl: 'Offline',
+    fr: 'Hors ligne',
+  },
+  'profile.online': {
+    en: 'Online',
+    nl: 'Online',
+    fr: 'En ligne',
+  },
+  'profile.offline': {
+    en: 'Offline',
+    nl: 'Offline',
+    fr: 'Hors ligne',
+  }
 };
 
 // Language Provider component
