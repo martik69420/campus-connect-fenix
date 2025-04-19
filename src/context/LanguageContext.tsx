@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 // Define the shape of the translation object for each language
@@ -596,7 +595,83 @@ const translations: Translations = {
     en: 'commented on your post',
     nl: 'heeft gereageerd op je bericht',
     fr: 'a commenté votre message',
-  }
+  },
+  // Friends related translations
+  'friends.forYou': {
+    en: 'For You',
+    nl: 'Voor Jou',
+    fr: 'Pour Vous',
+  },
+  'friends.findNew': {
+    en: 'Find New Friends',
+    nl: 'Nieuwe Vrienden Zoeken',
+    fr: 'Trouver de Nouveaux Amis',
+  },
+  'friends.refresh': {
+    en: 'Refresh',
+    nl: 'Vernieuwen',
+    fr: 'Actualiser',
+  },
+  'friends.findMore': {
+    en: 'Find More Friends',
+    nl: 'Meer Vrienden Zoeken',
+    fr: 'Trouver Plus d\'Amis',
+  },
+  'friends.loadingTimeout': {
+    en: 'Taking longer than expected to load',
+    nl: 'Het laden duurt langer dan verwacht',
+    fr: 'Chargement plus long que prévu',
+  },
+  'friends.noSuggestions': {
+    en: 'No suggestions available',
+    nl: 'Geen suggesties beschikbaar',
+    fr: 'Aucune suggestion disponible',
+  },
+  'friends.mutualFriends': {
+    en: 'mutual friends',
+    nl: 'gemeenschappelijke vrienden',
+    fr: 'amis en commun',
+  },
+  'friends.connect': {
+    en: 'Connect',
+    nl: 'Verbinden',
+    fr: 'Se Connecter',
+  },
+  'friends.findNewSuggestions': {
+    en: 'Find New Suggestions',
+    nl: 'Nieuwe Suggesties Zoeken',
+    fr: 'Trouver de Nouvelles Suggestions',
+  },
+  'friends.yourFriends': {
+    en: 'Your Friends',
+    nl: 'Je Vrienden',
+    fr: 'Vos Amis',
+  },
+  'friends.noFriends': {
+    en: 'No Friends Yet',
+    nl: 'Nog Geen Vrienden',
+    fr: 'Pas Encore d\'Amis',
+  },
+  'friends.noFriendsDescription': {
+    en: 'Start connecting with other students on your campus',
+    nl: 'Begin met verbinding te maken met andere studenten op je campus',
+    fr: 'Commencez à vous connecter avec d\'autres étudiants sur votre campus',
+  },
+  'friends.findFriends': {
+    en: 'Find Friends',
+    nl: 'Vrienden Zoeken',
+    fr: 'Trouver des Amis',
+  },
+  'common.retry': {
+    en: 'Retry',
+    nl: 'Opnieuw Proberen',
+    fr: 'Réessayer',
+  },
+  'common.refresh': {
+    en: 'Refresh',
+    nl: 'Vernieuwen',
+    fr: 'Actualiser',
+  },
 };
 
 // Language Provider component
