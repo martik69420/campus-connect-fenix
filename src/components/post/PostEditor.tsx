@@ -1,138 +1,82 @@
-
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Loader2, X, Image as ImageIcon, Smile } from 'lucide-react';
-import MentionInput from './MentionInput';
-import { useLanguage } from '@/context/LanguageContext';
+import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { useTheme } from '@/context/ThemeContext';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Image as ImageIcon, Smile, X, Loader2 } from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
+import { usePost } from '@/context/PostContext';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/auth';
+import data from '@emoji-mart/data';
+import Picker from '@emoji-mart/react';
+import { useTheme } from '@/context/ThemeContext';
 
 interface PostEditorProps {
-  isOpen: boolean;
-  onClose: () => void;
-  post: any;
-  onSave: (updatedPost: { content: string, images?: string[] }) => Promise<void>;
+  onPostCreated?: () => void;
+  placeholder?: string;
+  autoFocus?: boolean;
+  className?: string;
 }
 
-// Import emoji picker dynamically to avoid SSR issues
-const loadEmojiPicker = () => import('@emoji-mart/react').then(mod => mod.default);
-const loadEmojiData = () => import('@emoji-mart/data').then(mod => mod.default);
-
 const PostEditor: React.FC<PostEditorProps> = ({
-  isOpen,
-  onClose,
-  post,
-  onSave,
+  onPostCreated,
+  placeholder,
+  autoFocus = false,
+  className = '',
 }) => {
-  const [content, setContent] = useState(post?.content || '');
-  const [images, setImages] = useState<string[]>(post?.images || []);
-  const [files, setFiles] = useState<File[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [content, setContent] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [images, setImages] = useState<File[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
-  const [EmojiPicker, setEmojiPicker] = useState<any>(null);
-  const [emojiData, setEmojiData] = useState<any>(null);
-  
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { t } = useLanguage();
-  const { theme } = useTheme();
   const { toast } = useToast();
-  
-  // Load emoji picker dynamically
-  const handleEmojiButtonClick = async () => {
-    if (!EmojiPicker) {
-      const [picker, data] = await Promise.all([loadEmojiPicker(), loadEmojiData()]);
-      setEmojiPicker(() => picker);
-      setEmojiData(data);
+  const { createPost } = usePost();
+  const { user } = useAuth();
+  const { theme } = useTheme();
+
+  useEffect(() => {
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
     }
-    setEmojiPickerOpen(prev => !prev);
-  };
-  
-  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const selectedFiles = Array.from(e.target.files);
-      
-      // Check file type
-      const validFiles = selectedFiles.filter(file => 
-        file.type.startsWith('image/')
-      );
-      
-      if (validFiles.length !== selectedFiles.length) {
-        toast({
-          title: "Invalid file type",
-          description: "Only image files are allowed",
-          variant: "destructive"
-        });
-      }
-      
-      // Check max files (limit to 4 total)
-      if (images.length + files.length + validFiles.length > 4) {
-        toast({
-          title: "Too many files",
-          description: "Maximum 4 images allowed per post",
-          variant: "destructive"
-        });
-        
-        // Only add files up to the limit
-        const availableSlots = 4 - images.length - files.length;
-        setFiles(prev => [...prev, ...validFiles.slice(0, availableSlots)]);
-      } else {
-        setFiles(prev => [...prev, ...validFiles]);
-      }
-    }
-  };
-  
-  const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  };
-  
-  const handleEmojiSelect = (emoji: any) => {
-    setContent(prev => prev + emoji.native);
-    setEmojiPickerOpen(false);
-  };
-  
-  const handleSave = async () => {
-    if (content.trim() === '' && images.length === 0 && files.length === 0) {
+  }, [autoFocus]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!content.trim() && images.length === 0) {
       toast({
-        title: "Cannot save empty post",
-        description: "Please add some content or images to your post",
-        variant: "destructive"
+        title: t('post.emptyPost'),
+        description: t('post.enterContent'),
+        variant: "destructive",
       });
       return;
     }
-    
-    setIsLoading(true);
-    
+
+    setIsSubmitting(true);
+
     try {
-      let uploadedImageUrls: string[] = [...images];
+      // Upload images if any
+      let uploadedImageUrls: string[] = [];
       
-      // Upload new image files if any
-      if (files.length > 0) {
-        const uploads = await Promise.all(
-          files.map(async (file) => {
-            const fileExt = file.name.split('.').pop();
+      if (images.length > 0) {
+        uploadedImageUrls = await Promise.all(
+          images.map(async (image) => {
+            const fileExt = image.name.split('.').pop();
             const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-            const filePath = `posts/${fileName}`;
+            const filePath = `${user?.id}/${fileName}`;
             
-            const { error } = await supabase.storage
+            const { error: uploadError } = await supabase.storage
               .from('post_images')
-              .upload(filePath, file);
+              .upload(filePath, image);
               
-            if (error) throw error;
-              
+            if (uploadError) {
+              throw uploadError;
+            }
+            
             const { data } = supabase.storage
               .from('post_images')
               .getPublicUrl(filePath);
@@ -140,174 +84,176 @@ const PostEditor: React.FC<PostEditorProps> = ({
             return data.publicUrl;
           })
         );
-        
-        uploadedImageUrls = [...uploadedImageUrls, ...uploads];
       }
       
-      // Save the post
-      await onSave({ content, images: uploadedImageUrls });
+      // Create the post with uploaded image URLs
+      await createPost(content, uploadedImageUrls);
+      
+      // Reset form
+      setContent('');
+      setImages([]);
+      setImageUrls([]);
+      
+      // Notify parent component
+      if (onPostCreated) {
+        onPostCreated();
+      }
       
       toast({
-        title: "Post updated",
-        description: "Your post has been updated successfully",
+        title: t('post.postCreated'),
+        description: t('post.postSuccess'),
       });
-      
-      onClose();
-    } catch (error) {
-      console.error('Error updating post:', error);
+    } catch (error: any) {
+      console.error('Error creating post:', error);
       toast({
-        title: "Error updating post",
-        description: "An error occurred while updating your post. Please try again.",
-        variant: "destructive"
+        title: t('post.postFailed'),
+        description: error.message || t('post.tryAgain'),
+        variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
-  
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      
+      // Limit to 4 images
+      if (images.length + selectedFiles.length > 4) {
+        toast({
+          title: t('post.tooManyImages'),
+          description: t('post.maxFourImages'),
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Check file sizes (max 5MB each)
+      const oversizedFiles = selectedFiles.filter(file => file.size > 5 * 1024 * 1024);
+      if (oversizedFiles.length > 0) {
+        toast({
+          title: t('post.imageTooLarge'),
+          description: t('post.maxImageSize'),
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      setImages(prev => [...prev, ...selectedFiles]);
+      
+      // Create object URLs for preview
+      const newImageUrls = selectedFiles.map(file => URL.createObjectURL(file));
+      setImageUrls(prev => [...prev, ...newImageUrls]);
+    }
+  };
+
+  const removeImage = (index: number) => {
+    // Revoke the object URL to avoid memory leaks
+    URL.revokeObjectURL(imageUrls[index]);
+    
+    setImages(prev => prev.filter((_, i) => i !== index));
+    setImageUrls(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleEmojiSelect = (emoji: any) => {
+    setContent(prev => prev + emoji.native);
+    setEmojiPickerOpen(false);
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>{t('post.edit')}</DialogTitle>
-        </DialogHeader>
-        
-        <div className="space-y-4 py-4">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={post?.author?.avatar || "/placeholder.svg"} />
-              <AvatarFallback>
-                {post?.author?.displayName?.[0] || post?.author?.username?.[0] || 'U'}
-              </AvatarFallback>
-            </Avatar>
-            <div>
-              <h3 className="font-medium text-sm">
-                {post?.author?.displayName || post?.author?.username || 'User'}
-              </h3>
-              <p className="text-xs text-muted-foreground">
-                Editing post
-              </p>
-            </div>
-          </div>
-          
-          <MentionInput
-            value={content}
-            onChange={setContent}
-            className="bg-muted/30 resize-none min-h-[120px]"
-          />
-          
-          {(images.length > 0 || files.length > 0) && (
-            <div className="grid grid-cols-2 gap-2">
-              {images.map((imageUrl, index) => (
-                <div key={`image-${index}`} className="relative group aspect-square">
-                  <img 
-                    src={imageUrl} 
-                    alt={`Post image ${index + 1}`} 
-                    className="h-full w-full object-cover rounded-md"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => removeImage(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-              
-              {files.map((file, index) => (
-                <div key={`file-${index}`} className="relative group aspect-square">
-                  <img 
-                    src={URL.createObjectURL(file)} 
-                    alt={`New image ${index + 1}`} 
-                    className="h-full w-full object-cover rounded-md"
-                  />
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    className="absolute top-1 right-1 h-6 w-6 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => removeFile(index)}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        
-        <div className="flex justify-between">
-          <div className="flex space-x-2">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileInputChange}
-              accept="image/*"
-              multiple
-              className="hidden"
-            />
-            <Button
+    <form onSubmit={handleSubmit} className={`space-y-4 ${className}`}>
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
+          placeholder={placeholder || t('post.whatsOnYourMind')}
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          className="min-h-[120px] resize-none pr-10"
+          disabled={isSubmitting}
+        />
+        <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+          <PopoverTrigger asChild>
+            <Button 
               type="button"
-              variant="outline"
-              size="sm"
-              className="text-muted-foreground"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={images.length + files.length >= 4}
+              size="icon" 
+              variant="ghost" 
+              className="absolute bottom-2 right-2 h-8 w-8 rounded-full"
+              disabled={isSubmitting}
             >
-              <ImageIcon className="mr-2 h-4 w-4" />
-              {t('post.addImage')}
+              <Smile className="h-5 w-5 text-muted-foreground" />
             </Button>
-            
-            <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="text-muted-foreground"
-                  onClick={handleEmojiButtonClick}
-                >
-                  <Smile className="mr-2 h-4 w-4" />
-                  {t('post.addEmoji')}
-                </Button>
-              </PopoverTrigger>
-              {EmojiPicker && emojiData && (
-                <PopoverContent className="w-auto p-0 border-none" side="top">
-                  <EmojiPicker
-                    data={emojiData}
-                    onEmojiSelect={handleEmojiSelect}
-                    theme={theme === 'dark' ? 'dark' : 'light'}
-                    previewPosition="none"
-                  />
-                </PopoverContent>
-              )}
-            </Popover>
-          </div>
+          </PopoverTrigger>
+          <PopoverContent className="w-full p-0 border-none bg-transparent" side="top" align="end">
+            <Picker 
+              data={data} 
+              onEmojiSelect={handleEmojiSelect}
+              theme={theme === 'dark' ? 'dark' : 'light'}
+              previewPosition="none"
+            />
+          </PopoverContent>
+        </Popover>
+      </div>
+      
+      {imageUrls.length > 0 && (
+        <div className="grid grid-cols-2 gap-2">
+          {imageUrls.map((url, index) => (
+            <div key={index} className="relative group aspect-square rounded-md overflow-hidden border bg-muted/20">
+              <img 
+                src={url} 
+                alt={`Preview ${index}`} 
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => removeImage(index)}
+                className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          ))}
         </div>
-        
-        <DialogFooter className="sm:justify-between">
+      )}
+      
+      <div className="flex justify-between items-center">
+        <div>
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleImageSelect}
+            accept="image/*"
+            multiple
+            className="hidden"
+            disabled={isSubmitting || images.length >= 4}
+          />
           <Button
             type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isLoading}
+            variant="ghost"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isSubmitting || images.length >= 4}
           >
-            {t('post.cancel')}
+            <ImageIcon className="h-4 w-4 mr-2" />
+            {t('post.addImage')}
           </Button>
-          <Button type="button" onClick={handleSave} disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t('common.loading')}
-              </>
-            ) : (
-              t('post.saveChanges')
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+        
+        <Button 
+          type="submit" 
+          disabled={isSubmitting || (!content.trim() && images.length === 0)}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              {t('post.posting')}
+            </>
+          ) : (
+            t('post.post')
+          )}
+        </Button>
+      </div>
+    </form>
   );
 };
 
