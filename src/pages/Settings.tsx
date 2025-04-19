@@ -151,7 +151,7 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-card rounded-lg shadow-sm border border-border/160">
+          <div className="bg-card rounded-lg shadow-sm border border-border/60">
             <Tabs 
               value={activeTab} 
               onValueChange={setActiveTab}
