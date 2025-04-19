@@ -8,7 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { usePost } from '@/context/PostContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
-import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -186,7 +185,6 @@ const PostEditor: React.FC<PostEditorProps> = ({
           </PopoverTrigger>
           <PopoverContent className="w-full p-0 border-none bg-transparent" side="top" align="end">
             <Picker 
-              data={data} 
               onEmojiSelect={handleEmojiSelect}
               theme={theme === 'dark' ? 'dark' : 'light'}
               previewPosition="none"

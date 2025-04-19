@@ -5,7 +5,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Send, Paperclip, Image, Smile } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
 import { useTheme } from '@/context/ThemeContext';
 
@@ -115,7 +114,6 @@ const EnhancedMessageInput: React.FC<EnhancedMessageInputProps> = ({
             </PopoverTrigger>
             <PopoverContent className="w-full p-0 border-none bg-transparent" side="top" align="end">
               <Picker 
-                data={data} 
                 onEmojiSelect={handleEmojiSelect}
                 theme={theme === 'dark' ? 'dark' : 'light'}
                 previewPosition="none"
