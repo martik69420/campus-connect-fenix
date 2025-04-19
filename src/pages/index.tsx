@@ -31,11 +31,12 @@ const Index = () => {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { posts, isLoading: postsLoading, fetchPosts } = usePost();
   const [activeTab, setActiveTab] = useState('for-you');
-  const [forYouPosts, setForYouPosts] = useState([]);
-  const [latestPosts, setLatestPosts] = useState([]);
+  const [forYouPosts, setForYouPosts] = useState<any[]>([]);
+  const [latestPosts, setLatestPosts] = useState<any[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [friendsLoaded, setFriendsLoaded] = useState(false);
+  const [loadingTimeout, setLoadingTimeout] = useState(false);
   const { toast } = useToast();
   const { isMobile } = useViewport();
 
@@ -45,6 +46,17 @@ const Index = () => {
       navigate('/login');
     }
   }, [isAuthenticated, authLoading, navigate]);
+
+  // Set a timeout for loading indicators to prevent infinite spinner
+  useEffect(() => {
+    if ((postsLoading || authLoading) && !loadingTimeout) {
+      const timer = setTimeout(() => {
+        setLoadingTimeout(true);
+      }, 10000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [postsLoading, authLoading, loadingTimeout]);
 
   // Fetch posts with error handling
   const loadPosts = useCallback(async () => {
@@ -90,15 +102,19 @@ const Index = () => {
     if (!postsLoading && posts.length > 0) {
       if (activeTab === 'for-you') {
         const sortedPosts = [...posts].sort((a, b) => 
-          (b.likes.length + b.comments.length * 2) - (a.likes.length + a.comments.length * 2)
+          (b.likes?.length + b.comments?.length * 2) - (a.likes?.length + a.comments?.length * 2)
         );
         setForYouPosts(sortedPosts);
       } else {
         const sortedPosts = [...posts].sort((a, b) => 
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          new Date(b.createdAt || Date.now()).getTime() - new Date(a.createdAt || Date.now()).getTime()
         );
         setLatestPosts(sortedPosts);
       }
+    } else if (!postsLoading && posts.length === 0) {
+      // Clear the arrays if there are no posts
+      setForYouPosts([]);
+      setLatestPosts([]);
     }
   }, [posts, postsLoading, activeTab]);
 
@@ -123,10 +139,34 @@ const Index = () => {
     }
   };
 
-  if (authLoading) {
+  // Handle loading timeout
+  const handleRetryAfterTimeout = () => {
+    setLoadingTimeout(false);
+    window.location.reload(); // Hard reload the page when it's been a long time
+  };
+
+  // Show loading state with retry option
+  if (postsLoading && (!forYouPosts.length && !latestPosts.length)) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="container mx-auto py-8 flex flex-col items-center justify-center min-h-[50vh]">
+        {loadingTimeout ? (
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4 mx-auto" />
+            <h2 className="text-xl font-bold mb-2">Taking longer than expected</h2>
+            <p className="text-muted-foreground mb-4">
+              It seems like the content is taking too long to load.
+            </p>
+            <Button onClick={handleRetryAfterTimeout}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Reload Page
+            </Button>
+          </div>
+        ) : (
+          <div className="text-center">
+            <Loader2 className="h-12 w-12 animate-spin text-primary mb-4 mx-auto" />
+            <p>Loading your feed...</p>
+          </div>
+        )}
       </div>
     );
   }

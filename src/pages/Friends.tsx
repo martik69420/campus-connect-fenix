@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth';
 import { useFriends } from '@/components/friends/useFriends';
 import FriendsList from '@/components/friends/FriendsList';
-import AdBanner from '@/components/ads/AdBanner';
 import { User, UserPlus, UserCheck, Users, Loader2 } from 'lucide-react';
 import AppLayout from '@/components/layout/AppLayout';
 
@@ -26,10 +25,12 @@ const Friends = () => {
     acceptFriendRequest, 
     rejectFriendRequest, 
     removeFriend,
-    sendFriendRequest 
+    sendFriendRequest,
+    fetchFriends 
   } = useFriends();
 
   const [activeTab, setActiveTab] = useState('all-friends');
+  const [loadingRetry, setLoadingRetry] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -37,6 +38,14 @@ const Friends = () => {
     }
   }, [isAuthenticated, authLoading, navigate]);
 
+  // Add a retry mechanism for when data fails to load
+  const handleRetryLoad = () => {
+    setLoadingRetry(true);
+    fetchFriends().finally(() => {
+      setLoadingRetry(false);
+    });
+  };
+  
   const handleMessageFriend = (friendId: string) => {
     navigate(`/messages?userId=${friendId}`);
   };
@@ -54,11 +63,11 @@ const Friends = () => {
     await rejectFriendRequest(requestId);
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </AppLayout>
     );
@@ -99,47 +108,59 @@ const Friends = () => {
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="all-friends">
-            <FriendsList 
-              friends={friends as any}
-              loading={isLoading}
-              onRemoveFriend={handleRemoveFriend}
-              onMessageFriend={handleMessageFriend}
-            />
-          </TabsContent>
-          
-          <TabsContent value="pending">
-            <Suspense fallback={
-              <Card>
-                <CardContent className="p-8 flex justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </CardContent>
-              </Card>
-            }>
-              <FriendRequestsTab 
-                requests={receivedRequests as any}
-                loading={isLoading}
-                onAccept={handleAcceptRequest}
-                onDecline={handleRejectRequest}
-              />
-            </Suspense>
-          </TabsContent>
-          
-          <TabsContent value="sent">
-            <Suspense fallback={
-              <Card>
-                <CardContent className="p-8 flex justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </CardContent>
-              </Card>
-            }>
-              <SentRequestsTab 
-                requests={sentRequests as any}
-                loading={isLoading} 
-                onCancel={handleRejectRequest}
-              />
-            </Suspense>
-          </TabsContent>
+          {isLoading || loadingRetry ? (
+            <Card>
+              <CardContent className="p-8 flex flex-col items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p>Loading friends information...</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              <TabsContent value="all-friends">
+                <FriendsList 
+                  friends={friends as any}
+                  loading={isLoading}
+                  onRemoveFriend={handleRemoveFriend}
+                  onMessageFriend={handleMessageFriend}
+                  onRetry={handleRetryLoad}
+                />
+              </TabsContent>
+              
+              <TabsContent value="pending">
+                <Suspense fallback={
+                  <Card>
+                    <CardContent className="p-8 flex justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </CardContent>
+                  </Card>
+                }>
+                  <FriendRequestsTab 
+                    requests={receivedRequests as any}
+                    loading={isLoading}
+                    onAccept={handleAcceptRequest}
+                    onDecline={handleRejectRequest}
+                  />
+                </Suspense>
+              </TabsContent>
+              
+              <TabsContent value="sent">
+                <Suspense fallback={
+                  <Card>
+                    <CardContent className="p-8 flex justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </CardContent>
+                  </Card>
+                }>
+                  <SentRequestsTab 
+                    requests={sentRequests as any}
+                    loading={isLoading} 
+                    onCancel={handleRejectRequest}
+                  />
+                </Suspense>
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </div>
     </AppLayout>
