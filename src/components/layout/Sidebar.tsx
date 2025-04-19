@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import OnlineStatus from "@/components/OnlineStatus";
 
 // Import icons
 import { 
@@ -64,8 +65,8 @@ const Sidebar = () => {
   };
 
   return (
-    <div className="w-64 flex-shrink-0 border-r border-border flex flex-col h-screen fixed left-0 top-0 overflow-y-auto z-30 bg-background backdrop-blur-sm">
-      <div className="p-4">
+    <div className="w-64 flex-shrink-0 border-r border-border flex flex-col h-screen fixed left-0 top-0 overflow-y-auto z-30 bg-background/95 backdrop-blur-sm shadow-sm">
+      <div className="p-5">
         <Link to="/" onClick={() => setActiveItem('/')} className="font-bold text-xl flex items-center">
           <img src="/logo.svg" alt="Logo" className="mr-2 h-6 w-6" />
           <span className="bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-500">
@@ -74,7 +75,7 @@ const Sidebar = () => {
         </Link>
       </div>
 
-      <Separator />
+      <Separator className="opacity-50" />
 
       <div className="p-4">
         {isLoading ? (
@@ -88,12 +89,17 @@ const Sidebar = () => {
         ) : user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex h-auto w-full items-center justify-between gap-2 p-0 font-normal hover:bg-secondary/50">
+              <Button variant="ghost" className="flex h-auto w-full items-center justify-between gap-2 p-2 font-normal hover:bg-secondary/50 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Avatar className="h-10 w-10 ring-1 ring-primary/30">
-                    <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.displayName || "Avatar"} />
-                    <AvatarFallback>{user.displayName?.charAt(0) || "U"}</AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className="h-10 w-10 ring-1 ring-primary/30">
+                      <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.displayName || "Avatar"} />
+                      <AvatarFallback>{user.displayName?.charAt(0) || "U"}</AvatarFallback>
+                    </Avatar>
+                    <div className="absolute -bottom-1 -right-1">
+                      <OnlineStatus userId={user.id} />
+                    </div>
+                  </div>
                   <div className="flex flex-col text-left">
                     <p className="text-sm font-medium leading-none">{user.displayName}</p>
                     <p className="text-xs text-muted-foreground">@{user.username}</p>
@@ -117,21 +123,25 @@ const Sidebar = () => {
         ) : null}
       </div>
 
-      <Separator />
+      <Separator className="opacity-50" />
 
-      <div className="flex-1 p-4">
-        <ul className="space-y-1.5">
+      <div className="flex-1 p-3">
+        <ul className="space-y-1">
           {NAV_ITEMS.map((item) => {
             const isActive = location.pathname === item.href;
             return (
-              <li key={item.label}>
+              <motion.li 
+                key={item.label} 
+                whileHover={{ x: 5 }}
+                transition={{ type: 'spring', stiffness: 300 }}
+              >
                 <Button
                   variant={isActive ? "default" : "ghost"}
                   className={cn(
-                    "w-full justify-start text-base",
+                    "w-full justify-start text-base py-6",
                     isActive 
                       ? "bg-primary text-primary-foreground font-medium" 
-                      : "text-muted-foreground hover:text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent/50"
                   )}
                   onClick={() => handleNavClick(item.href)}
                 >
@@ -144,9 +154,12 @@ const Sidebar = () => {
                     {item.label === 'Games' && (
                       <Sparkles className="h-3.5 w-3.5 ml-2 text-amber-400" />
                     )}
+                    {item.label === 'Messages' && (
+                      <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">2</span>
+                    )}
                   </div>
                 </Button>
-              </li>
+              </motion.li>
             );
           })}
         </ul>
@@ -161,6 +174,9 @@ const Sidebar = () => {
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </Button>
+        <div className="mt-3 text-center text-xs text-muted-foreground">
+          <p>© 2025 Campus Connect</p>
+        </div>
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { motion } from 'framer-motion';
+import OnlineStatus from '@/components/OnlineStatus';
 
 export interface Friend {
   id: string;
@@ -135,12 +136,15 @@ const FriendsList: React.FC<FriendsListProps> = ({
                       <AvatarImage src={friend.avatar || '/placeholder.svg'} alt={friend.displayName} />
                       <AvatarFallback>{friend.displayName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    {friend.isOnline && (
-                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background"></span>
-                    )}
+                    <div className="absolute -bottom-1 -right-1">
+                      <OnlineStatus userId={friend.id} />
+                    </div>
                   </div>
                   <div>
-                    <p className="font-medium">{friend.displayName}</p>
+                    <div className="flex items-center">
+                      <p className="font-medium">{friend.displayName}</p>
+                      <OnlineStatus userId={friend.id} className="ml-2" showLabel />
+                    </div>
                     <p className="text-sm text-muted-foreground">@{friend.username}</p>
                     {friend.school && <p className="text-xs text-muted-foreground">{friend.school}</p>}
                   </div>

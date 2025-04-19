@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
@@ -9,9 +10,23 @@ import ContactsList from '@/components/messaging/ContactsList';
 import MessagesList from '@/components/messaging/MessagesList';
 import ChatHeader from '@/components/messaging/ChatHeader';
 import MessageInput from '@/components/messaging/MessageInput';
-import { UserX } from 'lucide-react';
+import { UserX, UserPlus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AdBanner from '@/components/ads/AdBanner';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 
 interface Message {
   id: string;
@@ -30,13 +45,6 @@ interface Contact {
   lastMessage?: string;
   lastMessageTime?: string;
   unreadCount?: number;
-}
-
-interface FriendProfile {
-  id: string;
-  username: string;
-  display_name: string;
-  avatar_url: string | null;
 }
 
 interface Friend {
@@ -65,6 +73,7 @@ const Messages = () => {
   const [allFriends, setAllFriends] = useState<Friend[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friendsSearchQuery, setFriendsSearchQuery] = useState('');
+  const [isGroupChatModalOpen, setIsGroupChatModalOpen] = useState(false);
   
   const userIdFromParams = searchParams.get('userId');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -248,11 +257,11 @@ const Messages = () => {
       const allFriends = [
         ...(friendsData || []).map(item => ({
           friendId: item.friend_id,
-          profile: item.profiles as FriendProfile
+          profile: item.profiles
         })),
         ...(reverseData || []).map(item => ({
           friendId: item.user_id,
-          profile: item.profiles as FriendProfile
+          profile: item.profiles
         }))
       ];
       
@@ -485,14 +494,13 @@ const Messages = () => {
     setContacts(prev => [...prev, newContact]);
     setActiveContact(newContact);
   };
-  
-  // Filter friends based on search
-  const filteredFriends = allFriends.filter(friend => {
-    if (!friendsSearchQuery) return true;
-    
-    return friend.displayName.toLowerCase().includes(friendsSearchQuery.toLowerCase()) ||
-           friend.username.toLowerCase().includes(friendsSearchQuery.toLowerCase());
-  });
+
+  const createGroupChat = () => {
+    // This would be implemented to create a group chat
+    console.log('Creating group chat with selected friends');
+    setIsGroupChatModalOpen(false);
+    // Add group chat creation logic here
+  };
 
   return (
     <AppLayout>
@@ -500,10 +508,56 @@ const Messages = () => {
         <AdBanner adSlot="5082313008" />
       
         <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mt-4">
-          <Card className="flex-1 flex flex-col h-[calc(100vh-250px)] bg-card">
-            <div className="flex flex-col md:flex-row h-full">
-              {/* Left side: Contacts */}
-              <div className="flex-none w-full md:w-80 md:border-r flex flex-col overflow-hidden max-h-[300px] md:max-h-none">
+          <Card className="flex-1 flex flex-col h-[calc(100vh-250px)] bg-gradient-to-b from-background to-background/95 shadow-md border-opacity-40">
+            <div className="flex flex-col md:flex-row h-full rounded-lg overflow-hidden">
+              {/* Left side: Contacts with improved styling */}
+              <div className="flex-none w-full md:w-80 md:border-r border-opacity-30 flex flex-col overflow-hidden max-h-[300px] md:max-h-none bg-card/80">
+                <div className="p-3 border-b border-opacity-20 bg-muted/30 backdrop-blur-sm flex items-center justify-between">
+                  <h3 className="font-medium text-base">Messages</h3>
+                  <div className="flex space-x-1">
+                    <Dialog open={isGroupChatModalOpen} onOpenChange={setIsGroupChatModalOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="rounded-full" title="New Group Chat">
+                          <Users className="h-4 w-4" />
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Create Group Chat</DialogTitle>
+                          <DialogDescription>
+                            Select friends to add to your group chat
+                          </DialogDescription>
+                        </DialogHeader>
+                        {/* Group chat creation UI would go here */}
+                        <div className="py-4">
+                          {/* Friend selection would go here */}
+                          <p className="text-sm text-muted-foreground mb-4">Select friends to add to this group:</p>
+                          <div className="max-h-60 overflow-y-auto space-y-2">
+                            {allFriends.map(friend => (
+                              <div key={friend.id} className="flex items-center p-2 hover:bg-accent rounded-md">
+                                <input type="checkbox" className="mr-3" />
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                                    {friend.displayName.charAt(0)}
+                                  </div>
+                                  <span>{friend.displayName}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex justify-end space-x-2">
+                          <Button variant="outline" onClick={() => setIsGroupChatModalOpen(false)}>Cancel</Button>
+                          <Button onClick={createGroupChat}>Create Group</Button>
+                        </div>
+                      </DialogContent>
+                    </Dialog>
+                    
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={handleOpenNewChat} title="New Chat">
+                      <UserPlus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
                 <ContactsList
                   contacts={contacts}
                   activeContactId={activeContact?.id || ''}
@@ -515,8 +569,8 @@ const Messages = () => {
                 />
               </div>
               
-              {/* Right side: Messages */}
-              <div className="flex-1 flex flex-col bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+              {/* Right side: Messages with updated styling */}
+              <div className="flex-1 flex flex-col bg-card/80 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60">
                 {activeContact ? (
                   <>
                     <ChatHeader 
@@ -532,7 +586,7 @@ const Messages = () => {
                       />
                       <div ref={messagesEndRef} />
                     </div>
-                    <div className="p-3 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+                    <div className="p-3 border-t border-opacity-50 bg-card/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60">
                       <MessageInput 
                         onSendMessage={handleSendMessage} 
                         isSending={messageSending}
@@ -542,14 +596,22 @@ const Messages = () => {
                   </>
                 ) : (
                   <div className="flex flex-col items-center justify-center h-full">
-                    <UserX className="h-12 w-12 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-medium">No conversation selected</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Select a contact or start a new conversation
+                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                      <UserX className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-medium mb-2">No conversation selected</h3>
+                    <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">
+                      Select a contact from your list or find new friends to start a conversation
                     </p>
-                    <Button onClick={handleOpenNewChat}>
-                      Find Friends
-                    </Button>
+                    <div className="flex space-x-3">
+                      <Button onClick={handleOpenNewChat} variant="default">
+                        Find Friends
+                      </Button>
+                      <Button onClick={() => setIsGroupChatModalOpen(true)} variant="outline">
+                        <Users className="mr-2 h-4 w-4" />
+                        Create Group
+                      </Button>
+                    </div>
                   </div>
                 )}
               </div>
