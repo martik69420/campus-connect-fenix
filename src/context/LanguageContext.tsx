@@ -343,11 +343,6 @@ const translations: Translations = {
     nl: 'Laat anderen zien wanneer je actief bent.',
     fr: 'Laissez les autres voir quand vous êtes actif.',
   },
-  'profile.userOffline': {
-    en: 'User is offline',
-    nl: 'Gebruiker is offline',
-    fr: 'L\'utilisateur est hors ligne',
-  },
   'post.save': {
     en: 'Save',
     nl: 'Opslaan',
@@ -471,17 +466,7 @@ const translations: Translations = {
     fr: 'Hier',
   },
   
-  // Adding profile related translations
-  'profile.userOnline': {
-    en: 'Online',
-    nl: 'Online',
-    fr: 'En ligne',
-  },
-  'profile.userOffline': {
-    en: 'Offline',
-    nl: 'Offline',
-    fr: 'Hors ligne',
-  },
+  // Adding profile online status related translations - keeping only one version of each
   'profile.online': {
     en: 'Online',
     nl: 'Online',
