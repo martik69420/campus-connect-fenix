@@ -114,11 +114,11 @@ const FriendsList: React.FC<FriendsListProps> = ({
             >
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12 border">
-                  <AvatarImage src={friend.avatar_url || undefined} alt={friend.display_name} />
-                  <AvatarFallback>{friend.display_name?.charAt(0) || friend.username?.charAt(0)}</AvatarFallback>
+                  <AvatarImage src={friend.avatar || undefined} alt={friend.displayName} />
+                  <AvatarFallback>{friend.displayName?.charAt(0) || friend.username?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-medium">{friend.display_name || friend.username}</h3>
+                  <h3 className="font-medium">{friend.displayName || friend.username}</h3>
                   <p className="text-sm text-muted-foreground">@{friend.username}</p>
                 </div>
               </div>
