@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UserPlusIcon } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import OnlineStatus from '@/components/OnlineStatus';
 
 interface ProfileFriendsProps {
   username?: string;
@@ -95,25 +94,17 @@ const ProfileFriends: React.FC<ProfileFriendsProps> = ({ username }) => {
             <Card className="overflow-hidden hover:bg-accent/50 transition-colors cursor-pointer">
               <CardContent className="p-4">
                 <div className="flex items-center space-x-4">
-                  <div className="relative">
-                    <Avatar>
-                      <AvatarImage 
-                        src={friend.avatar || '/placeholder.svg'} 
-                        alt={friend.displayName} 
-                      />
-                      <AvatarFallback>
-                        {friend.displayName.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-1 -right-1">
-                      <OnlineStatus userId={friend.id} />
-                    </div>
-                  </div>
+                  <Avatar>
+                    <AvatarImage 
+                      src={friend.avatar || '/placeholder.svg'} 
+                      alt={friend.displayName} 
+                    />
+                    <AvatarFallback>
+                      {friend.displayName.charAt(0)}
+                    </AvatarFallback>
+                  </Avatar>
                   <div>
-                    <p className="font-medium flex items-center">
-                      {friend.displayName}
-                      <OnlineStatus userId={friend.id} className="ml-2" showLabel />
-                    </p>
+                    <p className="font-medium">{friend.displayName}</p>
                     <p className="text-sm text-muted-foreground">@{friend.username}</p>
                   </div>
                 </div>
