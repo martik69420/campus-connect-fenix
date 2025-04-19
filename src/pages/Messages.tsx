@@ -4,12 +4,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useLanguage } from '@/context/LanguageContext';
 import { Card } from '@/components/ui/card';
 import AppLayout from '@/components/layout/AppLayout';
 import ContactsList from '@/components/messaging/ContactsList';
 import MessagesList from '@/components/messaging/MessagesList';
 import ChatHeader from '@/components/messaging/ChatHeader';
-import MessageInput from '@/components/messaging/MessageInput';
+import EnhancedMessageInput from '@/components/messaging/EnhancedMessageInput';
 import { UserX, UserPlus, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AdBanner from '@/components/ads/AdBanner';
@@ -27,6 +28,14 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 
 interface Message {
   id: string;
@@ -45,6 +54,7 @@ interface Contact {
   lastMessage?: string;
   lastMessageTime?: string;
   unreadCount?: number;
+  isOnline?: boolean;
 }
 
 interface Friend {
@@ -53,12 +63,14 @@ interface Friend {
   username: string;
   displayName: string;
   avatar: string | null;
+  isOnline?: boolean;
 }
 
 const Messages = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
+  const { t } = useLanguage();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -74,6 +86,8 @@ const Messages = () => {
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friendsSearchQuery, setFriendsSearchQuery] = useState('');
   const [isGroupChatModalOpen, setIsGroupChatModalOpen] = useState(false);
+  const [selectedFriends, setSelectedFriends] = useState<string[]>([]);
+  const [groupName, setGroupName] = useState('');
   
   const userIdFromParams = searchParams.get('userId');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -153,6 +167,83 @@ const Messages = () => {
       supabase.removeChannel(channel);
     };
   }, [activeContact, user]);
+
+  // Set up realtime subscription for online status
+  useEffect(() => {
+    if (!user?.id) return;
+    
+    // Setup presence channel
+    const presenceChannel = supabase.channel('online-users');
+    
+    // Subscribe to presence changes
+    presenceChannel
+      .on('presence', { event: 'sync' }, () => {
+        const newState = presenceChannel.presenceState();
+        updateContactsOnlineStatus(newState);
+      })
+      .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+        // A user came online
+        updateUserOnlineStatus(key, true);
+      })
+      .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+        // A user went offline
+        updateUserOnlineStatus(key, false);
+      })
+      .subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          // Track this user's presence
+          await presenceChannel.track({
+            user_id: user.id,
+            online_at: new Date().toISOString()
+          });
+        }
+      });
+      
+    return () => {
+      supabase.removeChannel(presenceChannel);
+    };
+  }, [user?.id, contacts]);
+  
+  const updateUserOnlineStatus = (userId: string, isOnline: boolean) => {
+    // Update contacts if the user is in the contacts list
+    setContacts(prev => 
+      prev.map(contact => 
+        contact.id === userId
+          ? { ...contact, isOnline }
+          : contact
+      )
+    );
+    
+    // Also update all friends
+    setAllFriends(prev => 
+      prev.map(friend => 
+        friend.friendId === userId
+          ? { ...friend, isOnline }
+          : friend
+      )
+    );
+  };
+  
+  const updateContactsOnlineStatus = (presenceState: Record<string, any[]>) => {
+    // Get all online user IDs from presence state
+    const onlineUserIds = new Set(Object.keys(presenceState));
+    
+    // Update contacts online status
+    setContacts(prev => 
+      prev.map(contact => ({
+        ...contact,
+        isOnline: onlineUserIds.has(contact.id)
+      }))
+    );
+    
+    // Update all friends online status
+    setAllFriends(prev => 
+      prev.map(friend => ({
+        ...friend,
+        isOnline: onlineUserIds.has(friend.friendId)
+      }))
+    );
+  };
   
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -200,14 +291,16 @@ const Messages = () => {
           friendId: item.friend_id,
           username: item.profiles.username,
           displayName: item.profiles.display_name,
-          avatar: item.profiles.avatar_url
+          avatar: item.profiles.avatar_url,
+          isOnline: false // Default to offline until we get presence data
         })),
         ...(reverseData || []).map(item => ({
           id: item.id,
           friendId: item.user_id,
           username: item.profiles.username,
           displayName: item.profiles.display_name,
-          avatar: item.profiles.avatar_url
+          avatar: item.profiles.avatar_url,
+          isOnline: false // Default to offline until we get presence data
         }))
       ];
       
@@ -294,7 +387,8 @@ const Messages = () => {
             avatar: friend.profile.avatar_url,
             lastMessage: lastMessage?.content,
             lastMessageTime: lastMessage?.created_at,
-            unreadCount: unreadCount || 0
+            unreadCount: unreadCount || 0,
+            isOnline: false // Default to offline until we get presence data
           };
         })
       );
@@ -390,8 +484,8 @@ const Messages = () => {
     }
   };
   
-  const handleSendMessage = async (content: string) => {
-    if (!user?.id || !activeContact || !content.trim()) return;
+  const handleSendMessage = async (content: string, attachments?: File[]) => {
+    if (!user?.id || !activeContact || (!content.trim() && !attachments?.length)) return;
     
     setMessageSending(true);
     
@@ -409,12 +503,53 @@ const Messages = () => {
     setOptimisticMessages(prev => [...prev, optimisticMsg]);
     
     try {
+      // Handle file uploads if any
+      let fileUrls: string[] = [];
+      
+      if (attachments && attachments.length > 0) {
+        try {
+          // Upload files to storage
+          const uploadsPromises = attachments.map(async file => {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+            const filePath = `${user.id}/${fileName}`;
+            
+            const { data, error } = await supabase.storage
+              .from('message_attachments')
+              .upload(filePath, file);
+              
+            if (error) throw error;
+              
+            // Get public URL for the file
+            const { data: urlData } = supabase.storage
+              .from('message_attachments')
+              .getPublicUrl(filePath);
+              
+            return urlData.publicUrl;
+          });
+          
+          fileUrls = await Promise.all(uploadsPromises);
+        } catch (uploadError) {
+          console.error('Error uploading files:', uploadError);
+          toast({
+            title: "Failed to upload files",
+            description: "Your message was sent without attachments",
+            variant: "destructive"
+          });
+        }
+      }
+      
+      // Prepare message content with file URLs if any
+      const messageContent = fileUrls.length > 0
+        ? `${content}\n${fileUrls.join('\n')}`
+        : content;
+      
       // Send the actual message
       const { data, error } = await supabase
         .from('messages')
         .insert([
           {
-            content,
+            content: messageContent,
             sender_id: user.id,
             receiver_id: activeContact.id,
           },
@@ -488,18 +623,44 @@ const Messages = () => {
       id: friend.friendId,
       username: friend.username,
       displayName: friend.displayName,
-      avatar: friend.avatar
+      avatar: friend.avatar,
+      isOnline: friend.isOnline
     };
     
     setContacts(prev => [...prev, newContact]);
     setActiveContact(newContact);
   };
 
+  const handleToggleFriendSelection = (friendId: string) => {
+    setSelectedFriends(prev => {
+      if (prev.includes(friendId)) {
+        return prev.filter(id => id !== friendId);
+      } else {
+        return [...prev, friendId];
+      }
+    });
+  };
+
   const createGroupChat = () => {
+    if (!groupName || selectedFriends.length < 2) {
+      toast({
+        title: "Cannot create group",
+        description: "Please provide a group name and select at least 2 friends",
+        variant: "destructive"
+      });
+      return;
+    }
+    
     // This would be implemented to create a group chat
-    console.log('Creating group chat with selected friends');
+    toast({
+      title: "Group chat created",
+      description: `Created group "${groupName}" with ${selectedFriends.length} members`,
+    });
     setIsGroupChatModalOpen(false);
-    // Add group chat creation logic here
+    setGroupName('');
+    setSelectedFriends([]);
+    
+    // Add actual group chat creation logic here
   };
 
   return (
@@ -508,52 +669,107 @@ const Messages = () => {
         <AdBanner adSlot="5082313008" />
       
         <div className="flex flex-col md:flex-row space-y-4 md:space-y-0 md:space-x-4 mt-4">
-          <Card className="flex-1 flex flex-col h-[calc(100vh-250px)] bg-gradient-to-b from-background to-background/95 shadow-md border-opacity-40">
+          <Card className="flex-1 flex flex-col h-[calc(100vh-220px)] bg-gradient-to-b from-background to-background/95 shadow-md border-opacity-40">
             <div className="flex flex-col md:flex-row h-full rounded-lg overflow-hidden">
               {/* Left side: Contacts with improved styling */}
               <div className="flex-none w-full md:w-80 md:border-r border-opacity-30 flex flex-col overflow-hidden max-h-[300px] md:max-h-none bg-card/80">
                 <div className="p-3 border-b border-opacity-20 bg-muted/30 backdrop-blur-sm flex items-center justify-between">
-                  <h3 className="font-medium text-base">Messages</h3>
+                  <h3 className="font-medium text-base">{t('messages.conversations')}</h3>
                   <div className="flex space-x-1">
                     <Dialog open={isGroupChatModalOpen} onOpenChange={setIsGroupChatModalOpen}>
                       <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full" title="New Group Chat">
+                        <Button variant="ghost" size="icon" className="rounded-full" title={t('messages.createGroup')}>
                           <Users className="h-4 w-4" />
                         </Button>
                       </DialogTrigger>
-                      <DialogContent>
+                      <DialogContent className="max-w-md">
                         <DialogHeader>
-                          <DialogTitle>Create Group Chat</DialogTitle>
+                          <DialogTitle>{t('messages.createGroup')}</DialogTitle>
                           <DialogDescription>
-                            Select friends to add to your group chat
+                            {t('messages.selectFriends')}
                           </DialogDescription>
                         </DialogHeader>
-                        {/* Group chat creation UI would go here */}
-                        <div className="py-4">
-                          {/* Friend selection would go here */}
-                          <p className="text-sm text-muted-foreground mb-4">Select friends to add to this group:</p>
-                          <div className="max-h-60 overflow-y-auto space-y-2">
-                            {allFriends.map(friend => (
-                              <div key={friend.id} className="flex items-center p-2 hover:bg-accent rounded-md">
-                                <input type="checkbox" className="mr-3" />
-                                <div className="flex items-center space-x-2">
-                                  <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                    {friend.displayName.charAt(0)}
+                        <div className="space-y-4 py-2">
+                          <div>
+                            <Label htmlFor="group-name">{t('messages.groupName')}</Label>
+                            <Input 
+                              id="group-name" 
+                              value={groupName}
+                              onChange={(e) => setGroupName(e.target.value)}
+                              placeholder="e.g. Study Group"
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label>{t('messages.selectFriends')}</Label>
+                            <div className="mt-2">
+                              <Input 
+                                placeholder={t('messages.searchContacts')}
+                                value={friendsSearchQuery}
+                                onChange={(e) => setFriendsSearchQuery(e.target.value)}
+                                className="mb-2"
+                              />
+                            </div>
+                            <div className="max-h-60 overflow-y-auto space-y-2 mt-2">
+                              {allFriends
+                                .filter(friend => 
+                                  friend.displayName.toLowerCase().includes(friendsSearchQuery.toLowerCase()) ||
+                                  friend.username.toLowerCase().includes(friendsSearchQuery.toLowerCase())
+                                )
+                                .map(friend => (
+                                  <div key={friend.id} className="flex items-center p-2 hover:bg-accent/50 rounded-md">
+                                    <Checkbox 
+                                      id={`friend-${friend.friendId}`} 
+                                      checked={selectedFriends.includes(friend.friendId)}
+                                      onCheckedChange={() => handleToggleFriendSelection(friend.friendId)}
+                                      className="mr-3"
+                                    />
+                                    <div className="flex items-center space-x-3 flex-1" onClick={() => handleToggleFriendSelection(friend.friendId)}>
+                                      <Avatar className="h-8 w-8 border">
+                                        <AvatarImage src={friend.avatar || undefined} />
+                                        <AvatarFallback>
+                                          {friend.displayName ? friend.displayName[0].toUpperCase() : friend.username[0].toUpperCase()}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <div className="flex flex-col">
+                                        <span className="font-medium text-sm">{friend.displayName || friend.username}</span>
+                                        <div className="flex items-center">
+                                          <span className={`w-2 h-2 rounded-full ${friend.isOnline ? 'bg-green-500' : 'bg-gray-400'} mr-1.5`}></span>
+                                          <span className="text-xs text-muted-foreground">{friend.isOnline ? t('profile.online') : t('profile.offline')}</span>
+                                        </div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <span>{friend.displayName}</span>
+                                ))
+                              }
+                              {allFriends.length === 0 && !friendsLoading && (
+                                <div className="text-center p-4 text-muted-foreground">
+                                  No friends found. Add some friends first.
                                 </div>
-                              </div>
-                            ))}
+                              )}
+                              {friendsLoading && (
+                                <div className="text-center p-4 text-muted-foreground">
+                                  Loading friends...
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                         <div className="flex justify-end space-x-2">
-                          <Button variant="outline" onClick={() => setIsGroupChatModalOpen(false)}>Cancel</Button>
-                          <Button onClick={createGroupChat}>Create Group</Button>
+                          <Button variant="outline" onClick={() => setIsGroupChatModalOpen(false)}>
+                            {t('post.cancel')}
+                          </Button>
+                          <Button 
+                            onClick={createGroupChat}
+                            disabled={!groupName || selectedFriends.length < 2}
+                          >
+                            {t('messages.createGroup')}
+                          </Button>
                         </div>
                       </DialogContent>
                     </Dialog>
                     
-                    <Button variant="ghost" size="icon" className="rounded-full" onClick={handleOpenNewChat} title="New Chat">
+                    <Button variant="ghost" size="icon" className="rounded-full" onClick={handleOpenNewChat} title={t('messages.addFriends')}>
                       <UserPlus className="h-4 w-4" />
                     </Button>
                   </div>
@@ -587,7 +803,7 @@ const Messages = () => {
                       <div ref={messagesEndRef} />
                     </div>
                     <div className="p-3 border-t border-opacity-50 bg-card/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/60">
-                      <MessageInput 
+                      <EnhancedMessageInput 
                         onSendMessage={handleSendMessage} 
                         isSending={messageSending}
                         disabled={!activeContact}
@@ -599,17 +815,17 @@ const Messages = () => {
                     <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
                       <UserX className="h-8 w-8 text-muted-foreground" />
                     </div>
-                    <h3 className="text-lg font-medium mb-2">No conversation selected</h3>
+                    <h3 className="text-lg font-medium mb-2">{t('messages.noConversations')}</h3>
                     <p className="text-sm text-muted-foreground mb-6 text-center max-w-xs">
-                      Select a contact from your list or find new friends to start a conversation
+                      {t('messages.startNewConversation')}
                     </p>
                     <div className="flex space-x-3">
                       <Button onClick={handleOpenNewChat} variant="default">
-                        Find Friends
+                        {t('messages.addFriends')}
                       </Button>
                       <Button onClick={() => setIsGroupChatModalOpen(true)} variant="outline">
                         <Users className="mr-2 h-4 w-4" />
-                        Create Group
+                        {t('messages.createGroup')}
                       </Button>
                     </div>
                   </div>

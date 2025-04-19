@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
 // Define the shape of the translation object for each language
@@ -414,7 +415,7 @@ const translations: Translations = {
     nl: 'resultaten',
     fr: 'résultats',
   },
-  // Adding missing message translations
+  // Adding messages translations
   'messages.conversations': {
     en: 'Conversations',
     nl: 'Gesprekken',
@@ -465,8 +466,53 @@ const translations: Translations = {
     nl: 'Gisteren',
     fr: 'Hier',
   },
+  'messages.createGroup': {
+    en: 'Create Group',
+    nl: 'Groep Maken',
+    fr: 'Créer un Groupe',
+  },
+  'messages.addFriends': {
+    en: 'Add Friends',
+    nl: 'Vrienden Toevoegen',
+    fr: 'Ajouter des Amis',
+  },
+  'messages.selectFriends': {
+    en: 'Select friends',
+    nl: 'Vrienden selecteren',
+    fr: 'Sélectionner des amis',
+  },
+  'messages.groupName': {
+    en: 'Group Name',
+    nl: 'Groepsnaam',
+    fr: 'Nom du Groupe',
+  },
+  'messages.attachFile': {
+    en: 'Attach File',
+    nl: 'Bestand Toevoegen',
+    fr: 'Joindre un Fichier',
+  },
+  'messages.emoji': {
+    en: 'Emoji',
+    nl: 'Emoji',
+    fr: 'Emoji',
+  },
+  'messages.call': {
+    en: 'Call',
+    nl: 'Bellen',
+    fr: 'Appeler',
+  },
+  'messages.videoCall': {
+    en: 'Video Call',
+    nl: 'Videogesprek',
+    fr: 'Appel Vidéo',
+  },
+  'messages.audioCall': {
+    en: 'Audio Call',
+    nl: 'Audiogesprek',
+    fr: 'Appel Audio',
+  },
   
-  // Adding profile online status related translations - keeping only one version of each
+  // Online status related translations
   'profile.online': {
     en: 'Online',
     nl: 'Online',
@@ -476,6 +522,80 @@ const translations: Translations = {
     en: 'Offline',
     nl: 'Offline',
     fr: 'Hors ligne',
+  },
+  
+  // Post editing and mentions
+  'post.edit': {
+    en: 'Edit Post',
+    nl: 'Bericht Bewerken',
+    fr: 'Modifier le Message',
+  },
+  'post.delete': {
+    en: 'Delete Post',
+    nl: 'Bericht Verwijderen',
+    fr: 'Supprimer le Message',
+  },
+  'post.report': {
+    en: 'Report Post',
+    nl: 'Bericht Melden',
+    fr: 'Signaler le Message',
+  },
+  'post.cancel': {
+    en: 'Cancel',
+    nl: 'Annuleren',
+    fr: 'Annuler',
+  },
+  'post.saveChanges': {
+    en: 'Save Changes',
+    nl: 'Wijzigingen Opslaan',
+    fr: 'Enregistrer les Modifications',
+  },
+  'post.mention': {
+    en: 'Mention someone with @',
+    nl: 'Vermeld iemand met @',
+    fr: 'Mentionnez quelqu\'un avec @',
+  },
+  'post.addImage': {
+    en: 'Add Image',
+    nl: 'Afbeelding Toevoegen',
+    fr: 'Ajouter une Image',
+  },
+  'post.addEmoji': {
+    en: 'Add Emoji',
+    nl: 'Emoji Toevoegen',
+    fr: 'Ajouter un Emoji',
+  },
+  'post.mentioned': {
+    en: 'mentioned you',
+    nl: 'heeft je vermeld',
+    fr: 'vous a mentionné',
+  },
+  'post.mentionedInPost': {
+    en: 'mentioned you in a post',
+    nl: 'heeft je vermeld in een bericht',
+    fr: 'vous a mentionné dans un message',
+  },
+  
+  // Push notification messages
+  'push.newMessage': {
+    en: 'New message from',
+    nl: 'Nieuw bericht van',
+    fr: 'Nouveau message de',
+  },
+  'push.newFriendRequest': {
+    en: 'New friend request from',
+    nl: 'Nieuwe vriendschapsverzoek van',
+    fr: 'Nouvelle demande d\'ami de',
+  },
+  'push.postLiked': {
+    en: 'liked your post',
+    nl: 'vond je bericht leuk',
+    fr: 'a aimé votre message',
+  },
+  'push.newComment': {
+    en: 'commented on your post',
+    nl: 'heeft gereageerd op je bericht',
+    fr: 'a commenté votre message',
   }
 };
 
