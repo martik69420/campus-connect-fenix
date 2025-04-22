@@ -14,13 +14,23 @@ export const ProfileSettings = () => {
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
-  // Store website as a separate field since it's not directly in UserSettings
+  // Create a separate field for website since it's not in the standard UserSettings type
   const [profileData, setProfileData] = useState({
     displayName: user?.displayName || '',
     bio: user?.bio || '',
     location: user?.location || '',
-    website: user?.settings?.privacy?.website || '', // Adjust this based on where website is actually stored
+    website: '', // Initialize as empty string
   });
+  
+  // Set website value if it exists in user data (try to find it from localStorage or other sources)
+  React.useEffect(() => {
+    // Try to retrieve the website from localStorage or any other source
+    const storedWebsite = localStorage.getItem('user_website') || '';
+    setProfileData(prev => ({
+      ...prev,
+      website: storedWebsite
+    }));
+  }, []);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -36,19 +46,17 @@ export const ProfileSettings = () => {
     setIsSaving(true);
     
     try {
+      // Store website in localStorage since it's not part of the UserSettings type
+      localStorage.setItem('user_website', profileData.website);
+      
       const success = await updateUserProfile({
         displayName: profileData.displayName,
         bio: profileData.bio,
         location: profileData.location,
-        // Store website in a field that actually exists in the UserSettings type
-        // Let's store it in the user's settings object
+        // Include all required settings but don't try to add website to privacy object
         settings: {
           ...(user?.settings || {}),
-          // Make sure we're not trying to add 'website' directly to settings
-          // Instead, we'll add any website info to an existing property or 
-          // handle it according to the UserSettings interface
           theme: user?.settings?.theme || 'default',
-          // You can modify this part based on where you want to store the website data
           publicLikedPosts: user?.settings?.publicLikedPosts || false,
           publicSavedPosts: user?.settings?.publicSavedPosts || false,
           emailNotifications: user?.settings?.emailNotifications || false,
@@ -62,8 +70,8 @@ export const ProfileSettings = () => {
             allowMessages: user?.settings?.privacy?.allowMessages || 'friends',
             allowTags: user?.settings?.privacy?.allowTags || true,
             dataSharing: user?.settings?.privacy?.dataSharing || true,
-            showEmail: user?.settings?.privacy?.showEmail || false,
-            website: profileData.website // Store website in the privacy section
+            showEmail: user?.settings?.privacy?.showEmail || false
+            // Don't add website here as it's not part of the type
           }
         }
       });
