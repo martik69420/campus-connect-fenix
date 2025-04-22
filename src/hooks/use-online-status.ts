@@ -15,6 +15,15 @@ export interface OnlineStatusHook {
   getUserStatus: (userId: string) => 'online' | 'away' | 'offline';
 }
 
+// Define a type for the payload coming from Supabase real-time subscription
+interface StatusPayload {
+  new: {
+    user_id: string;
+    is_online: boolean;
+    last_active: string;
+  };
+}
+
 const useOnlineStatus = (userIds: string[]): OnlineStatusHook => {
   const [onlineStatuses, setOnlineStatuses] = useState<Record<string, UserStatus>>({});
   const { user } = useAuth();
@@ -65,17 +74,26 @@ const useOnlineStatus = (userIds: string[]): OnlineStatusHook => {
           table: 'user_status',
           filter: `user_id=in.(${userIds.join(',')})`,
         },
-        (payload) => {
-          const { new: newStatus } = payload;
-          if (newStatus) {
-            setOnlineStatuses(prev => ({
-              ...prev,
-              [newStatus.user_id]: {
-                isOnline: newStatus.is_online || false,
-                lastActive: newStatus.last_active || null,
-                status: newStatus.is_online ? 'online' : 'offline'
-              }
-            }));
+        (payload: any) => {
+          // Type check and guard for the payload
+          if (payload && payload.new && typeof payload.new === 'object') {
+            const newStatus = payload.new as {
+              user_id: string;
+              is_online: boolean;
+              last_active: string;
+            };
+            
+            // Verify required properties exist before using them
+            if ('user_id' in newStatus) {
+              setOnlineStatuses(prev => ({
+                ...prev,
+                [newStatus.user_id]: {
+                  isOnline: newStatus.is_online || false,
+                  lastActive: newStatus.last_active || null,
+                  status: newStatus.is_online ? 'online' : 'offline'
+                }
+              }));
+            }
           }
         }
       )
