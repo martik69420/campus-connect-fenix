@@ -12,10 +12,6 @@ const Home: React.FC = () => {
   return (
     <AppLayout>
       <div className="flex flex-col md:flex-row gap-6">
-        <div className="flex-1">
-          <Index />
-        </div>
-        
         {user && (
           <div className="w-full md:w-80 lg:w-96 space-y-6 flex-shrink-0">
             <Card>
@@ -28,6 +24,10 @@ const Home: React.FC = () => {
             </Card>
           </div>
         )}
+        
+        <div className="flex-1">
+          <Index />
+        </div>
       </div>
     </AppLayout>
   );

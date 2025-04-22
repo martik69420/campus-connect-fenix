@@ -67,18 +67,15 @@ export const useFriends = () => {
 
     console.log('Setting up Supabase subscription for friends table');
 
-    // Subscribe to friend status changes
-    // Fix the subscription syntax to use the correct format
     const channel = supabase
       .channel('friends-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'friends',
-        filter: `user_id=eq.${user.id}`
-      }, (payload) => {
-        console.log('Friends table change detected:', payload);
-        // Refresh friends list when changes occur
+        filter: `or(user_id.eq.${user.id},friend_id.eq.${user.id})`
+      }, () => {
+        console.log('Friends table change detected, refreshing...');
         fetchFriends();
       })
       .subscribe();
