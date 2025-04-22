@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent
@@ -26,6 +26,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { motion } from 'framer-motion';
+import OnlineStatus from '@/components/OnlineStatus';
+import useOnlineStatus from '@/hooks/use-online-status';
 
 export interface Friend {
   id: string;
@@ -53,6 +55,10 @@ const FriendsList: React.FC<FriendsListProps> = ({
   const [removingFriend, setRemovingFriend] = useState<string | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<string>('');
+  
+  // Get online status for all friends
+  const friendIds = friends.map(friend => friend.id);
+  const { isUserOnline } = useOnlineStatus(friendIds);
   
   const handleRemoveFriend = async () => {
     if (!selectedFriendId) return;
@@ -99,7 +105,7 @@ const FriendsList: React.FC<FriendsListProps> = ({
     );
   }
 
-  if (friends.length === 0) {
+  if (!friends || friends.length === 0) {
     return (
       <div className="text-center py-16 px-4">
         <UserX className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
@@ -135,9 +141,7 @@ const FriendsList: React.FC<FriendsListProps> = ({
                       <AvatarImage src={friend.avatar || '/placeholder.svg'} alt={friend.displayName} />
                       <AvatarFallback>{friend.displayName.charAt(0)}</AvatarFallback>
                     </Avatar>
-                    {friend.isOnline && (
-                      <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-background"></span>
-                    )}
+                    <OnlineStatus userId={friend.id} className="absolute bottom-0 right-0" />
                   </div>
                   <div>
                     <p className="font-medium">{friend.displayName}</p>
@@ -149,7 +153,10 @@ const FriendsList: React.FC<FriendsListProps> = ({
                   <Button 
                     variant="secondary" 
                     size="icon" 
-                    onClick={() => onMessageFriend(friend.id)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      onMessageFriend(friend.id);
+                    }}
                     title="Message"
                   >
                     <MessageSquare className="h-4 w-4" />
