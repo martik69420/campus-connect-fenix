@@ -37,7 +37,7 @@ export const fetchFriendsData = async (userId: string): Promise<Friend[]> => {
       throw error;
     }
     
-    console.log('Raw friends data:', data);
+    console.log('Raw friends data from database:', data);
     
     // Transform the data to get consistent friend objects
     const friends: Friend[] = data.map(friendRelation => {

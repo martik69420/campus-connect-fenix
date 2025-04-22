@@ -2,13 +2,11 @@
 import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import Index from './index';
-import { useFriends } from '@/components/friends/useFriends';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import FriendsForYou from '@/components/users/FriendsForYou';
 import { useAuth } from '@/context/auth';
 
 const Home: React.FC = () => {
-  const { friends, isLoading: friendsLoading } = useFriends();
   const { user } = useAuth();
 
   return (

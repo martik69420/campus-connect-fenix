@@ -28,16 +28,7 @@ import {
 import { motion } from 'framer-motion';
 import OnlineStatus from '@/components/OnlineStatus';
 import useOnlineStatus from '@/hooks/use-online-status';
-
-export interface Friend {
-  id: string;
-  username: string;
-  displayName: string;
-  avatar?: string;
-  lastActive?: string;
-  isOnline?: boolean;
-  school?: string;
-}
+import { Friend } from './types';
 
 interface FriendsListProps {
   friends: Friend[];
@@ -56,8 +47,13 @@ const FriendsList: React.FC<FriendsListProps> = ({
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
   const [selectedFriendId, setSelectedFriendId] = useState<string>('');
   
+  // Debug log friends data
+  useEffect(() => {
+    console.log('FriendsList component received friends:', friends);
+  }, [friends]);
+  
   // Get online status for all friends
-  const friendIds = friends.map(friend => friend.id);
+  const friendIds = friends?.map(friend => friend.id) || [];
   const { isUserOnline } = useOnlineStatus(friendIds);
   
   const handleRemoveFriend = async () => {

@@ -26,13 +26,16 @@ export const useFriends = () => {
 
   // Fetch friends and friend requests
   const fetchFriends = useCallback(async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      console.log('No user ID available, cannot fetch friends');
+      setIsLoading(false);
+      return;
+    }
     
     setIsLoading(true);
+    console.log('Starting to fetch friends data for user:', user.id);
     
     try {
-      console.log('Fetching friends data for user:', user.id);
-      
       // Fetch all data in parallel
       const [friendsData, receivedData, sentData] = await Promise.all([
         fetchFriendsData(user.id),
@@ -40,9 +43,9 @@ export const useFriends = () => {
         fetchSentRequests(user.id)
       ]);
       
-      console.log('Fetched friends:', friendsData);
-      console.log('Fetched received requests:', receivedData);
-      console.log('Fetched sent requests:', sentData);
+      console.log(`Successfully fetched ${friendsData.length} friends`);
+      console.log(`Successfully fetched ${receivedData.length} received requests`);
+      console.log(`Successfully fetched ${sentData.length} sent requests`);
       
       setFriends(friendsData);
       setReceivedRequests(receivedData);
@@ -63,6 +66,8 @@ export const useFriends = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    console.log('Setting up Supabase subscription for friends table');
+
     // Subscribe to friend status changes
     const channel = supabase
       .channel('friends-changes')
@@ -72,7 +77,8 @@ export const useFriends = () => {
           event: '*',
           schema: 'public',
           table: 'friends',
-          filter: `user_id=eq.${user.id},friend_id=eq.${user.id}`
+          filter: `user_id=eq.${user.id},friend_id=eq.${user.id}`,
+          or: `user_id=eq.${user.id},friend_id=eq.${user.id}`
         },
         (payload) => {
           console.log('Friends table change detected:', payload);
@@ -83,6 +89,7 @@ export const useFriends = () => {
       .subscribe();
 
     return () => {
+      console.log('Cleaning up Supabase subscription');
       supabase.removeChannel(channel);
     };
   }, [user?.id, fetchFriends]);
@@ -92,6 +99,7 @@ export const useFriends = () => {
     if (!user?.id) return false;
     
     try {
+      console.log(`Sending friend request from ${user.id} to ${friendId}`);
       const success = await sendFriendRequest(user.id, friendId);
       if (success) {
         // Refetch to update the UI
@@ -196,6 +204,7 @@ export const useFriends = () => {
   // Load friends when component mounts
   useEffect(() => {
     if (user?.id) {
+      console.log('Initial friends data load');
       fetchFriends();
     }
   }, [user?.id, fetchFriends]);

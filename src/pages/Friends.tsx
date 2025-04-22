@@ -26,10 +26,25 @@ const Friends = () => {
     acceptFriendRequest, 
     rejectFriendRequest, 
     removeFriend,
-    sendFriendRequest 
+    sendFriendRequest,
+    fetchFriends 
   } = useFriends();
 
   const [activeTab, setActiveTab] = useState('all-friends');
+
+  // Log state for debugging
+  useEffect(() => {
+    console.log('Current friends state:', friends);
+    console.log('Is loading state:', isLoading);
+  }, [friends, isLoading]);
+
+  // Force refresh when tab is selected
+  useEffect(() => {
+    if (activeTab === 'all-friends' && user?.id) {
+      console.log('Refreshing friends data from tab selection');
+      fetchFriends();
+    }
+  }, [activeTab, user?.id, fetchFriends]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -54,11 +69,12 @@ const Friends = () => {
     await rejectFriendRequest(requestId);
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading) {
     return (
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading authentication...</span>
         </div>
       </AppLayout>
     );
@@ -101,7 +117,7 @@ const Friends = () => {
           
           <TabsContent value="all-friends">
             <FriendsList 
-              friends={friends as any}
+              friends={friends}
               loading={isLoading}
               onRemoveFriend={handleRemoveFriend}
               onMessageFriend={handleMessageFriend}
@@ -117,7 +133,7 @@ const Friends = () => {
               </Card>
             }>
               <FriendRequestsTab 
-                requests={receivedRequests as any}
+                requests={receivedRequests}
                 loading={isLoading}
                 onAccept={handleAcceptRequest}
                 onDecline={handleRejectRequest}
@@ -134,7 +150,7 @@ const Friends = () => {
               </Card>
             }>
               <SentRequestsTab 
-                requests={sentRequests as any}
+                requests={sentRequests}
                 loading={isLoading} 
                 onCancel={handleRejectRequest}
               />
