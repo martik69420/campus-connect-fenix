@@ -15,10 +15,10 @@ export const ProfileSettings = () => {
   const [isSaving, setIsSaving] = useState(false);
   
   const [profileData, setProfileData] = useState({
-    displayName: user?.display_name || '',
+    displayName: user?.displayName || '',
     bio: user?.bio || '',
     location: user?.location || '',
-    website: user?.website || '',
+    website: user?.settings?.website || '',
   });
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -36,10 +36,13 @@ export const ProfileSettings = () => {
     
     try {
       const success = await updateUserProfile({
-        display_name: profileData.displayName,
+        displayName: profileData.displayName,
         bio: profileData.bio,
         location: profileData.location,
-        website: profileData.website,
+        settings: {
+          ...(user?.settings || {}),
+          website: profileData.website,
+        }
       });
       
       if (success) {
@@ -66,7 +69,7 @@ export const ProfileSettings = () => {
   };
   
   return (
-    <Card>
+    <Card className="mb-8">
       <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-4">
         <CardTitle className="text-xl flex items-center">
           <User className="h-5 w-5 mr-2 text-primary" />
