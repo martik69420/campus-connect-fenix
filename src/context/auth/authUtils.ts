@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData, UserSettings } from './types';
 
@@ -303,7 +304,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       // Sign in with username
       console.log("Login attempt using username:", usernameOrEmail);
       
-      // First find all profiles that match this username (case insensitive)
+      // First find the profile that matches this username
       const { data: profileMatches, error: matchError } = await supabase
         .from('profiles')
         .select('*')
@@ -316,7 +317,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
       
       console.log(`Found ${profileMatches.length} matching profiles for username: ${usernameOrEmail}`);
       
-      // Check if any profile has an auth account linked
+      // Check if any profile has an email
       let foundAuthAccount = false;
       
       // Try each matching profile (in case of duplicate usernames)
@@ -344,12 +345,12 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           if (data?.user) {
             console.log("Login successful for user:", data.user.id);
             
-            // Get the complete and fresh profile data
+            // Get the complete profile data
             const { data: completeProfile } = await supabase
               .from('profiles')
               .select('*')
               .eq('id', data.user.id)
-              .maybeSingle(); // Use maybeSingle here too
+              .maybeSingle();
             
             return formatUser(data.user, completeProfile || profile);
           }
@@ -410,6 +411,7 @@ export async function registerUser(
     
     if (data?.user) {
       try {
+        // Create the profile directly after signup
         await createProfile(data.user.id, username, displayName, school);
         
         const user: User = {
@@ -471,7 +473,7 @@ export async function getCurrentUser(): Promise<User | null> {
       .from('profiles')
       .select('*')
       .eq('id', session.user.id)
-      .single();
+      .maybeSingle();
       
     if (error || !profile) {
       console.warn('Profile not found for user, attempting to create one');
@@ -486,7 +488,7 @@ export async function getCurrentUser(): Promise<User | null> {
         .from('profiles')
         .select('*')
         .eq('id', session.user.id)
-        .single();
+        .maybeSingle();
         
       if (newProfile) {
         return formatUser(session.user, newProfile);
@@ -514,6 +516,7 @@ export async function updateUserProfile(userId: string, data: ProfileUpdateData)
     if (data.school !== undefined) updateData.school = data.school;
     if (data.bio !== undefined) updateData.bio = data.bio;
     if (data.interests !== undefined) updateData.interests = data.interests;
+    if (data.location !== undefined) updateData.location = data.location;
     if (data.settings !== undefined) updateData.settings = data.settings;
     
     const { error } = await supabase

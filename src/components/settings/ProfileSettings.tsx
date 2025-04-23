@@ -19,18 +19,8 @@ export const ProfileSettings = () => {
     displayName: user?.displayName || '',
     bio: user?.bio || '',
     location: user?.location || '',
-    website: '', // Initialize as empty string
+    website: localStorage.getItem('user_website') || '', // Initialize from localStorage
   });
-  
-  // Set website value if it exists in user data (try to find it from localStorage or other sources)
-  React.useEffect(() => {
-    // Try to retrieve the website from localStorage or any other source
-    const storedWebsite = localStorage.getItem('user_website') || '';
-    setProfileData(prev => ({
-      ...prev,
-      website: storedWebsite
-    }));
-  }, []);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -41,7 +31,7 @@ export const ProfileSettings = () => {
   };
   
   const saveProfileData = async () => {
-    if (!updateUserProfile) return;
+    if (!user || !updateUserProfile) return;
     
     setIsSaving(true);
     
@@ -53,27 +43,6 @@ export const ProfileSettings = () => {
         displayName: profileData.displayName,
         bio: profileData.bio,
         location: profileData.location,
-        // Include all required settings but don't try to add website to privacy object
-        settings: {
-          ...(user?.settings || {}),
-          theme: user?.settings?.theme || 'default',
-          publicLikedPosts: user?.settings?.publicLikedPosts || false,
-          publicSavedPosts: user?.settings?.publicSavedPosts || false,
-          emailNotifications: user?.settings?.emailNotifications || false,
-          pushNotifications: user?.settings?.pushNotifications || false,
-          privacy: {
-            ...(user?.settings?.privacy || {}),
-            profileVisibility: user?.settings?.privacy?.profileVisibility || 'public',
-            onlineStatus: user?.settings?.privacy?.onlineStatus || true,
-            friendRequests: user?.settings?.privacy?.friendRequests || true,
-            showActivity: user?.settings?.privacy?.showActivity || true,
-            allowMessages: user?.settings?.privacy?.allowMessages || 'friends',
-            allowTags: user?.settings?.privacy?.allowTags || true,
-            dataSharing: user?.settings?.privacy?.dataSharing || true,
-            showEmail: user?.settings?.privacy?.showEmail || false
-            // Don't add website here as it's not part of the type
-          }
-        }
       });
       
       if (success) {
