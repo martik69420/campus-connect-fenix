@@ -204,15 +204,29 @@ export async function doesProfileExist(usernameOrEmail: string): Promise<boolean
     // Check if it's an email or username
     const isEmail = usernameOrEmail.includes('@');
     
-    const { data } = await supabase
-      .from('profiles')
-      .select('id')
-      .or(
-        isEmail 
-          ? `email.ilike.${usernameOrEmail}`
-          : `username.ilike.${usernameOrEmail}`
-      )
-      .limit(1);
+    let query;
+    if (isEmail) {
+      // Search by email
+      query = supabase
+        .from('profiles')
+        .select('id')
+        .ilike('email', usernameOrEmail)
+        .limit(1);
+    } else {
+      // Search by username
+      query = supabase
+        .from('profiles')
+        .select('id')
+        .ilike('username', usernameOrEmail)
+        .limit(1);
+    }
+    
+    const { data, error } = await query;
+      
+    if (error) {
+      console.error('Error checking profile existence:', error);
+      return false;
+    }
       
     return !!data && data.length > 0;
   } catch (error) {
@@ -277,9 +291,9 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
-          .single();
+          .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no profile is found
         
-        if (profileError) {
+        if (profileError || !profileData) {
           console.warn('Could not find profile, attempting to create one');
           const username = sanitizeUsername(data.user.email?.split('@')[0] || '');
           const displayName = data.user.email?.split('@')[0] || '';
@@ -290,7 +304,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
-            .single();
+            .maybeSingle(); // Use maybeSingle here too
             
           return formatUser(data.user, newProfile);
         }
@@ -349,7 +363,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
               .from('profiles')
               .select('*')
               .eq('id', data.user.id)
-              .single();
+              .maybeSingle(); // Use maybeSingle here too
             
             return formatUser(data.user, completeProfile || profile);
           }
