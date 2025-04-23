@@ -742,7 +742,7 @@ export type Database = {
     }
     Functions: {
       validate_password: {
-        Args: { username: string; password: string }
+        Args: { password: string } | { username: string; password: string }
         Returns: boolean
       }
     }

@@ -9,7 +9,7 @@ export async function createProfile(userId: string, username: string, displayNam
       .from('profiles')
       .select('id')
       .eq('id', userId)
-      .single();
+      .maybeSingle();
       
     // If profile already exists, just return success
     if (existingProfile) {
@@ -17,7 +17,7 @@ export async function createProfile(userId: string, username: string, displayNam
       return true;
     }
     
-    // Create new profile
+    // Create new profile with default settings
     const { error } = await supabase.from('profiles').insert([
       {
         id: userId,
@@ -260,30 +260,16 @@ export function parseAuthError(error: any): string {
 // Login user with username or email
 export async function loginUser(usernameOrEmail: string, password: string): Promise<User | null> {
   try {
-    console.log(`Attempting to login with: ${usernameOrEmail}`);
-    
-    // Determine if input is email or username
     const isEmail = usernameOrEmail.includes('@');
     
     if (isEmail) {
       // Sign in with email directly
-      console.log("Login attempt using email");
       const { data, error } = await supabase.auth.signInWithPassword({
         email: usernameOrEmail,
         password,
       });
       
-      if (error) {
-        // Check if profile exists but auth failed
-        const profileExists = await doesProfileExist(usernameOrEmail);
-        if (profileExists) {
-          console.error('Profile exists but auth failed:', error);
-          throw new Error('Profile found but password may be incorrect or account needs reset.');
-        }
-        
-        console.error('Login authentication failed:', error);
-        throw error;
-      }
+      if (error) throw error;
       
       if (data?.user) {
         // Get user profile data
@@ -291,10 +277,10 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
-          .maybeSingle(); // Use maybeSingle instead of single to avoid errors when no profile is found
+          .maybeSingle();
         
         if (profileError || !profileData) {
-          console.warn('Could not find profile, attempting to create one');
+          console.warn('Profile not found for user, attempting to create one');
           const username = sanitizeUsername(data.user.email?.split('@')[0] || '');
           const displayName = data.user.email?.split('@')[0] || '';
           await createProfile(data.user.id, username, displayName);
@@ -304,7 +290,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
             .from('profiles')
             .select('*')
             .eq('id', data.user.id)
-            .maybeSingle(); // Use maybeSingle here too
+            .maybeSingle();
             
           return formatUser(data.user, newProfile);
         }
