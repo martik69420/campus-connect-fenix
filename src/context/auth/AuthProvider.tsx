@@ -91,6 +91,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setAuthError("Error setting up user profile. Please try again.");
               }
             }
+            
+            // Handle Google sign-in specifically
+            if (event === "SIGNED_IN" && session.user.app_metadata.provider === 'google') {
+              toast({
+                title: "Welcome!",
+                description: `Successfully signed in with Google as ${session.user.email}`,
+              });
+            }
+            
           } catch (error) {
             console.error("Error getting user:", error);
             setAuthError("Error retrieving user profile");
