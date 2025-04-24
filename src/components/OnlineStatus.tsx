@@ -1,7 +1,6 @@
-
 import React from 'react';
 import useOnlineStatus from '@/hooks/use-online-status';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
 import { Wifi, WifiOff, Clock } from 'lucide-react';
 
@@ -74,40 +73,38 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   };
   
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className={`flex items-center gap-1.5 ${className}`}>
-            {showIcon ? (
-              getStatusIcon()
-            ) : (
-              <span 
-                className={`relative flex h-2.5 w-2.5 ${getStatusColor()} rounded-full`}
-              >
-                {(isOnline || isAway) && (
-                  <span className={getStatusAnimation()}></span>
-                )}
-              </span>
-            )}
-            
-            {showLabel && (
-              <span className="text-xs text-muted-foreground">
-                {getStatusText()}
-              </span>
-            )}
-            
-            {showLastActive && !isOnline && lastActive && (
-              <span className="text-xs text-muted-foreground ml-1">
-                {getLastActiveText()}
-              </span>
-            )}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{getTooltipText()}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className={`flex items-center gap-1.5 ${className}`}>
+          {showIcon ? (
+            getStatusIcon()
+          ) : (
+            <span 
+              className={`relative flex h-2.5 w-2.5 ${getStatusColor()} rounded-full`}
+            >
+              {(isOnline || isAway) && (
+                <span className={getStatusAnimation()}></span>
+              )}
+            </span>
+          )}
+          
+          {showLabel && (
+            <span className="text-xs text-muted-foreground">
+              {getStatusText()}
+            </span>
+          )}
+          
+          {showLastActive && !isOnline && lastActive && (
+            <span className="text-xs text-muted-foreground ml-1">
+              {getLastActiveText()}
+            </span>
+          )}
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{getTooltipText()}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 };
 
