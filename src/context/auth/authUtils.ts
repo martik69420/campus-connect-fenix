@@ -1,16 +1,22 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData, UserSettings } from './types';
 
 // Function to create user profile in the public.profiles table
 export async function createProfile(userId: string, username: string, displayName: string, school: string = 'Unknown School', avatarUrl: string = '/placeholder.svg') {
   try {
+    console.log("Creating profile for user:", userId);
+    
     // Check if profile already exists to prevent duplication
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: checkError } = await supabase
       .from('profiles')
       .select('id')
       .eq('id', userId)
       .maybeSingle();
+      
+    if (checkError) {
+      console.error("Error checking existing profile:", checkError);
+      throw checkError;
+    }
       
     // If profile already exists, just return success
     if (existingProfile) {
@@ -19,39 +25,38 @@ export async function createProfile(userId: string, username: string, displayNam
     }
     
     // Create new profile with default settings
-    const { error } = await supabase.from('profiles').insert([
-      {
-        id: userId,
-        username, 
-        display_name: displayName,
-        school,
-        avatar_url: avatarUrl,
-        coins: 100, // Starting coins
-        settings: {
-          publicLikedPosts: false,
-          publicSavedPosts: false,
-          emailNotifications: true,
-          pushNotifications: true,
-          theme: 'system',
-          privacy: {
-            profileVisibility: 'everyone',
-            onlineStatus: true,
-            friendRequests: true,
-            showActivity: true,
-            allowMessages: 'everyone',
-            allowTags: true,
-            dataSharing: false,
-            showEmail: false
-          }
+    const { error } = await supabase.from('profiles').insert({
+      id: userId,
+      username, 
+      display_name: displayName,
+      school,
+      avatar_url: avatarUrl,
+      coins: 100, // Starting coins
+      settings: {
+        publicLikedPosts: false,
+        publicSavedPosts: false,
+        emailNotifications: true,
+        pushNotifications: true,
+        theme: 'system',
+        privacy: {
+          profileVisibility: 'everyone',
+          onlineStatus: true,
+          friendRequests: true,
+          showActivity: true,
+          allowMessages: 'everyone',
+          allowTags: true,
+          dataSharing: false,
+          showEmail: false
         }
       }
-    ]);
+    });
     
     if (error) {
       console.error('Error creating profile:', error);
       throw error;
     }
     
+    console.log("Profile created successfully for:", userId);
     return true;
   } catch (error) {
     console.error('Error creating profile:', error);
@@ -365,7 +370,7 @@ export async function loginUser(usernameOrEmail: string, password: string): Prom
         console.error('Login failed: No valid credential match found');
         throw new Error('Invalid username or password. Please check your credentials and try again.');
       } else {
-        // If profile exists but no auth account found
+        // If profile exists but no auth account linked
         console.error('Login failed: Profile exists but no auth account linked');
         throw new Error('Account exists but needs password reset. Please use the "Forgot Password" option.');
       }
@@ -475,33 +480,49 @@ export async function getCurrentUser(): Promise<User | null> {
       .eq('id', session.user.id)
       .maybeSingle();
       
-    if (error || !profile) {
+    if (error) {
+      console.error("Error fetching profile:", error);
+      throw error;
+    }
+      
+    if (!profile) {
       console.warn('Profile not found for user, attempting to create one');
       
-      const username = sanitizeUsername(session.user.email?.split('@')[0] || '');
-      const displayName = session.user.email?.split('@')[0] || '';
+      // Extract name from Google profile data if available
+      const displayName = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '';
+      const username = sanitizeUsername(displayName || session.user.email?.split('@')[0] || '');
+      const avatarUrl = session.user.user_metadata?.avatar_url || '/placeholder.svg';
       
-      await createProfile(session.user.id, username, displayName);
-      
-      // Try to get the profile again
-      const { data: newProfile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', session.user.id)
-        .maybeSingle();
+      try {
+        await createProfile(session.user.id, username, displayName, 'Unknown School', avatarUrl);
         
-      if (newProfile) {
-        return formatUser(session.user, newProfile);
+        // Try to get the profile again
+        const { data: newProfile, error: newProfileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+          
+        if (newProfileError) {
+          throw newProfileError;
+        }
+            
+        if (newProfile) {
+          return formatUser(session.user, newProfile);
+        } else {
+          throw new Error("Failed to fetch newly created profile");
+        }
+      } catch (profileError) {
+        console.error("Error creating user profile:", profileError);
+        throw profileError;
       }
-      
-      return null;
     }
     
     // Create User object from session and profile data
     return formatUser(session.user, profile);
   } catch (error) {
     console.error('Error in getCurrentUser:', error);
-    return null;
+    throw error;
   }
 }
 

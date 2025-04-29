@@ -50,59 +50,65 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
             
             // If no valid cache, fetch fresh data
-            const currentUser = await getCurrentUser();
-            if (currentUser) {
-              setUser(currentUser);
-              setIsAuthenticated(true);
-              updateOnlineStatus(currentUser.id, true);
-              
-              // Cache the user data
-              localStorage.setItem('cached_user', JSON.stringify(currentUser));
-              localStorage.setItem('cached_user_timestamp', now.toString());
-            } else {
-              // User signed in but profile not found - attempt to create profile
-              try {
-                const username = session.user.email?.split('@')[0] || 'user';
-                const displayName = session.user.user_metadata?.displayName || username;
-                const school = session.user.user_metadata?.school || 'Unknown School';
+            setIsLoading(true);
+            try {
+              const currentUser = await getCurrentUser();
+              if (currentUser) {
+                setUser(currentUser);
+                setIsAuthenticated(true);
+                updateOnlineStatus(currentUser.id, true);
                 
-                await createProfile(session.user.id, username, displayName, school);
-                const newUser = await getCurrentUser();
-                
-                if (newUser) {
-                  setUser(newUser);
-                  setIsAuthenticated(true);
-                  
-                  // Cache the new user data
-                  localStorage.setItem('cached_user', JSON.stringify(newUser));
-                  localStorage.setItem('cached_user_timestamp', now.toString());
-                } else {
-                  // Still couldn't get user profile, sign out
-                  await supabase.auth.signOut();
-                  setUser(null);
-                  setIsAuthenticated(false);
-                  setAuthError("Failed to set up user profile. Please try again or contact support.");
-                }
-              } catch (profileError) {
-                console.error("Error creating user profile:", profileError);
-                await supabase.auth.signOut();
-                setUser(null);
-                setIsAuthenticated(false);
-                setAuthError("Error setting up user profile. Please try again.");
+                // Cache the user data
+                localStorage.setItem('cached_user', JSON.stringify(currentUser));
+                localStorage.setItem('cached_user_timestamp', now.toString());
               }
+            } catch (profileError) {
+              console.error("Error getting user profile:", profileError);
+              
+              // Try to create profile for Google users
+              if (session.user.app_metadata?.provider === 'google') {
+                try {
+                  const displayName = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '';
+                  const username = displayName.toLowerCase().replace(/\s+/g, '.') || session.user.email?.split('@')[0];
+                  const avatarUrl = session.user.user_metadata?.avatar_url || '/placeholder.svg';
+                  
+                  await createProfile(session.user.id, username, displayName, 'Unknown School', avatarUrl);
+                  
+                  // Try one more time to get the user
+                  const newUser = await getCurrentUser();
+                  if (newUser) {
+                    setUser(newUser);
+                    setIsAuthenticated(true);
+                    
+                    // Cache the new user data
+                    localStorage.setItem('cached_user', JSON.stringify(newUser));
+                    localStorage.setItem('cached_user_timestamp', now.toString());
+                    
+                    // Show welcome toast
+                    toast({
+                      title: "Welcome!",
+                      description: `Successfully signed in as ${displayName}`,
+                    });
+                  } else {
+                    throw new Error("Failed to get user after profile creation");
+                  }
+                } catch (e) {
+                  console.error("Failed to create profile for Google user:", e);
+                  toast({
+                    title: "Error",
+                    description: "Failed to create your profile. Please try again or contact support.",
+                    variant: "destructive",
+                  });
+                  // Don't sign out, let's keep the auth session
+                }
+              }
+            } finally {
+              setIsLoading(false);
             }
-            
-            // Handle Google sign-in specifically
-            if (event === "SIGNED_IN" && session.user.app_metadata.provider === 'google') {
-              toast({
-                title: "Welcome!",
-                description: `Successfully signed in with Google as ${session.user.email}`,
-              });
-            }
-            
           } catch (error) {
-            console.error("Error getting user:", error);
-            setAuthError("Error retrieving user profile");
+            console.error("Error processing auth change:", error);
+            setAuthError("Error accessing your profile");
+            setIsLoading(false);
           }
         } else if (event === "SIGNED_OUT") {
           setUser(null);
@@ -113,64 +119,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
     
-    // Initial auth state check using cache if available
+    // Initial auth state check
     const initializeAuth = async () => {
       try {
         const { data: sessionData } = await supabase.auth.getSession();
-        
         if (!sessionData.session) {
           setIsLoading(false);
           return;
         }
         
-        // Try to use cached data during initialization
-        const cachedUser = localStorage.getItem('cached_user');
-        const cachedTimestamp = localStorage.getItem('cached_user_timestamp');
-        const now = new Date().getTime();
-        
-        if (cachedUser && cachedTimestamp && (now - parseInt(cachedTimestamp)) < 300000) {
-          const userData = JSON.parse(cachedUser);
-          setUser(userData);
-          setIsAuthenticated(true);
-          
-          // Check if the user exists in the profiles table
-          const { data } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', userData.id)
-            .single();
-          
-          if (!data) {
-            // Profile doesn't exist, create it
-            console.log("Profile doesn't exist for user, creating it");
-            try {
-              const username = sessionData.session.user.email?.split('@')[0] || 'user';
-              const displayName = sessionData.session.user.user_metadata?.displayName || username;
-              const school = sessionData.session.user.user_metadata?.school || 'Unknown School';
-              
-              await createProfile(sessionData.session.user.id, username, displayName, school);
-              // Refresh user data after creating profile
-              const newUser = await getCurrentUser();
-              if (newUser) {
-                setUser(newUser);
-                localStorage.setItem('cached_user', JSON.stringify(newUser));
-                localStorage.setItem('cached_user_timestamp', now.toString());
-              }
-            } catch (error) {
-              console.error("Error creating profile during initialization:", error);
-            }
-          }
-        } else if (sessionData.session) {
-          // No valid cache, fetch fresh data
+        try {
           const currentUser = await getCurrentUser();
           if (currentUser) {
             setUser(currentUser);
             setIsAuthenticated(true);
             
             // Cache the user data
+            const now = new Date().getTime();
             localStorage.setItem('cached_user', JSON.stringify(currentUser));
             localStorage.setItem('cached_user_timestamp', now.toString());
           }
+        } catch (error) {
+          console.error("Error during initialization:", error);
+          // For initialization errors, we won't show error toasts, just silently fail
+          // as the auth listener will trigger and can handle this more gracefully
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -559,21 +531,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (!user?.id) return;
       
       setIsLoading(true);
-      const currentUser = await getCurrentUser();
-      
-      if (currentUser) {
-        setUser(currentUser);
+      try {
+        const currentUser = await getCurrentUser();
         
-        // Update cache
-        const now = new Date().getTime();
-        localStorage.setItem('cached_user', JSON.stringify(currentUser));
-        localStorage.setItem('cached_user_timestamp', now.toString());
-        
-        console.log("User data refreshed successfully");
+        if (currentUser) {
+          setUser(currentUser);
+          
+          // Update cache
+          const now = new Date().getTime();
+          localStorage.setItem('cached_user', JSON.stringify(currentUser));
+          localStorage.setItem('cached_user_timestamp', now.toString());
+          
+          console.log("User data refreshed successfully");
+        }
+      } catch (error) {
+        console.error("Error refreshing user data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to refresh your profile data",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
       }
     } catch (error: any) {
       console.error("Refresh user error:", error);
-    } finally {
       setIsLoading(false);
     }
   };

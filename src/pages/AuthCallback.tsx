@@ -9,6 +9,7 @@ const AuthCallback = () => {
   const navigate = useNavigate();
   const { refreshUser } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(true);
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -17,28 +18,35 @@ const AuthCallback = () => {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
         if (sessionError) {
+          console.error("Session error:", sessionError);
           throw sessionError;
         }
         
         if (session) {
           // If we have a session, refresh the user data
-          await refreshUser();
-          
-          toast({
-            title: "Authentication successful",
-            description: "You have successfully signed in with Google.",
-          });
-          
-          // Redirect to the home page
-          navigate('/', { replace: true });
+          try {
+            await refreshUser();
+            
+            toast({
+              title: "Authentication successful",
+              description: "You have successfully signed in with Google.",
+            });
+            
+            // Redirect to the home page
+            navigate('/', { replace: true });
+          } catch (refreshError) {
+            console.error("Error refreshing user:", refreshError);
+            setError("Your account was authenticated, but we had trouble loading your profile. Please try again.");
+            setTimeout(() => navigate('/', { replace: true }), 3000);
+          }
         } else {
           // If we don't have a session, something went wrong
-          setError("Authentication failed. Please try again.");
+          setError("Authentication failed. No session was created. Please try again.");
           
           // Redirect to login after a delay
           setTimeout(() => {
             navigate('/login', { replace: true });
-          }, 2000);
+          }, 3000);
         }
       } catch (err: any) {
         console.error("Auth callback error:", err);
@@ -47,7 +55,9 @@ const AuthCallback = () => {
         // Redirect to login after a delay
         setTimeout(() => {
           navigate('/login', { replace: true });
-        }, 2000);
+        }, 3000);
+      } finally {
+        setIsProcessing(false);
       }
     };
 
@@ -55,19 +65,25 @@ const AuthCallback = () => {
   }, [navigate, refreshUser]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md text-center">
-        {error ? (
-          <>
-            <div className="text-destructive text-xl font-bold mb-4">Authentication Failed</div>
-            <p className="text-muted-foreground">{error}</p>
-            <p className="mt-4">Redirecting you back to the login page...</p>
-          </>
-        ) : (
+    <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+      <div className="w-full max-w-md text-center p-6 rounded-lg shadow-lg border border-border bg-card">
+        {isProcessing && !error ? (
           <>
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
             <h1 className="text-2xl font-bold mb-2">Completing Authentication</h1>
             <p className="text-muted-foreground">Please wait while we complete your authentication...</p>
+          </>
+        ) : error ? (
+          <>
+            <div className="text-destructive text-xl font-bold mb-4">Authentication Failed</div>
+            <p className="text-muted-foreground mb-4">{error}</p>
+            <p className="mt-4">Redirecting you in a moment...</p>
+          </>
+        ) : (
+          <>
+            <div className="text-success text-xl font-bold mb-4">Authentication Successful!</div>
+            <p className="text-muted-foreground">You are now signed in.</p>
+            <p className="mt-4">Redirecting you to the home page...</p>
           </>
         )}
       </div>
