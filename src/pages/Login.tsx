@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useAuth } from '@/context/auth'; // Correct import path
+import { useAuth } from '@/context/auth';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,8 +11,8 @@ import RegisterForm from '@/components/auth/RegisterForm';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading } = useAuth(); // Use the auth context
-  const [activeTab, setActiveTab] = useState('login');
+  const { isAuthenticated, isLoading } = useAuth();
+  const [activeTab, setActiveTab] = React.useState('login');
 
   // Redirect if user is already authenticated
   useEffect(() => {
