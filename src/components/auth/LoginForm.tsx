@@ -126,26 +126,42 @@ const LoginForm = () => {
   const handleGoogleSignIn = async () => {
     try {
       setIsGoogleLoading(true);
+      setLoginError(null);
+      
+      // Get the current window URL to determine the host (without hash or query params)
+      const currentUrl = new URL(window.location.href);
+      const baseUrl = `${currentUrl.protocol}//${currentUrl.host}`;
+      
+      console.log("Attempting Google sign in with redirect to:", baseUrl);
+      
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${baseUrl}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
       if (error) {
+        console.error("Google sign in error:", error);
         toast({
           title: "Error",
           description: error.message,
           variant: "destructive",
         });
+        setLoginError(error.message);
       }
     } catch (error: any) {
+      console.error("Failed to sign in with Google:", error);
       toast({
         title: "Error",
         description: "Failed to sign in with Google. Please try again.",
         variant: "destructive",
       });
+      setLoginError("Failed to sign in with Google: " + error.message);
     } finally {
       setIsGoogleLoading(false);
     }

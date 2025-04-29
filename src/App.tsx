@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,6 +11,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Settings from './pages/Settings';
+import AuthCallback from './pages/AuthCallback';
 // ... any other page imports
 
 // Initialize React Query client
@@ -32,6 +34,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
               {/* Add other routes as needed */}
             </Routes>
             <Toaster />
