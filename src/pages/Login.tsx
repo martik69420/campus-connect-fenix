@@ -5,14 +5,11 @@ import { motion } from 'framer-motion';
 import { useAuth } from '@/context/auth';
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import LoginForm from '@/components/auth/LoginForm';
-import RegisterForm from '@/components/auth/RegisterForm';
+import GoogleAuthForm from '@/components/auth/GoogleAuthForm';
 
 const Login = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
-  const [activeTab, setActiveTab] = React.useState('login');
 
   // Redirect if user is already authenticated
   useEffect(() => {
@@ -57,24 +54,11 @@ const Login = () => {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl text-center">Welcome</CardTitle>
             <CardDescription className="text-center">
-              Sign in or create an account to continue
+              Sign in with your Google account to continue
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="login">
-                <LoginForm />
-              </TabsContent>
-              
-              <TabsContent value="register">
-                <RegisterForm />
-              </TabsContent>
-            </Tabs>
+            <GoogleAuthForm />
           </CardContent>
           <CardFooter className="flex justify-center border-t pt-4">
             <div className="text-sm text-muted-foreground text-center">

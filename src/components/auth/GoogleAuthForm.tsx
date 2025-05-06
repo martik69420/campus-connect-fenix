@@ -5,14 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/components/ui/use-toast';
 
-const LoginForm = () => {
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
+const GoogleAuthForm = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleAuth = async () => {
     try {
-      setIsGoogleLoading(true);
-      setLoginError(null);
+      setIsLoading(true);
+      setAuthError(null);
       
       // Get the current window URL to determine the host (without hash or query params)
       const currentUrl = new URL(window.location.href);
@@ -38,7 +38,7 @@ const LoginForm = () => {
           description: error.message,
           variant: "destructive",
         });
-        setLoginError(error.message);
+        setAuthError(error.message);
       }
     } catch (error: any) {
       console.error("Failed to sign in with Google:", error);
@@ -47,17 +47,17 @@ const LoginForm = () => {
         description: "Failed to sign in with Google. Please try again.",
         variant: "destructive",
       });
-      setLoginError("Failed to sign in with Google: " + error.message);
+      setAuthError("Failed to sign in with Google: " + error.message);
     } finally {
-      setIsGoogleLoading(false);
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="space-y-6">
-      {loginError && (
+      {authError && (
         <Alert variant="destructive" className="mb-4 bg-destructive/10 border-destructive/30 text-destructive">
-          <AlertDescription>{loginError}</AlertDescription>
+          <AlertDescription>{authError}</AlertDescription>
         </Alert>
       )}
       
@@ -65,10 +65,10 @@ const LoginForm = () => {
         type="button"
         variant="default" 
         className="w-full flex items-center justify-center gap-2"
-        onClick={handleGoogleSignIn}
-        disabled={isGoogleLoading}
+        onClick={handleGoogleAuth}
+        disabled={isLoading}
       >
-        {isGoogleLoading ? (
+        {isLoading ? (
           <>
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-b-transparent"></span>
             Connecting...
@@ -94,7 +94,7 @@ const LoginForm = () => {
               />
               <path d="M1 1h22v22H1z" fill="none" />
             </svg>
-            Sign in with Google
+            Continue with Google
           </>
         )}
       </Button>
@@ -106,4 +106,4 @@ const LoginForm = () => {
   );
 };
 
-export default LoginForm;
+export default GoogleAuthForm;
