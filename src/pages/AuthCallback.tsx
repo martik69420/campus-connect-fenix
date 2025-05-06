@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -37,7 +38,6 @@ const AuthCallback = () => {
           } catch (refreshError) {
             console.error("Error refreshing user:", refreshError);
             setError("Your account was authenticated, but we had trouble loading your profile. Please try again.");
-            setTimeout(() => navigate('/', { replace: true }), 3000);
           }
         } else {
           // If we don't have a session, something went wrong
@@ -51,11 +51,6 @@ const AuthCallback = () => {
       } catch (err: any) {
         console.error("Auth callback error:", err);
         setError(err.message || "Authentication failed. Please try again.");
-        
-        // Redirect to login after a delay
-        setTimeout(() => {
-          navigate('/login', { replace: true });
-        }, 3000);
       } finally {
         setIsProcessing(false);
       }
@@ -63,6 +58,10 @@ const AuthCallback = () => {
 
     handleAuthCallback();
   }, [navigate, refreshUser]);
+
+  const handleRetry = () => {
+    navigate('/login', { replace: true });
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
@@ -77,7 +76,7 @@ const AuthCallback = () => {
           <>
             <div className="text-destructive text-xl font-bold mb-4">Authentication Failed</div>
             <p className="text-muted-foreground mb-4">{error}</p>
-            <p className="mt-4">Redirecting you in a moment...</p>
+            <Button onClick={handleRetry} className="mt-4">Try Again</Button>
           </>
         ) : (
           <>

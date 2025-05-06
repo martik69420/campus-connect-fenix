@@ -1,3 +1,4 @@
+
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +13,9 @@ import {
   updateUserProfile,
   changePassword,
   validateCurrentPassword,
-  parseAuthError
+  parseAuthError,
+  generateUniqueUsername,
+  sanitizeUsername
 } from "./authUtils";
 import { toast } from "@/components/ui/use-toast";
 
@@ -23,7 +26,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated, setIsAuthenticated] = React.useState(false);
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [session, setSession] = React.useState<any>(null);
-
+  
   // Set up auth listener first, then check for existing session
   React.useEffect(() => {
     console.log("Setting up auth listener");
@@ -62,14 +65,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 localStorage.setItem('cached_user', JSON.stringify(currentUser));
                 localStorage.setItem('cached_user_timestamp', now.toString());
               }
-            } catch (profileError) {
+            } catch (profileError: any) {
               console.error("Error getting user profile:", profileError);
               
               // Try to create profile for Google users
               if (session.user.app_metadata?.provider === 'google') {
                 try {
-                  const displayName = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '';
-                  const username = displayName.toLowerCase().replace(/\s+/g, '.') || session.user.email?.split('@')[0];
+                  const displayName = session.user.user_metadata?.name || 
+                                    session.user.user_metadata?.full_name || 
+                                    session.user.email?.split('@')[0] || '';
+                                    
+                  const username = await generateUniqueUsername(
+                    sanitizeUsername(displayName || session.user.email?.split('@')[0] || '')
+                  );
+                  
                   const avatarUrl = session.user.user_metadata?.avatar_url || '/placeholder.svg';
                   
                   await createProfile(session.user.id, username, displayName, 'Unknown School', avatarUrl);
@@ -528,7 +537,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Refresh user data from the database
   const refreshUser = async (): Promise<void> => {
     try {
-      if (!user?.id) return;
+      if (!session?.user?.id) {
+        const { data } = await supabase.auth.getSession();
+        if (!data.session?.user?.id) {
+          console.log("No session available to refresh user data");
+          return;
+        }
+      }
       
       setIsLoading(true);
       try {
@@ -536,6 +551,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (currentUser) {
           setUser(currentUser);
+          setIsAuthenticated(true);
           
           // Update cache
           const now = new Date().getTime();

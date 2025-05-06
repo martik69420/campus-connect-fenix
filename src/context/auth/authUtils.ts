@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData, UserSettings } from './types';
 
@@ -130,8 +131,8 @@ export function formatUser(authUser: any, profileData?: any): User | null {
     id: authUser.id,
     email: authUser.email || '',
     username: profile.username || sanitizeUsername(authUser.email?.split('@')[0] || ''),
-    displayName: profile.display_name || profile.displayName || authUser.email?.split('@')[0] || '',
-    avatar: profile.avatar_url || '/placeholder.svg',
+    displayName: profile.display_name || profile.displayName || profile.name || authUser.user_metadata?.name || authUser.email?.split('@')[0] || '',
+    avatar: profile.avatar_url || authUser.user_metadata?.avatar_url || '/placeholder.svg',
     school: profile.school || 'Unknown School',
     bio: profile.bio || '',
     coins: profile.coins || 0,
@@ -489,8 +490,14 @@ export async function getCurrentUser(): Promise<User | null> {
       console.warn('Profile not found for user, attempting to create one');
       
       // Extract name from Google profile data if available
-      const displayName = session.user.user_metadata?.name || session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || '';
-      const username = sanitizeUsername(displayName || session.user.email?.split('@')[0] || '');
+      const displayName = session.user.user_metadata?.name || 
+                         session.user.user_metadata?.full_name || 
+                         session.user.email?.split('@')[0] || '';
+      
+      const username = await generateUniqueUsername(
+        sanitizeUsername(displayName || session.user.email?.split('@')[0] || '')
+      );
+      
       const avatarUrl = session.user.user_metadata?.avatar_url || '/placeholder.svg';
       
       try {
