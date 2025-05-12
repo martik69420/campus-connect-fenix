@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { User, ProfileUpdateData, UserSettings } from './types';
 
@@ -594,4 +593,26 @@ export async function changePassword(newPassword: string): Promise<boolean> {
     console.error('Error changing password:', error);
     return false;
   }
+}
+
+// Helper to clean up auth state to prevent limbo states
+export function cleanupAuthState() {
+  // Remove standard auth tokens
+  localStorage.removeItem('supabase.auth.token');
+  // Remove all Supabase auth keys from localStorage
+  Object.keys(localStorage).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      localStorage.removeItem(key);
+    }
+  });
+  // Remove from sessionStorage if in use
+  Object.keys(sessionStorage || {}).forEach((key) => {
+    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
+      sessionStorage.removeItem(key);
+    }
+  });
+  
+  // Clear cached user data
+  localStorage.removeItem('cached_user');
+  localStorage.removeItem('cached_user_timestamp');
 }

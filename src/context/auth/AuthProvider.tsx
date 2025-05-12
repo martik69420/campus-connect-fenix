@@ -1,4 +1,3 @@
-
 import * as React from "react";
 import { AuthContext } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,7 +14,8 @@ import {
   validateCurrentPassword,
   parseAuthError,
   generateUniqueUsername,
-  sanitizeUsername
+  sanitizeUsername,
+  cleanupAuthState
 } from "./authUtils";
 import { toast } from "@/components/ui/use-toast";
 
@@ -36,94 +36,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("Auth state changed:", event);
         setSession(session);
         
-        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "INITIAL_SESSION")) {
+        if (session?.user && (event === "SIGNED_IN" || event === "TOKEN_REFRESHED" || event === "USER_UPDATED")) {
           try {
-            // Cache the user data in localStorage to prevent unnecessary fetches
-            const cachedUser = localStorage.getItem('cached_user');
-            const cachedTimestamp = localStorage.getItem('cached_user_timestamp');
-            const now = new Date().getTime();
-            
-            // Use cached data if it's less than 5 minutes old
-            if (cachedUser && cachedTimestamp && (now - parseInt(cachedTimestamp)) < 300000) {
-              const userData = JSON.parse(cachedUser);
-              setUser(userData);
-              setIsAuthenticated(true);
-              updateOnlineStatus(userData.id, true);
-              return;
-            }
-            
-            // If no valid cache, fetch fresh data
-            setIsLoading(true);
-            try {
-              const currentUser = await getCurrentUser();
-              if (currentUser) {
-                setUser(currentUser);
-                setIsAuthenticated(true);
-                updateOnlineStatus(currentUser.id, true);
-                
-                // Cache the user data
-                localStorage.setItem('cached_user', JSON.stringify(currentUser));
-                localStorage.setItem('cached_user_timestamp', now.toString());
-              }
-            } catch (profileError: any) {
-              console.error("Error getting user profile:", profileError);
-              
-              // Try to create profile for Google users
-              if (session.user.app_metadata?.provider === 'google') {
-                try {
-                  const displayName = session.user.user_metadata?.name || 
-                                    session.user.user_metadata?.full_name || 
-                                    session.user.email?.split('@')[0] || '';
-                                    
-                  const username = await generateUniqueUsername(
-                    sanitizeUsername(displayName || session.user.email?.split('@')[0] || '')
-                  );
+            // Use setTimeout to prevent potential deadlocks with Supabase auth
+            setTimeout(async () => {
+              try {
+                setIsLoading(true);
+                const currentUser = await getCurrentUser();
+                if (currentUser) {
+                  setUser(currentUser);
+                  setIsAuthenticated(true);
+                  updateOnlineStatus(currentUser.id, true);
                   
-                  const avatarUrl = session.user.user_metadata?.avatar_url || '/placeholder.svg';
-                  
-                  await createProfile(session.user.id, username, displayName, 'Unknown School', avatarUrl);
-                  
-                  // Try one more time to get the user
-                  const newUser = await getCurrentUser();
-                  if (newUser) {
-                    setUser(newUser);
-                    setIsAuthenticated(true);
-                    
-                    // Cache the new user data
-                    localStorage.setItem('cached_user', JSON.stringify(newUser));
-                    localStorage.setItem('cached_user_timestamp', now.toString());
-                    
-                    // Show welcome toast
-                    toast({
-                      title: "Welcome!",
-                      description: `Successfully signed in as ${displayName}`,
-                    });
-                  } else {
-                    throw new Error("Failed to get user after profile creation");
-                  }
-                } catch (e) {
-                  console.error("Failed to create profile for Google user:", e);
-                  toast({
-                    title: "Error",
-                    description: "Failed to create your profile. Please try again or contact support.",
-                    variant: "destructive",
-                  });
-                  // Don't sign out, let's keep the auth session
+                  // Cache the user data
+                  const now = new Date().getTime();
+                  localStorage.setItem('cached_user', JSON.stringify(currentUser));
+                  localStorage.setItem('cached_user_timestamp', now.toString());
                 }
+              } catch (profileError: any) {
+                console.error("Error getting user profile:", profileError);
+                
+                // Try to create profile for Google users if profile doesn't exist
+                if (session.user.app_metadata?.provider === 'google') {
+                  await handleGoogleUserProfile(session);
+                }
+              } finally {
+                setIsLoading(false);
               }
-            } finally {
-              setIsLoading(false);
-            }
+            }, 0);
           } catch (error) {
             console.error("Error processing auth change:", error);
             setAuthError("Error accessing your profile");
             setIsLoading(false);
           }
         } else if (event === "SIGNED_OUT") {
+          cleanupAuthState();
           setUser(null);
           setIsAuthenticated(false);
-          localStorage.removeItem('cached_user');
-          localStorage.removeItem('cached_user_timestamp');
         }
       }
     );
@@ -150,8 +99,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
         } catch (error) {
           console.error("Error during initialization:", error);
-          // For initialization errors, we won't show error toasts, just silently fail
-          // as the auth listener will trigger and can handle this more gracefully
         }
       } catch (error) {
         console.error("Error initializing auth:", error);
@@ -166,6 +113,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       authListener.subscription.unsubscribe();
     };
   }, []);
+
+  // Helper function to handle Google user profile creation
+  const handleGoogleUserProfile = async (session: any) => {
+    try {
+      const displayName = session.user.user_metadata?.name || 
+                        session.user.user_metadata?.full_name || 
+                        session.user.email?.split('@')[0] || '';
+                        
+      const username = await generateUniqueUsername(
+        sanitizeUsername(displayName || session.user.email?.split('@')[0] || '')
+      );
+      
+      const avatarUrl = session.user.user_metadata?.avatar_url || '/placeholder.svg';
+      
+      await createProfile(session.user.id, username, displayName, 'Unknown School', avatarUrl);
+      
+      // Try one more time to get the user
+      const newUser = await getCurrentUser();
+      if (newUser) {
+        setUser(newUser);
+        setIsAuthenticated(true);
+        
+        // Cache the new user data
+        const now = new Date().getTime();
+        localStorage.setItem('cached_user', JSON.stringify(newUser));
+        localStorage.setItem('cached_user_timestamp', now.toString());
+        
+        // Show welcome toast
+        toast({
+          title: "Welcome!",
+          description: `Successfully signed in as ${displayName}`,
+        });
+      } else {
+        throw new Error("Failed to get user after profile creation");
+      }
+    } catch (e) {
+      console.error("Failed to create profile for Google user:", e);
+      toast({
+        title: "Error",
+        description: "Failed to create your profile. Please try again or contact support.",
+        variant: "destructive",
+      });
+    }
+  };
 
   // Update online status when window focus changes
   React.useEffect(() => {
@@ -319,14 +310,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (user) {
         await updateOnlineStatus(user.id, false);
       }
-      const { error } = await supabase.auth.signOut();
+      
+      // Clean up auth state before signing out
+      cleanupAuthState();
+      
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
       if (error) {
         console.error("Error signing out:", error);
         throw error;
       }
+      
       setUser(null);
       setIsAuthenticated(false);
       console.log("User successfully logged out");
+      
+      // Force a page reload for clean state
+      window.location.href = '/login';
     } catch (error: any) {
       console.error("Logout error:", error);
     } finally {
@@ -547,6 +546,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       setIsLoading(true);
       try {
+        // Clear cached user data
+        localStorage.removeItem('cached_user');
+        localStorage.removeItem('cached_user_timestamp');
+        
         const currentUser = await getCurrentUser();
         
         if (currentUser) {

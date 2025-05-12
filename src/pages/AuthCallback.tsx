@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 import { toast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
+import { cleanupAuthState } from '@/context/auth/authUtils';
 
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -15,6 +16,9 @@ const AuthCallback = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
+        // Clear any stale auth state
+        cleanupAuthState();
+        
         // Check if we have a session
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         
@@ -29,7 +33,7 @@ const AuthCallback = () => {
             await refreshUser();
             
             toast({
-              title: "Authentication successful",
+              title: "Welcome!",
               description: "You have successfully signed in with Google.",
             });
             
@@ -69,7 +73,7 @@ const AuthCallback = () => {
         {isProcessing && !error ? (
           <>
             <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
-            <h1 className="text-2xl font-bold mb-2">Completing Authentication</h1>
+            <h1 className="text-2xl font-bold mb-2">Completing Sign In</h1>
             <p className="text-muted-foreground">Please wait while we complete your authentication...</p>
           </>
         ) : error ? (
