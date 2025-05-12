@@ -10,15 +10,15 @@ import { useToast } from '@/hooks/use-toast';
 import { User } from 'lucide-react';
 
 export const ProfileSettings = () => {
-  const { user, updateUserProfile } = useAuth();
+  const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
   const [isSaving, setIsSaving] = useState(false);
   
   // Create a separate field for website since it's not in the standard UserSettings type
   const [profileData, setProfileData] = useState({
-    displayName: user?.displayName || '',
-    bio: user?.bio || '',
-    location: user?.location || '',
+    displayName: profile?.display_name || '',
+    bio: profile?.bio || '',
+    location: profile?.location || '',
     website: localStorage.getItem('user_website') || '', // Initialize from localStorage
   });
   
@@ -31,7 +31,7 @@ export const ProfileSettings = () => {
   };
   
   const saveProfileData = async () => {
-    if (!user || !updateUserProfile) return;
+    if (!profile || !updateProfile) return;
     
     setIsSaving(true);
     
@@ -39,8 +39,8 @@ export const ProfileSettings = () => {
       // Store website in localStorage since it's not part of the UserSettings type
       localStorage.setItem('user_website', profileData.website);
       
-      const success = await updateUserProfile({
-        displayName: profileData.displayName,
+      const success = await updateProfile({
+        display_name: profileData.displayName,
         bio: profileData.bio,
         location: profileData.location,
       });

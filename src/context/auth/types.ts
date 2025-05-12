@@ -33,39 +33,26 @@ export interface UserSettings {
   };
 }
 
+// This interface should match what the Supabase database expects
 export interface ProfileUpdateData {
-  displayName?: string;
+  display_name?: string;
   username?: string;
-  avatar?: string;
+  avatar_url?: string;
   school?: string;
   bio?: string;
   interests?: string[];
-  settings?: UserSettings;
+  settings?: Record<string, any>; // Changed from UserSettings to make it compatible with Json type
   location?: string;
 }
 
+// Simplified AuthContextType to match what's actually implemented
 export interface AuthContextType {
   user: User | null;
+  profile: any | null;
+  session: any;
   isAuthenticated: boolean;
   isLoading: boolean;
-  session: any;
-  authError: string | null;
-  login: (usernameOrEmail: string, password: string) => Promise<boolean>;
-  logout: () => Promise<void>;
-  register: (
-    email: string,
-    password: string,
-    username: string,
-    displayName: string,
-    school: string
-  ) => Promise<boolean>;
-  updateProfile: (data: ProfileUpdateData) => Promise<boolean>;
-  updateUserProfile: (data: ProfileUpdateData) => Promise<boolean>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<boolean>;
-  uploadProfilePicture: (file: File) => Promise<string | null>;
-  updateUser: (userData: Partial<User>) => void;
-  addCoins: (amount: number, reason?: string) => Promise<boolean>;
-  resetPassword: (email: string) => Promise<void>;
-  updatePassword: (password: string) => Promise<void>;
-  refreshUser: () => Promise<void>;
+  refreshUser: () => Promise<any>;
+  updateProfile: (updates: ProfileUpdateData) => Promise<any>;
+  signOut: () => Promise<void>;
 }

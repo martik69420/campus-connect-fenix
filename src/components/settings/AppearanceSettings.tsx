@@ -9,9 +9,9 @@ import { Label } from '@/components/ui/label';
 import { Paintbrush } from 'lucide-react';
 
 export const AppearanceSettings = () => {
-  const { user, updateUserProfile } = useAuth();
+  const { profile, updateProfile } = useAuth();
   const { toast } = useToast();
-  const [theme, setTheme] = useState(user?.settings?.theme || 'system');
+  const [theme, setTheme] = useState(profile?.settings?.theme || 'system');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleThemeChange = (value: string) => {
@@ -19,16 +19,19 @@ export const AppearanceSettings = () => {
   };
 
   const saveAppearanceSettings = async () => {
-    if (!user || !updateUserProfile) return;
+    if (!profile || !updateProfile) return;
     
     setIsSaving(true);
     
     try {
-      const success = await updateUserProfile({
-        settings: {
-          ...user.settings,
-          theme,
-        }
+      // Create settings object with the current theme
+      const settings = {
+        ...(profile.settings || {}),
+        theme
+      };
+      
+      const success = await updateProfile({
+        settings
       });
       
       if (success) {

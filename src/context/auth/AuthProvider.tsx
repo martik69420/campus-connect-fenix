@@ -3,7 +3,7 @@ import React, { createContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from './AuthContext';
-import { ProfileUpdateData, UserSettings } from './types';
+import { ProfileUpdateData } from './types';
 import { checkIfProfileExists, createUserProfile } from './authUtils';
 import { toast } from '@/components/ui/use-toast';
 
@@ -92,9 +92,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return { error: { message: 'Not authenticated' } };
 
     try {
+      // Convert settings to a JSON-compatible format if it exists
+      const updatesToSend = {
+        ...updates
+      };
+
       const { error } = await supabase
         .from('profiles')
-        .update(updates)
+        .update(updatesToSend)
         .eq('id', user.id);
 
       if (error) throw error;
