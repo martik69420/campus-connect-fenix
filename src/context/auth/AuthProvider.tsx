@@ -1,9 +1,9 @@
 
 import React, { createContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from './AuthContext';
-import { ProfileUpdateData } from './types';
+import { ProfileUpdateData, User } from './types';
 import { checkIfProfileExists, createUserProfile } from './authUtils';
 import { toast } from '@/components/ui/use-toast';
 
@@ -15,8 +15,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
+  // Function to convert profile data to User interface
+  const convertProfileToUser = (profile: any, supabaseUser: SupabaseUser): User => {
+    return {
+      id: profile.id,
+      username: profile.username || supabaseUser.email?.split('@')[0] || '',
+      email: profile.email || supabaseUser.email || '',
+      displayName: profile.display_name || supabaseUser.email?.split('@')[0] || '',
+      avatar: profile.avatar_url || '/placeholder.svg',
+      bio: profile.bio || '',
+      school: profile.school || '',
+      coins: profile.coins || 0,
+      createdAt: profile.created_at || new Date().toISOString(),
+      isAdmin: profile.is_admin || false,
+      interests: profile.interests || [],
+      location: profile.location || '',
+      settings: profile.settings || {
+        publicLikedPosts: true,
+        publicSavedPosts: true,
+        emailNotifications: true,
+        pushNotifications: true,
+        theme: 'light',
+        privacy: {
+          profileVisibility: 'everyone',
+          onlineStatus: true,
+          friendRequests: true,
+          showActivity: true,
+          allowMessages: 'everyone',
+          allowTags: true,
+          dataSharing: false,
+          showEmail: false,
+        }
+      }
+    };
+  };
+
   // Function to fetch the user's profile from Supabase
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, supabaseUser: SupabaseUser) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
@@ -29,12 +64,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Check if profile exists, if not create it
         const profileExists = await checkIfProfileExists(userId);
         
-        if (!profileExists && user?.user_metadata) {
+        if (!profileExists && supabaseUser?.user_metadata) {
           console.log("Profile not found for user, attempting to create one");
           const created = await createUserProfile(
             userId, 
-            user.email, 
-            user.user_metadata
+            supabaseUser.email, 
+            supabaseUser.user_metadata
           );
           
           if (created) {
@@ -47,6 +82,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               
             if (newProfile) {
               setProfile(newProfile);
+              const convertedUser = convertProfileToUser(newProfile, supabaseUser);
+              setUser(convertedUser);
               return newProfile;
             }
           } else {
@@ -58,6 +95,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       setProfile(data);
+      const convertedUser = convertProfileToUser(data, supabaseUser);
+      setUser(convertedUser);
       return data;
     } catch (err) {
       console.error("Error getting user profile:", err);
@@ -77,9 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return null;
       }
 
-      setUser(session.user);
-      const userProfile = await fetchUserProfile(session.user.id);
-      
+      const userProfile = await fetchUserProfile(session.user.id, session.user);
       setIsAuthenticated(true);
       return userProfile;
     } catch (error) {
@@ -90,13 +127,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Function to update user profile
   const updateProfile = async (updates: ProfileUpdateData) => {
-    if (!user) return { error: { message: 'Not authenticated' } };
+    if (!session?.user) return { error: { message: 'Not authenticated' } };
 
     try {
       const { error } = await supabase
         .from('profiles')
         .update(updates)
-        .eq('id', user.id);
+        .eq('id', session.user.id);
 
       if (error) throw error;
 
@@ -175,11 +212,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateUserProfile = updateProfile;
 
   const uploadProfilePicture = async (file: File) => {
-    if (!user) return { error: 'Not authenticated' };
+    if (!session?.user) return { error: 'Not authenticated' };
     
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${user.id}.${fileExt}`;
+      const fileName = `${session.user.id}.${fileExt}`;
       
       const { error: uploadError } = await supabase.storage
         .from('avatars')
@@ -200,13 +237,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addCoins = async (amount: number) => {
-    if (!user) return { error: 'Not authenticated' };
+    if (!session?.user) return { error: 'Not authenticated' };
 
     try {
       const { error } = await supabase
         .from('profiles')
         .update({ coins: (profile?.coins || 0) + amount })
-        .eq('id', user.id);
+        .eq('id', session.user.id);
 
       if (error) throw error;
 
@@ -227,19 +264,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.log("Auth state changed:", event);
         
         setSession(newSession);
-        setUser(newSession?.user || null);
         
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           if (newSession?.user) {
             // Delay profile fetch to avoid potential recursive RLS issues
             setTimeout(async () => {
-              const userProfile = await fetchUserProfile(newSession.user.id);
+              const userProfile = await fetchUserProfile(newSession.user.id, newSession.user);
               setIsAuthenticated(!!userProfile);
             }, 0);
           }
         } else if (event === 'SIGNED_OUT') {
           setIsAuthenticated(false);
           setProfile(null);
+          setUser(null);
         }
       }
     );
@@ -247,11 +284,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user || null);
       
       if (session?.user) {
         try {
-          const userProfile = await fetchUserProfile(session.user.id);
+          const userProfile = await fetchUserProfile(session.user.id, session.user);
           setIsAuthenticated(!!userProfile);
         } catch (error) {
           console.error("Error during initialization:", error);

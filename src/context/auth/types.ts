@@ -1,4 +1,6 @@
 
+import { User as SupabaseUser } from '@supabase/supabase-js';
+
 export interface User {
   id: string;
   username: string;
@@ -41,7 +43,7 @@ export interface ProfileUpdateData {
   school?: string;
   bio?: string;
   interests?: string[];
-  settings?: Record<string, any>; // Changed from UserSettings to make it compatible with Json type
+  settings?: Record<string, any>;
   location?: string;
 }
 
