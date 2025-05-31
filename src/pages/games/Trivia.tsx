@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,6 +11,7 @@ interface Question {
   question: string;
   correct_answer: string;
   incorrect_answers: string[];
+  answers: string[]; // Add this to store shuffled answers
 }
 
 const Trivia = () => {
@@ -100,7 +102,7 @@ const Trivia = () => {
 
         if (error) throw error;
 
-        // Award coins based on score - using single argument
+        // Award coins based on score
         const coinsEarned = finalScore * 10;
         await addCoins(coinsEarned);
         

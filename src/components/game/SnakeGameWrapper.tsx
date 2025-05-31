@@ -47,7 +47,7 @@ const SnakeGameWrapper = () => {
 
         if (error) throw error;
 
-        // Award coins for playing - using single argument
+        // Award coins for playing
         await addCoins(finalScore);
         
         toast({
