@@ -10,6 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 // Import your pages
 import Home from './pages/Home';
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import Settings from './pages/Settings';
 import AuthCallback from './pages/AuthCallback';
 // ... any other page imports
@@ -33,6 +34,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/signup" element={<Signup />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               {/* Add other routes as needed */}

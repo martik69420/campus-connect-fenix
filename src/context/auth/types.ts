@@ -45,14 +45,22 @@ export interface ProfileUpdateData {
   location?: string;
 }
 
-// Simplified AuthContextType to match what's actually implemented
+// Complete AuthContextType to match what's actually implemented
 export interface AuthContextType {
   user: User | null;
   profile: any | null;
   session: any;
   isAuthenticated: boolean;
   isLoading: boolean;
+  authError: string | null;
   refreshUser: () => Promise<any>;
   updateProfile: (updates: ProfileUpdateData) => Promise<any>;
   signOut: () => Promise<void>;
+  login: (email: string, password: string) => Promise<{ error?: any }>;
+  logout: () => Promise<void>;
+  register: (email: string, password: string, userData?: any) => Promise<{ error?: any }>;
+  updateUser: (updates: any) => Promise<any>;
+  updateUserProfile: (updates: any) => Promise<any>;
+  uploadProfilePicture: (file: File) => Promise<any>;
+  addCoins: (amount: number) => Promise<any>;
 }

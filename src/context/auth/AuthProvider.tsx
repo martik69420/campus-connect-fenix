@@ -13,6 +13,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Function to fetch the user's profile from Supabase
   const fetchUserProfile = async (userId: string) => {
@@ -92,14 +93,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return { error: { message: 'Not authenticated' } };
 
     try {
-      // Convert settings to a JSON-compatible format if it exists
-      const updatesToSend = {
-        ...updates
-      };
-
       const { error } = await supabase
         .from('profiles')
-        .update(updatesToSend)
+        .update(updates)
         .eq('id', user.id);
 
       if (error) throw error;
@@ -109,6 +105,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return { success: true };
     } catch (error: any) {
       console.error('Error updating profile:', error);
+      return { error };
+    }
+  };
+
+  // Login function
+  const login = async (email: string, password: string) => {
+    try {
+      setAuthError(null);
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return { error };
+      }
+
+      return { data };
+    } catch (error: any) {
+      setAuthError(error.message);
+      return { error };
+    }
+  };
+
+  // Register function
+  const register = async (email: string, password: string, userData?: any) => {
+    try {
+      setAuthError(null);
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: userData || {}
+        }
+      });
+
+      if (error) {
+        setAuthError(error.message);
+        return { error };
+      }
+
+      return { data };
+    } catch (error: any) {
+      setAuthError(error.message);
       return { error };
     }
   };
@@ -123,6 +164,56 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null);
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  // Alias for signOut to match interface
+  const logout = signOut;
+
+  // Additional methods to match the interface
+  const updateUser = updateProfile;
+  const updateUserProfile = updateProfile;
+
+  const uploadProfilePicture = async (file: File) => {
+    if (!user) return { error: 'Not authenticated' };
+    
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      await updateProfile({ avatar_url: publicUrl });
+      
+      return { success: true };
+    } catch (error) {
+      return { error };
+    }
+  };
+
+  const addCoins = async (amount: number) => {
+    if (!user) return { error: 'Not authenticated' };
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ coins: (profile?.coins || 0) + amount })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      await refreshUser();
+      return { success: true };
+    } catch (error) {
+      return { error };
     }
   };
 
@@ -183,9 +274,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     session,
     isAuthenticated,
     isLoading,
+    authError,
     refreshUser,
     updateProfile,
-    signOut
+    signOut,
+    login,
+    logout,
+    register,
+    updateUser,
+    updateUserProfile,
+    uploadProfilePicture,
+    addCoins
   };
 
   return (
