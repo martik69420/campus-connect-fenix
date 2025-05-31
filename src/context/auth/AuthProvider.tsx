@@ -1,11 +1,9 @@
-
 import React, { createContext, useEffect, useState } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { AuthContext } from './AuthContext';
 import { ProfileUpdateData, User } from './types';
 import { checkIfProfileExists, createUserProfile } from './authUtils';
-import { toast } from '@/components/ui/use-toast';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -50,7 +48,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-  // Function to fetch the user's profile from Supabase
   const fetchUserProfile = async (userId: string, supabaseUser: SupabaseUser) => {
     try {
       const { data, error } = await supabase
@@ -167,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Register function
+  // Register function - updated to disable email confirmation
   const register = async (email: string, password: string, userData?: any) => {
     try {
       setAuthError(null);
@@ -175,7 +172,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         email,
         password,
         options: {
-          data: userData || {}
+          data: userData || {},
+          emailRedirectTo: undefined // Remove email confirmation
         }
       });
 
@@ -236,7 +234,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const addCoins = async (amount: number) => {
+  // Updated addCoins function to accept both signatures
+  const addCoins = async (amount: number, description?: string) => {
     if (!session?.user) return { error: 'Not authenticated' };
 
     try {
@@ -246,6 +245,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .eq('id', session.user.id);
 
       if (error) throw error;
+
+      // Optionally create a notification if description is provided
+      if (description) {
+        await supabase
+          .from('notifications')
+          .insert({
+            user_id: session.user.id,
+            type: 'coins',
+            content: description,
+            related_id: session.user.id
+          });
+      }
 
       await refreshUser();
       return { success: true };
