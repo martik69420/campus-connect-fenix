@@ -16,7 +16,19 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Settings from './pages/Settings';
 import AuthCallback from './pages/AuthCallback';
-// ... any other page imports
+import Messages from './pages/Messages';
+import Search from './pages/Search';
+import Notifications from './pages/Notifications';
+import Friends from './pages/Friends';
+import AddFriends from './pages/AddFriends';
+import Games from './pages/Games';
+import Earn from './pages/Earn';
+import Leaderboard from './pages/Leaderboard';
+import Profile from './pages/Profile';
+import Snake from './pages/games/Snake';
+import Trivia from './pages/games/Trivia';
+import FriendRequests from './pages/FriendRequests';
+import Achievements from './pages/Achievements';
 
 // Initialize React Query client
 const queryClient = new QueryClient({
@@ -43,7 +55,19 @@ function App() {
                     <Route path="/signup" element={<Signup />} />
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/auth/callback" element={<AuthCallback />} />
-                    {/* Add other routes as needed */}
+                    <Route path="/messages" element={<Messages />} />
+                    <Route path="/search" element={<Search />} />
+                    <Route path="/notifications" element={<Notifications />} />
+                    <Route path="/friends" element={<Friends />} />
+                    <Route path="/friend-requests" element={<FriendRequests />} />
+                    <Route path="/add-friends" element={<AddFriends />} />
+                    <Route path="/games" element={<Games />} />
+                    <Route path="/games/snake" element={<Snake />} />
+                    <Route path="/games/trivia" element={<Trivia />} />
+                    <Route path="/earn" element={<Earn />} />
+                    <Route path="/leaderboard" element={<Leaderboard />} />
+                    <Route path="/achievements" element={<Achievements />} />
+                    <Route path="/profile/:username" element={<Profile />} />
                   </Routes>
                   <Toaster />
                 </PostProvider>
