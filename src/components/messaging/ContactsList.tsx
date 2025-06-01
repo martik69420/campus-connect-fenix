@@ -1,6 +1,4 @@
-
 import React from 'react';
-import { useLanguage } from '@/context/LanguageContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -39,8 +37,6 @@ const ContactsList: React.FC<ContactsListProps> = ({
   setSearchQuery,
   onNewChat,
 }) => {
-  const { t } = useLanguage();
-
   const formatLastMessageTime = (dateString?: string) => {
     if (!dateString) return '';
     
@@ -82,12 +78,12 @@ const ContactsList: React.FC<ContactsListProps> = ({
   return (
     <>
       <div className="border-b p-3 dark:border-gray-800">
-        <h2 className="text-xl font-bold mb-3">{t('messages.conversations')}</h2>
+        <h2 className="text-xl font-bold mb-3">Messages</h2>
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder={t('messages.searchContacts')}
+              placeholder="Search contacts"
               className="pl-9"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -95,7 +91,7 @@ const ContactsList: React.FC<ContactsListProps> = ({
           </div>
           <Button variant="outline" size="icon" onClick={onNewChat}>
             <PlusCircle className="h-5 w-5" />
-            <span className="sr-only">{t('messages.new')}</span>
+            <span className="sr-only">New message</span>
           </Button>
         </div>
       </div>
@@ -127,11 +123,11 @@ const ContactsList: React.FC<ContactsListProps> = ({
               </>
             ) : (
               <>
-                <p className="font-medium mb-1">{t('messages.noConversations')}</p>
-                <p className="text-sm">{t('messages.startNewConversation')}</p>
+                <p className="font-medium mb-1">No conversations yet</p>
+                <p className="text-sm">Start messaging your friends</p>
                 <Button onClick={onNewChat} className="mt-4" variant="outline">
                   <PlusCircle className="h-4 w-4 mr-2" />
-                  Find Friends to Chat
+                  Start a conversation
                 </Button>
               </>
             )}

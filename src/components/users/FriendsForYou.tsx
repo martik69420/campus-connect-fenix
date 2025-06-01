@@ -221,7 +221,8 @@ const FriendsForYou: React.FC = () => {
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <Users className="h-12 w-12 text-muted-foreground mb-2 opacity-50" />
-              <p className="text-muted-foreground font-medium">No friend suggestions</p>
+              <p className="text-muted-foreground font-medium">No friends suggested for you</p>
+              <p className="text-xs text-muted-foreground mt-1">There are currently no friends suggested for you</p>
               <Button 
                 variant="outline" 
                 size="sm" 
