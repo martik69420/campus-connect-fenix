@@ -1,75 +1,89 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/context/auth';
-import { Button } from '@/components/ui/button';
+
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import AppLayout from '@/components/layout/AppLayout';
+import { Gamepad2, Trophy, Target } from 'lucide-react';
 
 const Earn = () => {
-  const { user, isAuthenticated, addCoins } = useAuth();
-  const [hasClaimedDaily, setHasClaimedDaily] = useState(false);
-
-  useEffect(() => {
-    // Check if the user has already claimed the daily reward today
-    const lastClaimed = localStorage.getItem('lastClaimed');
-    if (lastClaimed) {
-      const lastClaimedDate = new Date(parseInt(lastClaimed));
-      const today = new Date();
-      if (
-        lastClaimedDate.getDate() === today.getDate() &&
-        lastClaimedDate.getMonth() === today.getMonth() &&
-        lastClaimedDate.getFullYear() === today.getFullYear()
-      ) {
-        setHasClaimedDaily(true);
-      }
-    }
-  }, []);
-
-  const handleDailyReward = async () => {
-    if (isAuthenticated && user) {
-      const result = await addCoins(50); // Use single argument
-      if (result.success) {
-        setHasClaimedDaily(true);
-        toast({
-          title: "Daily Reward Claimed!",
-          description: "You earned 50 coins!",
-        });
-      }
-    }
-  };
-
-  useEffect(() => {
-    // Save the claim date to localStorage
-    if (hasClaimedDaily) {
-      localStorage.setItem('lastClaimed', Date.now().toString());
-    }
-  }, [hasClaimedDaily]);
+  const navigate = useNavigate();
 
   return (
-    <div className="container mx-auto py-10">
-      <Card className="w-[400px] mx-auto">
-        <CardHeader>
-          <CardTitle>Earn Coins</CardTitle>
-          <CardDescription>Complete tasks to earn coins.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <span>Daily Reward</span>
-            <Button
-              variant="outline"
-              disabled={hasClaimedDaily || !isAuthenticated}
-              onClick={handleDailyReward}
-            >
-              {hasClaimedDaily ? 'Claimed' : 'Claim 50 Coins'}
-            </Button>
+    <AppLayout>
+      <div className="container mx-auto py-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-bold mb-4">Games & Fun</h1>
+            <p className="text-muted-foreground">Play games, have fun, and compete on the leaderboard!</p>
           </div>
-          {!isAuthenticated && (
-            <p className="text-sm text-muted-foreground">
-              You must be logged in to claim rewards.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Gamepad2 className="mr-2 h-5 w-5 text-primary" />
+                  Play Games
+                </CardTitle>
+                <CardDescription>
+                  Challenge yourself with fun games like Snake and Trivia
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  onClick={() => navigate('/games/snake')} 
+                  className="w-full"
+                  variant="outline"
+                >
+                  Play Snake
+                </Button>
+                <Button 
+                  onClick={() => navigate('/games/trivia')} 
+                  className="w-full"
+                  variant="outline"
+                >
+                  Play Trivia
+                </Button>
+                <Button 
+                  onClick={() => navigate('/games')} 
+                  className="w-full"
+                >
+                  View All Games
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card className="hover:shadow-lg transition-shadow">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Trophy className="mr-2 h-5 w-5 text-primary" />
+                  Compete & Achieve
+                </CardTitle>
+                <CardDescription>
+                  Check your ranking and see how you compare with others
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <Button 
+                  onClick={() => navigate('/leaderboard')} 
+                  className="w-full"
+                  variant="outline"
+                >
+                  View Leaderboard
+                </Button>
+                <Button 
+                  onClick={() => navigate('/achievements')} 
+                  className="w-full"
+                  variant="outline"
+                >
+                  View Achievements
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </AppLayout>
   );
 };
 

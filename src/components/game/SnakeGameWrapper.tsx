@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,7 +12,7 @@ const INITIAL_FOOD = { x: 15, y: 15 };
 const INITIAL_DIRECTION = { x: 1, y: 0 };
 
 const SnakeGameWrapper = () => {
-  const { isAuthenticated, user, addCoins } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [snake, setSnake] = useState(INITIAL_SNAKE);
   const [food, setFood] = useState(INITIAL_FOOD);
@@ -34,7 +35,7 @@ const SnakeGameWrapper = () => {
     setGameEnded(true);
     setGameRunning(false);
     
-    // Save game history
+    // Save game history for leaderboard
     if (isAuthenticated && user) {
       try {
         const { data, error } = await supabase
@@ -46,19 +47,16 @@ const SnakeGameWrapper = () => {
           });
 
         if (error) throw error;
-
-        // Award coins for playing
-        await addCoins(finalScore);
         
         toast({
           title: "Game Over!",
-          description: `You scored ${finalScore} points and earned ${finalScore} coins!`,
+          description: `You scored ${finalScore} points!`,
         });
       } catch (error) {
         console.error('Error saving game:', error);
       }
     }
-  }, [gameEnded, isAuthenticated, user, addCoins]);
+  }, [gameEnded, isAuthenticated, user]);
 
   const moveSnake = useCallback(() => {
     if (gameOver || !gameRunning) return;
@@ -96,8 +94,7 @@ const SnakeGameWrapper = () => {
   }, [snake, food, direction, gameOver, gameRunning, score, handleGameEnd]);
 
   useEffect(() => {
-    const gameInterval = setInterval(moveSnake, 150); // Adjust speed as needed
-
+    const gameInterval = setInterval(moveSnake, 150);
     return () => clearInterval(gameInterval);
   }, [moveSnake]);
 
@@ -120,7 +117,6 @@ const SnakeGameWrapper = () => {
     };
 
     window.addEventListener('keydown', handleKeyDown);
-
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 

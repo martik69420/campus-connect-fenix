@@ -68,6 +68,17 @@ const ContactsList: React.FC<ContactsListProps> = ({
     });
   };
 
+  // Filter contacts based on search query
+  const filteredContacts = contacts.filter(contact => {
+    if (!searchQuery.trim()) return true;
+    
+    const query = searchQuery.toLowerCase();
+    return (
+      contact.displayName.toLowerCase().includes(query) ||
+      contact.username.toLowerCase().includes(query)
+    );
+  });
+
   return (
     <>
       <div className="border-b p-3 dark:border-gray-800">
@@ -103,22 +114,31 @@ const ContactsList: React.FC<ContactsListProps> = ({
               </div>
             ))}
           </>
-        ) : contacts.length === 0 ? (
-          // Empty state
+        ) : filteredContacts.length === 0 ? (
+          // Empty state - check if it's due to search or no contacts
           <div className="flex flex-col items-center justify-center h-full p-4 text-center text-muted-foreground">
             <div className="bg-muted/40 p-4 rounded-full mb-4">
               <User className="h-8 w-8" />
             </div>
-            <p className="font-medium mb-1">{t('messages.noConversations')}</p>
-            <p className="text-sm">{t('messages.startNewConversation')}</p>
-            <Button onClick={onNewChat} className="mt-4" variant="outline">
-              <PlusCircle className="h-4 w-4 mr-2" />
-              {t('messages.new')}
-            </Button>
+            {searchQuery.trim() ? (
+              <>
+                <p className="font-medium mb-1">No friends found</p>
+                <p className="text-sm">Try adjusting your search terms</p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium mb-1">{t('messages.noConversations')}</p>
+                <p className="text-sm">{t('messages.startNewConversation')}</p>
+                <Button onClick={onNewChat} className="mt-4" variant="outline">
+                  <PlusCircle className="h-4 w-4 mr-2" />
+                  Find Friends to Chat
+                </Button>
+              </>
+            )}
           </div>
         ) : (
           // Contact list
-          contacts.map((contact) => (
+          filteredContacts.map((contact) => (
             <button
               key={contact.id}
               className={cn(
@@ -152,7 +172,7 @@ const ContactsList: React.FC<ContactsListProps> = ({
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground truncate">
-                  {contact.lastMessage || t('messages.noMessages')}
+                  {contact.lastMessage || "Start a conversation"}
                 </p>
               </div>
               

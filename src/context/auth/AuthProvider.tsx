@@ -1,3 +1,4 @@
+
 import React, { createContext, useEffect, useState } from 'react';
 import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -23,7 +24,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       avatar: profile.avatar_url || '/placeholder.svg',
       bio: profile.bio || '',
       school: profile.school || '',
-      coins: profile.coins || 0,
+      coins: 0, // Remove coins from user data
       createdAt: profile.created_at || new Date().toISOString(),
       isAdmin: profile.is_admin || false,
       interests: profile.interests || [],
@@ -234,35 +235,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Updated addCoins function to accept both signatures
+  // Remove addCoins function since we're removing coins completely
   const addCoins = async (amount: number, description?: string) => {
-    if (!session?.user) return { error: 'Not authenticated' };
-
-    try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({ coins: (profile?.coins || 0) + amount })
-        .eq('id', session.user.id);
-
-      if (error) throw error;
-
-      // Optionally create a notification if description is provided
-      if (description) {
-        await supabase
-          .from('notifications')
-          .insert({
-            user_id: session.user.id,
-            type: 'coins',
-            content: description,
-            related_id: session.user.id
-          });
-      }
-
-      await refreshUser();
-      return { success: true };
-    } catch (error) {
-      return { error };
-    }
+    // This function is kept for compatibility but doesn't do anything
+    console.log('Coins system has been removed');
+    return { success: true };
   };
 
   // Set up auth state listener on mount
