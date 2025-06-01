@@ -21,14 +21,13 @@ interface FriendSuggestion {
 const FriendsForYou: React.FC = () => {
   const [friendSuggestions, setFriendSuggestions] = useState<FriendSuggestion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
   const [offset, setOffset] = useState(0);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Function to fetch suggestions - separated so we can call it directly
-  const fetchFriendSuggestions = async () => {
+  // Function to fetch suggestions
+  const fetchFriendSuggestions = async (newOffset = offset) => {
     if (!user?.id) return;
     
     try {
@@ -39,18 +38,12 @@ const FriendsForYou: React.FC = () => {
         .from('profiles')
         .select('*')
         .neq('id', user.id)
-        .range(offset, offset + 4)
+        .range(newOffset, newOffset + 4)
         .limit(5);
         
       if (error) throw error;
       
       let filteredUsers = users || [];
-      
-      // If no users found with current offset, reset to 0 and try again
-      if (filteredUsers.length === 0 && offset > 0) {
-        setOffset(0);
-        return; // Will trigger another fetch through the dependency change
-      }
       
       // Filter out users that are already friends
       const { data: friends } = await supabase
@@ -76,12 +69,6 @@ const FriendsForYou: React.FC = () => {
           mutual_friends: Math.floor(Math.random() * 5) + 1, // Simulate mutual friends
         }));
         
-      if (enhancedUsers.length === 0 && offset === 0) {
-        // If we still have no suggestions at offset 0, increment to try more users
-        setOffset(prev => prev + 5);
-        return;
-      }
-      
       setFriendSuggestions(enhancedUsers);
     } catch (error) {
       console.error('Error fetching friend suggestions:', error);
@@ -90,10 +77,12 @@ const FriendsForYou: React.FC = () => {
     }
   };
 
-  // Initial fetch + refetch when dependencies change
+  // Initial fetch only
   useEffect(() => {
-    fetchFriendSuggestions();
-  }, [user?.id, refreshKey, offset]);
+    if (user?.id) {
+      fetchFriendSuggestions(0);
+    }
+  }, [user?.id]);
 
   const handleFollow = async (userId: string) => {
     if (!user?.id) return;
@@ -115,11 +104,6 @@ const FriendsForYou: React.FC = () => {
       // Remove user from suggestions
       const updatedSuggestions = friendSuggestions.filter(u => u.id !== userId);
       setFriendSuggestions(updatedSuggestions);
-      
-      // If all friends are added, fetch new suggestions
-      if (updatedSuggestions.length === 0) {
-        fetchNewSuggestions();
-      }
     } catch (error: any) {
       toast({
         title: "Failed to send request",
@@ -130,13 +114,9 @@ const FriendsForYou: React.FC = () => {
   };
 
   const fetchNewSuggestions = () => {
-    // Increase offset to get new users
-    setOffset(prev => prev + 5);
-    // Reset suggestions while loading
-    setFriendSuggestions([]);
-    // Trigger refetch
-    setRefreshKey(prev => prev + 1);
-    // Show toast
+    const newOffset = offset + 5;
+    setOffset(newOffset);
+    fetchFriendSuggestions(newOffset);
     toast({
       title: "Finding new friends",
       description: "Loading new friend suggestions for you"
@@ -221,8 +201,8 @@ const FriendsForYou: React.FC = () => {
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <Users className="h-12 w-12 text-muted-foreground mb-2 opacity-50" />
-              <p className="text-muted-foreground font-medium">No friends suggested for you</p>
-              <p className="text-xs text-muted-foreground mt-1">There are currently no friends suggested for you</p>
+              <p className="text-muted-foreground font-medium">No one to suggest</p>
+              <p className="text-xs text-muted-foreground mt-1">There is no one to suggest right now</p>
               <Button 
                 variant="outline" 
                 size="sm" 

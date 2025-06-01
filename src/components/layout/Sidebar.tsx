@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
@@ -23,7 +22,6 @@ import {
   Settings,
   Bell,
   Search, 
-  Heart,
   Trophy,
   UserPlus,
   Gamepad2,
@@ -41,8 +39,7 @@ const NAV_ITEMS = [
   { icon: Bell, label: 'Notifications', href: '/notifications', tooltip: 'See your alerts' },
   { icon: Users, label: 'Friends', href: '/friends', tooltip: 'Manage your connections' },
   { icon: UserPlus, label: 'Add Friends', href: '/add-friends', tooltip: 'Grow your network' },
-  { icon: Gamepad2, label: 'Games', href: '/games', tooltip: 'Play and win coins' },
-  { icon: Heart, label: 'Earn', href: '/earn', tooltip: 'Earn more coins' },
+  { icon: Gamepad2, label: 'Games', href: '/games', tooltip: 'Play games for fun' },
   { icon: Trophy, label: 'Leaderboard', href: '/leaderboard', tooltip: 'See top performers' },
   { icon: Settings, label: 'Settings', href: '/settings', tooltip: 'Customize your experience' },
 ];
