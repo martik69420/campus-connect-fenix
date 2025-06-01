@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, ShieldAlert, UserX } from "lucide-react";
@@ -52,7 +53,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({
     ? showFullBio
       ? user.bio
       : user.bio.substring(0, 150)
-    : t('profile.noBio');
+    : 'No bio available';
 
   const showReadMore = user?.bio && user.bio.length > 150;
 

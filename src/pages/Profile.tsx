@@ -22,6 +22,7 @@ const Profile: React.FC = () => {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [isFriend, setIsFriend] = useState(false);
   const [profileUser, setProfileUser] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const { earnedBadges } = useAchievements();
 
   // Combine achievement badges with admin badge if user is admin
@@ -52,15 +53,25 @@ const Profile: React.FC = () => {
       if (!username) return;
       
       setIsLoading(true);
+      setError(null);
       
       try {
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('username', username)
-          .single();
+          .maybeSingle();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error loading profile:', error);
+          setError('Failed to load profile');
+          return;
+        }
+        
+        if (!data) {
+          setError('Profile not found');
+          return;
+        }
         
         setProfileUser(data);
         
@@ -81,6 +92,7 @@ const Profile: React.FC = () => {
         }
       } catch (error) {
         console.error('Error loading profile:', error);
+        setError('An unexpected error occurred');
       } finally {
         setIsLoading(false);
       }
@@ -141,6 +153,21 @@ const Profile: React.FC = () => {
               </div>
               <Skeleton className="h-64 w-full" />
             </div>
+          </Card>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppLayout>
+        <div className="container py-6 max-w-4xl mx-auto">
+          <Card className="mb-6 border-2 border-destructive/20 shadow-sm">
+            <CardContent className="p-6 text-center">
+              <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
+              <p className="text-muted-foreground">{error}</p>
+            </CardContent>
           </Card>
         </div>
       </AppLayout>
