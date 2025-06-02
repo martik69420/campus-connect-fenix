@@ -8,6 +8,7 @@ import { motion } from 'framer-motion';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
+import { useLanguage } from '@/context/LanguageContext';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface FriendSuggestion {
@@ -25,6 +26,7 @@ const FriendsForYou: React.FC = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t } = useLanguage();
 
   // Function to fetch suggestions
   const fetchFriendSuggestions = async (newOffset = offset) => {
@@ -97,8 +99,8 @@ const FriendsForYou: React.FC = () => {
       if (error) throw error;
       
       toast({
-        title: "Friend request sent",
-        description: "They will be notified of your request."
+        title: t('friends.requestSent'),
+        description: t('friends.requestSentDesc')
       });
       
       // Remove user from suggestions
@@ -106,7 +108,7 @@ const FriendsForYou: React.FC = () => {
       setFriendSuggestions(updatedSuggestions);
     } catch (error: any) {
       toast({
-        title: "Failed to send request",
+        title: t('friends.requestFailed'),
         description: error.message,
         variant: "destructive"
       });
@@ -118,8 +120,8 @@ const FriendsForYou: React.FC = () => {
     setOffset(newOffset);
     fetchFriendSuggestions(newOffset);
     toast({
-      title: "Finding new friends",
-      description: "Loading new friend suggestions for you"
+      title: t('friends.findingNewFriends'),
+      description: t('friends.loadingNewSuggestions')
     });
   };
 
@@ -132,7 +134,7 @@ const FriendsForYou: React.FC = () => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <Users className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Friends For You</h2>
+          <h2 className="text-lg font-semibold">{t('friends.forYou')}</h2>
         </div>
         <Button 
           variant="ghost" 
@@ -141,10 +143,10 @@ const FriendsForYou: React.FC = () => {
           disabled={isLoading}
           className="p-1 h-8 w-8 rounded-full"
           aria-label="Refresh suggestions"
-          title="Find new suggestions"
+          title={t('friends.findNewSuggestions')}
         >
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-          <span className="sr-only">Refresh suggestions</span>
+          <span className="sr-only">{t('friends.findNewSuggestions')}</span>
         </Button>
       </div>
       
@@ -186,14 +188,14 @@ const FriendsForYou: React.FC = () => {
                     <div>
                       <p className="font-medium text-sm">{friend.display_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {friend.mutual_friends} mutual friends
+                        {friend.mutual_friends} {t('friends.mutualFriends')}
                       </p>
                     </div>
                   </div>
                   
                   <Button variant="outline" size="sm" onClick={() => handleFollow(friend.id)}>
                     <UserPlus className="h-3.5 w-3.5 mr-1" />
-                    Connect
+                    {t('friends.connect')}
                   </Button>
                 </motion.div>
               ))}
@@ -201,8 +203,8 @@ const FriendsForYou: React.FC = () => {
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-center">
               <Users className="h-12 w-12 text-muted-foreground mb-2 opacity-50" />
-              <p className="text-muted-foreground font-medium">No one to suggest</p>
-              <p className="text-xs text-muted-foreground mt-1">There is no one to suggest right now</p>
+              <p className="text-muted-foreground font-medium">{t('friends.noSuggestions')}</p>
+              <p className="text-xs text-muted-foreground mt-1">{t('friends.noSuggestionsDesc')}</p>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -210,7 +212,7 @@ const FriendsForYou: React.FC = () => {
                 onClick={fetchNewSuggestions}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
-                Find new suggestions
+                {t('friends.findNewSuggestions')}
               </Button>
             </div>
           )}
@@ -224,7 +226,7 @@ const FriendsForYou: React.FC = () => {
           className="w-full group"
           onClick={() => navigate('/add-friends')}
         >
-          Find more friends
+          {t('friends.findMoreFriends')}
           <ArrowRight className="h-4 w-4 ml-1 transition-transform group-hover:translate-x-1" />
         </Button>
       </div>

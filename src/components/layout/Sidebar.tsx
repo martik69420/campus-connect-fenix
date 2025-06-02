@@ -1,3 +1,4 @@
+
 import React, { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/auth";
@@ -33,15 +34,15 @@ import { motion } from "framer-motion";
 
 // Define the navigation items for the sidebar with enhanced tooltips
 const NAV_ITEMS = [
-  { icon: Home, label: 'Home', href: '/', tooltip: 'Go to homepage' },
-  { icon: Search, label: 'Search', href: '/search', tooltip: 'Find people and content' },
-  { icon: MessagesSquare, label: 'Messages', href: '/messages', tooltip: 'Chat with friends' },
-  { icon: Bell, label: 'Notifications', href: '/notifications', tooltip: 'See your alerts' },
-  { icon: Users, label: 'Friends', href: '/friends', tooltip: 'Manage your connections' },
-  { icon: UserPlus, label: 'Add Friends', href: '/add-friends', tooltip: 'Grow your network' },
-  { icon: Gamepad2, label: 'Games', href: '/games', tooltip: 'Play games for fun' },
-  { icon: Trophy, label: 'Leaderboard', href: '/leaderboard', tooltip: 'See top performers' },
-  { icon: Settings, label: 'Settings', href: '/settings', tooltip: 'Customize your experience' },
+  { icon: Home, labelKey: 'nav.home', href: '/', tooltip: 'Go to homepage' },
+  { icon: Search, labelKey: 'nav.search', href: '/search', tooltip: 'Find people and content' },
+  { icon: MessagesSquare, labelKey: 'nav.messages', href: '/messages', tooltip: 'Chat with friends' },
+  { icon: Bell, labelKey: 'nav.notifications', href: '/notifications', tooltip: 'See your alerts' },
+  { icon: Users, labelKey: 'nav.friends', href: '/friends', tooltip: 'Manage your connections' },
+  { icon: UserPlus, labelKey: 'nav.addFriends', href: '/add-friends', tooltip: 'Grow your network' },
+  { icon: Gamepad2, labelKey: 'nav.games', href: '/games', tooltip: 'Play games for fun' },
+  { icon: Trophy, labelKey: 'nav.leaderboard', href: '/leaderboard', tooltip: 'See top performers' },
+  { icon: Settings, labelKey: 'nav.settings', href: '/settings', tooltip: 'Customize your experience' },
 ];
 
 const Sidebar = () => {
@@ -102,7 +103,7 @@ const Sidebar = () => {
               <DropdownMenuItem asChild>
                 <Link to={`/profile/${user.username}`} onClick={() => setActiveItem(`/profile/${user.username}`)}>
                   <User className="mr-2 h-4 w-4" />
-                  View Profile
+                  {t('auth.viewProfile')}
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleSignOut}>
@@ -121,7 +122,7 @@ const Sidebar = () => {
           {NAV_ITEMS.map((item) => {
             const isActive = location.pathname === item.href;
             return (
-              <li key={item.label}>
+              <li key={item.labelKey}>
                 <Button
                   variant={isActive ? "default" : "ghost"}
                   className={cn(
@@ -137,8 +138,8 @@ const Sidebar = () => {
                       "h-5 w-5 mr-3", 
                       isActive ? "text-primary-foreground" : "text-muted-foreground"
                     )} />
-                    <span>{item.label}</span>
-                    {item.label === 'Games' && (
+                    <span>{t(item.labelKey)}</span>
+                    {item.labelKey === 'nav.games' && (
                       <Sparkles className="h-3.5 w-3.5 ml-2 text-amber-400" />
                     )}
                   </div>
@@ -156,7 +157,7 @@ const Sidebar = () => {
           onClick={handleSignOut}
         >
           <LogOut className="mr-2 h-4 w-4" />
-          Sign Out
+          {t('auth.signOut')}
         </Button>
       </div>
     </div>

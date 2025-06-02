@@ -41,7 +41,7 @@ const translations: Translations = {
   },
   'nav.home': {
     en: 'Home',
-    nl: 'Thuis',
+    nl: 'Startpagina',
     fr: 'Accueil',
   },
   'nav.profile': {
@@ -69,9 +69,29 @@ const translations: Translations = {
     nl: 'Zoeken',
     fr: 'Rechercher',
   },
+  'nav.friends': {
+    en: 'Friends',
+    nl: 'Vrienden',
+    fr: 'Amis',
+  },
+  'nav.addFriends': {
+    en: 'Add Friends',
+    nl: 'Vrienden Toevoegen',
+    fr: 'Ajouter des Amis',
+  },
+  'nav.games': {
+    en: 'Games',
+    nl: 'Spellen',
+    fr: 'Jeux',
+  },
+  'nav.leaderboard': {
+    en: 'Leaderboard',
+    nl: 'Ranglijst',
+    fr: 'Classement',
+  },
   'auth.requiresLogin': {
     en: 'Requires Login',
-    nl: 'Vereist Login',
+    nl: 'Vereist Inloggen',
     fr: 'Connexion Requise',
   },
   'auth.loginToSave': {
@@ -88,6 +108,11 @@ const translations: Translations = {
     en: 'Sign Out',
     nl: 'Uitloggen',
     fr: 'Déconnexion',
+  },
+  'auth.viewProfile': {
+    en: 'View Profile',
+    nl: 'Profiel Bekijken',
+    fr: 'Voir le Profil',
   },
   'post.removed': {
     en: 'Removed',
@@ -124,6 +149,11 @@ const translations: Translations = {
     nl: 'Wees de eerste om te posten!',
     fr: 'Soyez le premier à poster !',
   },
+  'post.save': {
+    en: 'Save',
+    nl: 'Opslaan',
+    fr: 'Enregistrer',
+  },
   'games.snake': {
     en: 'Snake Game',
     nl: 'Slangen Spel',
@@ -134,9 +164,39 @@ const translations: Translations = {
     nl: 'Spellen',
     fr: 'Jeux',
   },
+  'games.description': {
+    en: 'Play games and earn coins!',
+    nl: 'Speel spellen en verdien munten!',
+    fr: 'Jouez à des jeux et gagnez des pièces !',
+  },
+  'games.playNow': {
+    en: 'Play Now',
+    nl: 'Nu Spelen',
+    fr: 'Jouer Maintenant',
+  },
+  'games.earnCoins': {
+    en: 'Earn up to 50 coins per game',
+    nl: 'Verdien tot 50 munten per spel',
+    fr: 'Gagnez jusqu\'à 50 pièces par jeu',
+  },
+  'games.trivia': {
+    en: 'Trivia Quiz',
+    nl: 'Trivia Quiz',
+    fr: 'Quiz Trivia',
+  },
+  'games.triviaDesc': {
+    en: 'Test your knowledge',
+    nl: 'Test je kennis',
+    fr: 'Testez vos connaissances',
+  },
+  'games.snakeDesc': {
+    en: 'Classic arcade fun',
+    nl: 'Klassiek arcade plezier',
+    fr: 'Plaisir d\'arcade classique',
+  },
   'leaderboard.title': {
     en: 'Leaderboard',
-    nl: 'Klassement',
+    nl: 'Ranglijst',
     fr: 'Classement',
   },
   'coins.earn': {
@@ -349,11 +409,6 @@ const translations: Translations = {
     nl: 'Gebruiker is offline',
     fr: 'L\'utilisateur est hors ligne',
   },
-  'post.save': {
-    en: 'Save',
-    nl: 'Opslaan',
-    fr: 'Enregistrer',
-  },
   'profile.addFriend': {
     en: 'Add Friend',
     nl: 'Vriend Toevoegen',
@@ -388,6 +443,123 @@ const translations: Translations = {
     en: 'About Me',
     nl: 'Over Mij',
     fr: 'À Propos de Moi',
+  },
+  // Messages translations
+  'messages.viewProfile': {
+    en: 'View Profile',
+    nl: 'Profiel Bekijken',
+    fr: 'Voir le Profil',
+  },
+  'messages.muteNotifications': {
+    en: 'Mute Notifications',
+    nl: 'Meldingen Uitschakelen',
+    fr: 'Désactiver les Notifications',
+  },
+  'messages.clearChat': {
+    en: 'Clear Chat',
+    nl: 'Chat Wissen',
+    fr: 'Effacer la Discussion',
+  },
+  'messages.reportUser': {
+    en: 'Report User',
+    nl: 'Gebruiker Rapporteren',
+    fr: 'Signaler l\'Utilisateur',
+  },
+  'messages.searchFriends': {
+    en: 'Search friends...',
+    nl: 'Vrienden zoeken...',
+    fr: 'Rechercher des amis...',
+  },
+  'messages.newMessage': {
+    en: 'New Message',
+    nl: 'Nieuw Bericht',
+    fr: 'Nouveau Message',
+  },
+  'messages.noConversation': {
+    en: 'No conversation selected',
+    nl: 'Geen gesprek geselecteerd',
+    fr: 'Aucune conversation sélectionnée',
+  },
+  'messages.selectContact': {
+    en: 'Select a contact to start messaging',
+    nl: 'Selecteer een contact om te beginnen met berichten sturen',
+    fr: 'Sélectionnez un contact pour commencer à envoyer des messages',
+  },
+  'messages.findFriends': {
+    en: 'Find Friends',
+    nl: 'Vrienden Zoeken',
+    fr: 'Trouver des Amis',
+  },
+  'messages.typeMessage': {
+    en: 'Type a message...',
+    nl: 'Typ een bericht...',
+    fr: 'Tapez un message...',
+  },
+  'messages.sendMessage': {
+    en: 'Send message',
+    nl: 'Bericht versturen',
+    fr: 'Envoyer le message',
+  },
+  // Friends translations
+  'friends.forYou': {
+    en: 'Friends For You',
+    nl: 'Vrienden Voor Jou',
+    fr: 'Amis Pour Vous',
+  },
+  'friends.mutualFriends': {
+    en: 'mutual friends',
+    nl: 'gemeenschappelijke vrienden',
+    fr: 'amis en commun',
+  },
+  'friends.connect': {
+    en: 'Connect',
+    nl: 'Verbinden',
+    fr: 'Se Connecter',
+  },
+  'friends.noSuggestions': {
+    en: 'No one to suggest',
+    nl: 'Niemand om voor te stellen',
+    fr: 'Personne à suggérer',
+  },
+  'friends.noSuggestionsDesc': {
+    en: 'There is no one to suggest right now',
+    nl: 'Er is op dit moment niemand om voor te stellen',
+    fr: 'Il n\'y a personne à suggérer pour le moment',
+  },
+  'friends.findNewSuggestions': {
+    en: 'Find new suggestions',
+    nl: 'Nieuwe suggesties zoeken',
+    fr: 'Trouver de nouvelles suggestions',
+  },
+  'friends.findMoreFriends': {
+    en: 'Find more friends',
+    nl: 'Meer vrienden zoeken',
+    fr: 'Trouver plus d\'amis',
+  },
+  'friends.findingNewFriends': {
+    en: 'Finding new friends',
+    nl: 'Nieuwe vrienden zoeken',
+    fr: 'Trouver de nouveaux amis',
+  },
+  'friends.loadingNewSuggestions': {
+    en: 'Loading new friend suggestions for you',
+    nl: 'Nieuwe vriendensuggesties voor je laden',
+    fr: 'Chargement de nouvelles suggestions d\'amis pour vous',
+  },
+  'friends.requestSent': {
+    en: 'Friend request sent',
+    nl: 'Vriendschapsverzoek verzonden',
+    fr: 'Demande d\'ami envoyée',
+  },
+  'friends.requestSentDesc': {
+    en: 'They will be notified of your request.',
+    nl: 'Ze worden op de hoogte gebracht van je verzoek.',
+    fr: 'Ils seront informés de votre demande.',
+  },
+  'friends.requestFailed': {
+    en: 'Failed to send request',
+    nl: 'Verzoek verzenden mislukt',
+    fr: 'Échec de l\'envoi de la demande',
   },
   // Table translations
   'table.noResults': {
@@ -424,7 +596,7 @@ const translations: Translations = {
 
 // Language Provider component
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('nl'); // Changed default to Dutch
 
   // Function to get translation
   const t = useCallback((key: TranslationKey): string => {
