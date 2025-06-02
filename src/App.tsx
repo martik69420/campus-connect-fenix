@@ -7,6 +7,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { PostProvider } from './context/PostContext';
 import { AchievementProvider } from './context/AchievementContext';
+import { GameProvider } from './context/GameContext';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './context/auth';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -47,32 +48,34 @@ function App() {
         <LanguageProvider>
           <TooltipProvider>
             <AuthProvider>
-              <AchievementProvider>
-                <NotificationProvider>
-                  <PostProvider>
-                    <Routes>
-                      <Route path="/" element={<Home />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/signup" element={<Signup />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/auth/callback" element={<AuthCallback />} />
-                      <Route path="/messages" element={<Messages />} />
-                      <Route path="/search" element={<Search />} />
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/friends" element={<Friends />} />
-                      <Route path="/friend-requests" element={<FriendRequests />} />
-                      <Route path="/add-friends" element={<AddFriends />} />
-                      <Route path="/games" element={<Games />} />
-                      <Route path="/games/snake" element={<Snake />} />
-                      <Route path="/games/trivia" element={<Trivia />} />
-                      <Route path="/leaderboard" element={<Leaderboard />} />
-                      <Route path="/achievements" element={<Achievements />} />
-                      <Route path="/profile/:username" element={<Profile />} />
-                    </Routes>
-                    <Toaster />
-                  </PostProvider>
-                </NotificationProvider>
-              </AchievementProvider>
+              <GameProvider>
+                <AchievementProvider>
+                  <NotificationProvider>
+                    <PostProvider>
+                      <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/signup" element={<Signup />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/auth/callback" element={<AuthCallback />} />
+                        <Route path="/messages" element={<Messages />} />
+                        <Route path="/search" element={<Search />} />
+                        <Route path="/notifications" element={<Notifications />} />
+                        <Route path="/friends" element={<Friends />} />
+                        <Route path="/friend-requests" element={<FriendRequests />} />
+                        <Route path="/add-friends" element={<AddFriends />} />
+                        <Route path="/games" element={<Games />} />
+                        <Route path="/games/snake" element={<Snake />} />
+                        <Route path="/games/trivia" element={<Trivia />} />
+                        <Route path="/leaderboard" element={<Leaderboard />} />
+                        <Route path="/achievements" element={<Achievements />} />
+                        <Route path="/profile/:username" element={<Profile />} />
+                      </Routes>
+                      <Toaster />
+                    </PostProvider>
+                  </NotificationProvider>
+                </AchievementProvider>
+              </GameProvider>
             </AuthProvider>
           </TooltipProvider>
         </LanguageProvider>
