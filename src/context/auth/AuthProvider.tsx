@@ -165,10 +165,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Register function - updated to disable email confirmation
+  // Register function - updated to properly use provided username
   const register = async (email: string, password: string, userData?: any) => {
     try {
       setAuthError(null);
+      
+      // Check if username already exists
+      if (userData?.username) {
+        const { data: existingProfile } = await supabase
+          .from('profiles')
+          .select('username')
+          .eq('username', userData.username)
+          .single();
+          
+        if (existingProfile) {
+          setAuthError('Username already exists');
+          return { error: { message: 'Username already exists' } };
+        }
+      }
+      
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

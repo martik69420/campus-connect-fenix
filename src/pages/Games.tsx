@@ -179,7 +179,7 @@ const Games = () => {
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <Button 
-                    onClick={() => navigate('/trivia')} 
+                    onClick={() => navigate('/games/trivia')} 
                     className="w-full bg-indigo-600 hover:bg-indigo-700 font-bold text-lg py-6 group-hover:shadow-lg transition-all duration-300"
                   >
                     <Sparkles className="w-5 h-5 mr-2 animate-pulse" />
@@ -245,7 +245,7 @@ const Games = () => {
                   transition={{ type: "spring", stiffness: 400, damping: 10 }}
                 >
                   <Button 
-                    onClick={() => navigate('/snake')} 
+                    onClick={() => navigate('/games/snake')} 
                     className="w-full bg-emerald-600 hover:bg-emerald-700 font-bold text-lg py-6 group-hover:shadow-lg transition-all duration-300"
                   >
                     <Sparkles className="w-5 h-5 mr-2 animate-pulse" />

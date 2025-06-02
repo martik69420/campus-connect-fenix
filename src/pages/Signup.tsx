@@ -57,10 +57,28 @@ const Signup = () => {
       return;
     }
 
+    if (!formData.username.trim()) {
+      setError('Username is required');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!formData.displayName.trim()) {
+      setError('Display name is required');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (!formData.school.trim()) {
+      setError('School is required');
+      setIsSubmitting(false);
+      return;
+    }
+
     const userData = {
-      username: formData.username,
-      display_name: formData.displayName,
-      school: formData.school
+      username: formData.username.trim(),
+      display_name: formData.displayName.trim(),
+      school: formData.school.trim()
     };
 
     const result = await register(formData.email, formData.password, userData);
