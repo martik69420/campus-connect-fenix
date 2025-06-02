@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/context/auth';
 
 export interface Message {
   id: string;
@@ -14,97 +13,70 @@ export interface Message {
 
 interface UseMessagesResult {
   messages: Message[];
-  sendMessage: (receiverId: string, content: string) => Promise<void>;
+  sendMessage: (receiverId: string, content: string) => Promise<Message | null>;
   markAsRead: (messageId: string) => Promise<void>;
   loading: boolean;
   error: string | null;
 }
 
-const useMessages = (userId: string | undefined): UseMessagesResult => {
+const useMessages = (currentUserId: string, contactId: string): UseMessagesResult => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
 
-  useEffect(() => {
-    if (!userId) return;
-
-    const fetchMessages = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const { data, error } = await supabase
-          .from('messages')
-          .select('*')
-          .or(`sender_id.eq.${user?.id},sender_id.eq.${userId}`)
-          .or(`receiver_id.eq.${user?.id},receiver_id.eq.${userId}`)
-          .order('created_at', { ascending: true });
-
-        if (error) {
-          setError(error.message);
-        } else if (data) {
-          setMessages(data as Message[]);
-        }
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchMessages();
-
-    // Set up a real-time subscription to listen for new messages
-    const messagesSubscription = supabase
-      .channel('custom-all-messages')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'messages' },
-        (payload) => {
-          if (payload.new) {
-            // Properly type the payload as a Message
-            const newMsg = payload.new as Message;
-            
-            // Optimistically update the messages array
-            setMessages((prevMessages) => {
-              // Check if the new message involves the current user and the target user
-              if (
-                (newMsg.sender_id === user?.id && newMsg.receiver_id === userId) ||
-                (newMsg.sender_id === userId && newMsg.receiver_id === user?.id)
-              ) {
-                return [...prevMessages, newMsg];
-              }
-              return prevMessages;
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    // Unsubscribe when the component unmounts
-    return () => {
-      supabase.removeChannel(messagesSubscription);
-    };
-  }, [userId, user?.id]);
-
-  const sendMessage = async (receiverId: string, content: string) => {
+  // Fetch messages between current user and contact
+  const fetchMessages = async () => {
+    if (!currentUserId || !contactId) return;
+    
+    setLoading(true);
     setError(null);
+
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('messages')
-        .insert([
-          { sender_id: user?.id, receiver_id: receiverId, content: content },
-        ]);
+        .select('*')
+        .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${currentUserId})`)
+        .order('created_at', { ascending: true });
 
       if (error) {
         setError(error.message);
+      } else {
+        setMessages(data || []);
       }
     } catch (err: any) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
 
+  // Send a message
+  const sendMessage = async (receiverId: string, content: string): Promise<Message | null> => {
+    setError(null);
+    try {
+      const { data, error } = await supabase
+        .from('messages')
+        .insert([{
+          sender_id: currentUserId,
+          receiver_id: receiverId,
+          content: content,
+        }])
+        .select('*')
+        .single();
+
+      if (error) {
+        setError(error.message);
+        return null;
+      }
+
+      return data;
+    } catch (err: any) {
+      setError(err.message);
+      return null;
+    }
+  };
+
+  // Mark message as read
   const markAsRead = async (messageId: string) => {
     setError(null);
     try {
@@ -120,6 +92,13 @@ const useMessages = (userId: string | undefined): UseMessagesResult => {
       setError(err.message);
     }
   };
+
+  // Load messages when dependencies change
+  useEffect(() => {
+    if (currentUserId && contactId) {
+      fetchMessages();
+    }
+  }, [currentUserId, contactId]);
 
   return { messages, sendMessage, markAsRead, loading, error };
 };
