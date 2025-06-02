@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/context/auth';
+import { useLanguage } from '@/context/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import AppLayout from '@/components/layout/AppLayout';
 import { Trophy, Users, Gamepad2 } from 'lucide-react';
@@ -24,6 +25,7 @@ const Leaderboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
+  const { t } = useLanguage();
   
   const [snakeLeaderboard, setSnakeLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [triviaLeaderboard, setTriviaLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -114,8 +116,8 @@ const Leaderboard = () => {
     } catch (error: any) {
       console.error('Error fetching leaderboard data:', error);
       toast({
-        title: "Failed to load leaderboard",
-        description: error.message || "An unexpected error occurred",
+        title: t('leaderboard.loadFailed'),
+        description: error.message || t('leaderboard.unexpectedError'),
         variant: "destructive"
       });
     } finally {
@@ -136,9 +138,9 @@ const Leaderboard = () => {
       return (
         <div className="text-center py-10">
           <Gamepad2 className="h-10 w-10 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium">No scores yet</h3>
+          <h3 className="text-lg font-medium">{t('leaderboard.noScores')}</h3>
           <p className="text-muted-foreground mt-1">
-            Be the first to play and set a high score!
+            {t('leaderboard.beFirst')}
           </p>
         </div>
       );
@@ -174,7 +176,7 @@ const Leaderboard = () => {
             </div>
             <div className="text-right">
               <div className="font-bold text-lg">{player.max_score} pts</div>
-              <div className="text-sm text-muted-foreground">{player.total_games} games</div>
+              <div className="text-sm text-muted-foreground">{player.total_games} {t('games.gamesPlayed')}</div>
             </div>
           </motion.div>
         ))}
@@ -187,8 +189,8 @@ const Leaderboard = () => {
       <div className="max-w-4xl mx-auto p-4">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Game Leaderboard</h1>
-            <p className="text-muted-foreground">See who's dominating the games!</p>
+            <h1 className="text-3xl font-bold">{t('leaderboard.gameLeaderboard')}</h1>
+            <p className="text-muted-foreground">{t('leaderboard.whosDominating')}</p>
           </div>
         </div>
         
@@ -196,18 +198,18 @@ const Leaderboard = () => {
           <TabsList className="mb-6">
             <TabsTrigger value="snake">
               <Gamepad2 className="mr-2 h-4 w-4" />
-              Snake
+              {t('games.snake')}
             </TabsTrigger>
             <TabsTrigger value="trivia">
               <Trophy className="mr-2 h-4 w-4" />
-              Trivia
+              {t('games.trivia')}
             </TabsTrigger>
           </TabsList>
           
           <TabsContent value="snake">
             <Card>
               <CardHeader>
-                <CardTitle>Snake High Scores</CardTitle>
+                <CardTitle>{t('leaderboard.snakeHighScores')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {renderLeaderboard(snakeLeaderboard)}
@@ -218,7 +220,7 @@ const Leaderboard = () => {
           <TabsContent value="trivia">
             <Card>
               <CardHeader>
-                <CardTitle>Trivia High Scores</CardTitle>
+                <CardTitle>{t('leaderboard.triviaHighScores')}</CardTitle>
               </CardHeader>
               <CardContent>
                 {renderLeaderboard(triviaLeaderboard)}

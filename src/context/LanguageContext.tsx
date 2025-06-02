@@ -39,6 +39,51 @@ const translations: Translations = {
     nl: 'Fout',
     fr: 'Erreur',
   },
+  'common.save': {
+    en: 'Save',
+    nl: 'Opslaan',
+    fr: 'Enregistrer',
+  },
+  'common.cancel': {
+    en: 'Cancel',
+    nl: 'Annuleren',
+    fr: 'Annuler',
+  },
+  'common.edit': {
+    en: 'Edit',
+    nl: 'Bewerken',
+    fr: 'Modifier',
+  },
+  'common.delete': {
+    en: 'Delete',
+    nl: 'Verwijderen',
+    fr: 'Supprimer',
+  },
+  'common.back': {
+    en: 'Back',
+    nl: 'Terug',
+    fr: 'Retour',
+  },
+  'common.next': {
+    en: 'Next',
+    nl: 'Volgende',
+    fr: 'Suivant',
+  },
+  'common.previous': {
+    en: 'Previous',
+    nl: 'Vorige',
+    fr: 'Précédent',
+  },
+  'common.close': {
+    en: 'Close',
+    nl: 'Sluiten',
+    fr: 'Fermer',
+  },
+  'common.confirm': {
+    en: 'Confirm',
+    nl: 'Bevestigen',
+    fr: 'Confirmer',
+  },
   'nav.home': {
     en: 'Home',
     nl: 'Startpagina',
@@ -113,6 +158,11 @@ const translations: Translations = {
     en: 'View Profile',
     nl: 'Profiel Bekijken',
     fr: 'Voir le Profil',
+  },
+  'auth.loadingAuth': {
+    en: 'Loading authentication...',
+    nl: 'Authenticatie laden...',
+    fr: 'Chargement de l\'authentification...',
   },
   'post.removed': {
     en: 'Removed',
@@ -194,10 +244,135 @@ const translations: Translations = {
     nl: 'Klassiek arcade plezier',
     fr: 'Plaisir d\'arcade classique',
   },
+  'games.hub': {
+    en: 'Games Hub',
+    nl: 'Spellen Hub',
+    fr: 'Hub de Jeux',
+  },
+  'games.compete': {
+    en: 'Play games and compete with friends',
+    nl: 'Speel spellen en ga de strijd aan met vrienden',
+    fr: 'Jouez à des jeux et rivalisez avec vos amis',
+  },
+  'games.yourProgress': {
+    en: 'Your Progress',
+    nl: 'Jouw Voortgang',
+    fr: 'Votre Progression',
+  },
+  'games.triviaChallenge': {
+    en: 'Trivia Challenge',
+    nl: 'Trivia Uitdaging',
+    fr: 'Défi Trivia',
+  },
+  'games.testKnowledge': {
+    en: 'Test your knowledge across various topics',
+    nl: 'Test je kennis over verschillende onderwerpen',
+    fr: 'Testez vos connaissances sur divers sujets',
+  },
+  'games.classicSnake': {
+    en: 'Classic arcade snake game',
+    nl: 'Klassiek arcade slangen spel',
+    fr: 'Jeu de serpent arcade classique',
+  },
+  'games.progress': {
+    en: 'Progress',
+    nl: 'Voortgang',
+    fr: 'Progression',
+  },
+  'games.gamesPlayed': {
+    en: 'games played',
+    nl: 'gespeelde spellen',
+    fr: 'jeux joués',
+  },
+  'games.tetris': {
+    en: 'Tetris',
+    nl: 'Tetris',
+    fr: 'Tetris',
+  },
+  'games.tetrisDesc': {
+    en: 'Classic block-stacking puzzle',
+    nl: 'Klassieke blok-stapel puzzel',
+    fr: 'Puzzle classique d\'empilement de blocs',
+  },
+  'games.new': {
+    en: 'NEW',
+    nl: 'NIEUW',
+    fr: 'NOUVEAU',
+  },
+  'games.development': {
+    en: 'Development',
+    nl: 'Ontwikkeling',
+    fr: 'Développement',
+  },
+  'games.comingSoon': {
+    en: 'Coming Soon',
+    nl: 'Binnenkort',
+    fr: 'Bientôt Disponible',
+  },
+  'games.classicPuzzle': {
+    en: 'Classic puzzle game coming soon',
+    nl: 'Klassiek puzzelspel komt binnenkort',
+    fr: 'Jeu de puzzle classique bientôt disponible',
+  },
+  'games.yourStatistics': {
+    en: 'Your Statistics',
+    nl: 'Jouw Statistieken',
+    fr: 'Vos Statistiques',
+  },
+  'games.bestScore': {
+    en: 'Best Score',
+    nl: 'Beste Score',
+    fr: 'Meilleur Score',
+  },
+  'games.total': {
+    en: 'Total',
+    nl: 'Totaal',
+    fr: 'Total',
+  },
   'leaderboard.title': {
     en: 'Leaderboard',
     nl: 'Ranglijst',
     fr: 'Classement',
+  },
+  'leaderboard.gameLeaderboard': {
+    en: 'Game Leaderboard',
+    nl: 'Spel Ranglijst',
+    fr: 'Classement des Jeux',
+  },
+  'leaderboard.whosDominating': {
+    en: 'See who\'s dominating the games!',
+    nl: 'Zie wie de baas is in de spellen!',
+    fr: 'Voyez qui domine les jeux !',
+  },
+  'leaderboard.snakeHighScores': {
+    en: 'Snake High Scores',
+    nl: 'Slangen Topscores',
+    fr: 'Meilleurs Scores du Serpent',
+  },
+  'leaderboard.triviaHighScores': {
+    en: 'Trivia High Scores',
+    nl: 'Trivia Topscores',
+    fr: 'Meilleurs Scores du Trivia',
+  },
+  'leaderboard.noScores': {
+    en: 'No scores yet',
+    nl: 'Nog geen scores',
+    fr: 'Pas encore de scores',
+  },
+  'leaderboard.beFirst': {
+    en: 'Be the first to play and set a high score!',
+    nl: 'Wees de eerste om te spelen en een hoge score te behalen!',
+    fr: 'Soyez le premier à jouer et établir un record !',
+  },
+  'leaderboard.loadFailed': {
+    en: 'Failed to load leaderboard',
+    nl: 'Kon ranglijst niet laden',
+    fr: 'Échec du chargement du classement',
+  },
+  'leaderboard.unexpectedError': {
+    en: 'An unexpected error occurred',
+    nl: 'Er is een onverwachte fout opgetreden',
+    fr: 'Une erreur inattendue s\'est produite',
   },
   'coins.earn': {
     en: 'Earn Coins',
@@ -414,6 +589,26 @@ const translations: Translations = {
     nl: 'Vriend Toevoegen',
     fr: 'Ajouter un Ami',
   },
+  'profile.removeFriend': {
+    en: 'Remove Friend',
+    nl: 'Vriend Verwijderen',
+    fr: 'Supprimer l\'Ami',
+  },
+  'profile.removing': {
+    en: 'Removing...',
+    nl: 'Verwijderen...',
+    fr: 'Suppression...',
+  },
+  'profile.adding': {
+    en: 'Adding...',
+    nl: 'Toevoegen...',
+    fr: 'Ajout...',
+  },
+  'profile.editProfile': {
+    en: 'Edit Profile',
+    nl: 'Profiel Bewerken',
+    fr: 'Modifier le Profil',
+  },
   'profile.message': {
     en: 'Message',
     nl: 'Bericht',
@@ -443,6 +638,36 @@ const translations: Translations = {
     en: 'About Me',
     nl: 'Over Mij',
     fr: 'À Propos de Moi',
+  },
+  'profile.readMore': {
+    en: 'read more',
+    nl: 'lees meer',
+    fr: 'lire plus',
+  },
+  'profile.readLess': {
+    en: 'read less',
+    nl: 'lees minder',
+    fr: 'lire moins',
+  },
+  'profile.notFound': {
+    en: 'Profile Not Found',
+    nl: 'Profiel Niet Gevonden',
+    fr: 'Profil Non Trouvé',
+  },
+  'profile.failedToLoad': {
+    en: 'Failed to load profile',
+    nl: 'Kon profiel niet laden',
+    fr: 'Échec du chargement du profil',
+  },
+  'profile.profileNotFound': {
+    en: 'Profile not found',
+    nl: 'Profiel niet gevonden',
+    fr: 'Profil non trouvé',
+  },
+  'profile.unexpectedError': {
+    en: 'An unexpected error occurred',
+    nl: 'Er is een onverwachte fout opgetreden',
+    fr: 'Une erreur inattendue s\'est produite',
   },
   // Messages translations
   'messages.viewProfile': {
@@ -499,6 +724,16 @@ const translations: Translations = {
     en: 'Send message',
     nl: 'Bericht versturen',
     fr: 'Envoyer le message',
+  },
+  'messages.title': {
+    en: 'Messages',
+    nl: 'Berichten',
+    fr: 'Messages',
+  },
+  'messages.chatWithFriends': {
+    en: 'Chat with your friends and stay connected',
+    nl: 'Chat met je vrienden en blijf verbonden',
+    fr: 'Discutez avec vos amis et restez connectés',
   },
   // Friends translations
   'friends.forYou': {
@@ -561,6 +796,144 @@ const translations: Translations = {
     nl: 'Verzoek verzenden mislukt',
     fr: 'Échec de l\'envoi de la demande',
   },
+  'friends.title': {
+    en: 'Friends',
+    nl: 'Vrienden',
+    fr: 'Amis',
+  },
+  'friends.connectCampus': {
+    en: 'Connect with your campus community',
+    nl: 'Verbind met je campus gemeenschap',
+    fr: 'Connectez-vous avec votre communauté universitaire',
+  },
+  'friends.allFriends': {
+    en: 'All Friends',
+    nl: 'Alle Vrienden',
+    fr: 'Tous les Amis',
+  },
+  'friends.requests': {
+    en: 'Requests',
+    nl: 'Verzoeken',
+    fr: 'Demandes',
+  },
+  'friends.sent': {
+    en: 'Sent',
+    nl: 'Verzonden',
+    fr: 'Envoyés',
+  },
+  'friends.friendRequests': {
+    en: 'Friend Requests',
+    nl: 'Vriendschapsverzoeken',
+    fr: 'Demandes d\'Ami',
+  },
+  'friends.received': {
+    en: 'Received',
+    nl: 'Ontvangen',
+    fr: 'Reçues',
+  },
+  // Search translations
+  'search.title': {
+    en: 'Search',
+    nl: 'Zoeken',
+    fr: 'Rechercher',
+  },
+  'search.findPeople': {
+    en: 'Find people, posts, and more...',
+    nl: 'Vind mensen, berichten en meer...',
+    fr: 'Trouvez des personnes, des publications et plus...',
+  },
+  'search.searchPlaceholder': {
+    en: 'Search for people, posts, or topics...',
+    nl: 'Zoek naar mensen, berichten of onderwerpen...',
+    fr: 'Recherchez des personnes, des publications ou des sujets...',
+  },
+  'search.noResults': {
+    en: 'No results found',
+    nl: 'Geen resultaten gevonden',
+    fr: 'Aucun résultat trouvé',
+  },
+  'search.tryDifferent': {
+    en: 'Try searching for something different',
+    nl: 'Probeer naar iets anders te zoeken',
+    fr: 'Essayez de rechercher quelque chose de différent',
+  },
+  // Notifications translations
+  'notifications.title': {
+    en: 'Notifications',
+    nl: 'Meldingen',
+    fr: 'Notifications',
+  },
+  'notifications.stayUpdated': {
+    en: 'Stay updated with activity on your account',
+    nl: 'Blijf op de hoogte van activiteit op je account',
+    fr: 'Restez informé de l\'activité sur votre compte',
+  },
+  'notifications.all': {
+    en: 'All',
+    nl: 'Alle',
+    fr: 'Toutes',
+  },
+  'notifications.unread': {
+    en: 'Unread',
+    nl: 'Ongelezen',
+    fr: 'Non lues',
+  },
+  'notifications.likes': {
+    en: 'Likes',
+    nl: 'Likes',
+    fr: 'J\'aime',
+  },
+  'notifications.comments': {
+    en: 'Comments',
+    nl: 'Reacties',
+    fr: 'Commentaires',
+  },
+  'notifications.system': {
+    en: 'System',
+    nl: 'Systeem',
+    fr: 'Système',
+  },
+  'notifications.noNotifications': {
+    en: 'No notifications to display',
+    nl: 'Geen meldingen om weer te geven',
+    fr: 'Aucune notification à afficher',
+  },
+  'notifications.markAllRead': {
+    en: 'Mark All Read',
+    nl: 'Alles Markeren als Gelezen',
+    fr: 'Tout Marquer comme Lu',
+  },
+  'notifications.clearAll': {
+    en: 'Clear All',
+    nl: 'Alles Wissen',
+    fr: 'Tout Effacer',
+  },
+  // Add Friends translations
+  'addFriends.title': {
+    en: 'Add Friends',
+    nl: 'Vrienden Toevoegen',
+    fr: 'Ajouter des Amis',
+  },
+  'addFriends.findNew': {
+    en: 'Find new friends to connect with',
+    nl: 'Vind nieuwe vrienden om mee te verbinden',
+    fr: 'Trouvez de nouveaux amis avec qui vous connecter',
+  },
+  'addFriends.suggestions': {
+    en: 'Friend Suggestions',
+    nl: 'Vriendensuggesties',
+    fr: 'Suggestions d\'Amis',
+  },
+  'addFriends.browseUsers': {
+    en: 'Browse Users',
+    nl: 'Bladeren door Gebruikers',
+    fr: 'Parcourir les Utilisateurs',
+  },
+  'addFriends.searchByUsername': {
+    en: 'Search by username or name...',
+    nl: 'Zoek op gebruikersnaam of naam...',
+    fr: 'Rechercher par nom d\'utilisateur ou nom...',
+  },
   // Table translations
   'table.noResults': {
     en: 'No results found',
@@ -596,7 +969,7 @@ const translations: Translations = {
 
 // Language Provider component
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('nl'); // Changed default to Dutch
+  const [language, setLanguage] = useState<Language>('nl'); // Default to Dutch
 
   // Function to get translation
   const t = useCallback((key: TranslationKey): string => {

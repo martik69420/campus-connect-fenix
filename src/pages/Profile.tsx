@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import { useAuth } from '@/context/auth';
+import { useLanguage } from '@/context/LanguageContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -17,6 +18,7 @@ import { supabase } from '@/integrations/supabase/client';
 const Profile: React.FC = () => {
   const { username } = useParams<{ username: string }>();
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
   const [isCurrentUser, setIsCurrentUser] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -50,12 +52,18 @@ const Profile: React.FC = () => {
 
   useEffect(() => {
     const loadProfileData = async () => {
-      if (!username) return;
+      if (!username) {
+        setError(t('profile.profileNotFound'));
+        setIsLoading(false);
+        return;
+      }
       
       setIsLoading(true);
       setError(null);
       
       try {
+        console.log('Loading profile for username:', username);
+        
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -64,15 +72,17 @@ const Profile: React.FC = () => {
           
         if (error) {
           console.error('Error loading profile:', error);
-          setError('Failed to load profile');
+          setError(t('profile.failedToLoad'));
           return;
         }
         
         if (!data) {
-          setError('Profile not found');
+          console.log('No profile found for username:', username);
+          setError(t('profile.profileNotFound'));
           return;
         }
         
+        console.log('Profile loaded successfully:', data);
         setProfileUser(data);
         
         // Check if this is the current user's profile
@@ -92,14 +102,14 @@ const Profile: React.FC = () => {
         }
       } catch (error) {
         console.error('Error loading profile:', error);
-        setError('An unexpected error occurred');
+        setError(t('profile.unexpectedError'));
       } finally {
         setIsLoading(false);
       }
     };
     
     loadProfileData();
-  }, [user, username]);
+  }, [user, username, t]);
 
   const handleAddFriend = async () => {
     if (!user || !profileUser) return;
@@ -165,7 +175,7 @@ const Profile: React.FC = () => {
         <div className="container py-6 max-w-4xl mx-auto">
           <Card className="mb-6 border-2 border-destructive/20 shadow-sm">
             <CardContent className="p-6 text-center">
-              <h2 className="text-xl font-semibold mb-2">Profile Not Found</h2>
+              <h2 className="text-xl font-semibold mb-2">{t('profile.notFound')}</h2>
               <p className="text-muted-foreground">{error}</p>
             </CardContent>
           </Card>
@@ -180,10 +190,10 @@ const Profile: React.FC = () => {
         {isEditingProfile ? (
           <Card className="mb-8 border-2 border-primary/10 shadow-md">
             <CardContent className="p-6">
-              <h3 className="text-xl font-semibold mb-6">Edit Profile Picture</h3>
+              <h3 className="text-xl font-semibold mb-6">{t('profile.editProfile')}</h3>
               <ProfilePictureUpload />
               <Button variant="secondary" onClick={() => setIsEditingProfile(false)} className="mt-6">
-                Cancel
+                {t('common.cancel')}
               </Button>
             </CardContent>
           </Card>

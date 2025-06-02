@@ -3,11 +3,13 @@ import React from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useLanguage } from '@/context/LanguageContext';
 import FriendRequestsTab from '@/components/friends/FriendRequestsTab';
 import SentRequestsTab from '@/components/friends/SentRequestsTab';
 import { useFriends } from '@/components/friends/useFriends';
 
 const FriendRequests: React.FC = () => {
+  const { t } = useLanguage();
   const { 
     receivedRequests, 
     sentRequests, 
@@ -30,13 +32,13 @@ const FriendRequests: React.FC = () => {
       <div className="container py-6">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">Friend Requests</CardTitle>
+            <CardTitle className="text-2xl">{t('friends.friendRequests')}</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="received">
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="received">Received</TabsTrigger>
-                <TabsTrigger value="sent">Sent</TabsTrigger>
+                <TabsTrigger value="received">{t('friends.received')}</TabsTrigger>
+                <TabsTrigger value="sent">{t('friends.sent')}</TabsTrigger>
               </TabsList>
               
               <TabsContent value="received" className="space-y-4">

@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth';
+import { useLanguage } from '@/context/LanguageContext';
 import { useFriends } from '@/components/friends/useFriends';
 import FriendsList from '@/components/friends/FriendsList';
 import AdBanner from '@/components/ads/AdBanner';
@@ -18,6 +19,7 @@ const SentRequestsTab = lazy(() => import('@/components/friends/SentRequestsTab'
 const Friends = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { t } = useLanguage();
   const { 
     friends, 
     receivedRequests, 
@@ -74,7 +76,7 @@ const Friends = () => {
       <AppLayout>
         <div className="flex items-center justify-center h-screen">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Loading authentication...</span>
+          <span className="ml-2">{t('auth.loadingAuth')}</span>
         </div>
       </AppLayout>
     );
@@ -85,12 +87,12 @@ const Friends = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Friends</h1>
-            <p className="text-muted-foreground">Connect with your campus community</p>
+            <h1 className="text-3xl font-bold">{t('friends.title')}</h1>
+            <p className="text-muted-foreground">{t('friends.connectCampus')}</p>
           </div>
           <Button onClick={() => navigate('/add-friends')}>
             <UserPlus className="mr-2 h-4 w-4" />
-            Add Friends
+            {t('nav.addFriends')}
           </Button>
         </div>
         
@@ -98,11 +100,11 @@ const Friends = () => {
           <TabsList className="mb-4">
             <TabsTrigger value="all-friends">
               <Users className="mr-2 h-4 w-4" />
-              All Friends
+              {t('friends.allFriends')}
             </TabsTrigger>
             <TabsTrigger value="pending">
               <UserCheck className="mr-2 h-4 w-4" />
-              Requests
+              {t('friends.requests')}
               {receivedRequests.length > 0 && (
                 <span className="ml-2 bg-primary text-primary-foreground rounded-full px-2 py-0.5 text-xs">
                   {receivedRequests.length}
@@ -111,7 +113,7 @@ const Friends = () => {
             </TabsTrigger>
             <TabsTrigger value="sent">
               <UserPlus className="mr-2 h-4 w-4" />
-              Sent
+              {t('friends.sent')}
             </TabsTrigger>
           </TabsList>
           

@@ -25,31 +25,10 @@ const Games = () => {
   const { toast } = useToast();
   const { bestScores, gameScores, gameState, isLoading } = useGame();
 
-  // Simplified translations with more consistent language
-  const translations = {
-    title: 'Games Hub',
-    subtitle: 'Play games and compete with friends',
-    yourGames: 'Your Progress',
-    trivia: 'Trivia Challenge',
-    triviaDescription: 'Test your knowledge across various topics',
-    snake: 'Snake Game',
-    snakeDescription: 'Classic arcade snake game',
-    progress: 'Progress',
-    played: 'games played',
-    playNow: 'Play Now',
-    comingSoonTitle: 'Tetris',
-    comingSoonDescription: 'Classic block-stacking puzzle',
-    new: 'NEW',
-    development: 'Development',
-    coming: 'Coming Soon',
-    gameCenterTitle: 'Games',
-    earnCoinsDesc: 'Play games and track your progress'
-  };
-
   const handleGameClick = () => {
     toast({
-      title: translations.coming,
-      description: translations.comingSoonTitle
+      title: t('games.comingSoon'),
+      description: t('games.tetris')
     });
   };
 
@@ -59,17 +38,17 @@ const Games = () => {
         {/* Header with consistent styling */}
         <div className="mb-8 bg-card p-6 rounded-lg border">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            {translations.gameCenterTitle}
+            {t('games.hub')}
           </h1>
           <p className="text-muted-foreground text-lg">
-            {translations.earnCoinsDesc}
+            {t('games.compete')}
           </p>
           
           <div className="flex items-center gap-3 mt-4 bg-muted/50 p-3 rounded-md w-fit">
             <Trophy className="h-5 w-5 text-yellow-600" />
             <div className="text-foreground">
               <span className="font-medium">
-                {translations.yourGames}: <span className="text-primary">{gameState.progress.snake.gamesPlayed + gameState.progress.tetris.gamesPlayed + gameState.progress.trivia.gamesPlayed}</span>
+                {t('games.yourProgress')}: <span className="text-primary">{gameState.progress.snake.gamesPlayed + gameState.progress.tetris.gamesPlayed + gameState.progress.trivia.gamesPlayed}</span>
               </span>
             </div>
           </div>
@@ -84,9 +63,9 @@ const Games = () => {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2 text-xl">
                     <BrainCircuit className="w-5 h-5 text-blue-600" />
-                    {translations.trivia}
+                    {t('games.triviaChallenge')}
                   </CardTitle>
-                  <CardDescription>{translations.triviaDescription}</CardDescription>
+                  <CardDescription>{t('games.testKnowledge')}</CardDescription>
                 </div>
                 <Badge variant="secondary" className="font-medium">
                   <Crown className="w-3 h-3 mr-1" />
@@ -97,8 +76,8 @@ const Games = () => {
             <CardContent className="pb-3">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{translations.progress}</span>
-                  <span className="font-medium">{gameState.progress.trivia.gamesPlayed} {translations.played}</span>
+                  <span className="text-muted-foreground">{t('games.progress')}</span>
+                  <span className="font-medium">{gameState.progress.trivia.gamesPlayed} {t('games.gamesPlayed')}</span>
                 </div>
                 <Progress 
                   value={Math.min(gameState.progress.trivia.gamesPlayed * 10, 100)} 
@@ -111,7 +90,7 @@ const Games = () => {
                 onClick={() => navigate('/games/trivia')} 
                 className="w-full"
               >
-                {translations.playNow}
+                {t('games.playNow')}
               </Button>
             </CardFooter>
           </Card>
@@ -123,9 +102,9 @@ const Games = () => {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2 text-xl">
                     <Terminal className="w-5 h-5 text-green-600" />
-                    {translations.snake}
+                    {t('games.snake')}
                   </CardTitle>
-                  <CardDescription>{translations.snakeDescription}</CardDescription>
+                  <CardDescription>{t('games.classicSnake')}</CardDescription>
                 </div>
                 <Badge variant="secondary" className="font-medium">
                   <Crown className="w-3 h-3 mr-1" />
@@ -136,8 +115,8 @@ const Games = () => {
             <CardContent className="pb-3">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{translations.progress}</span>
-                  <span className="font-medium">{gameState.progress.snake.gamesPlayed} {translations.played}</span>
+                  <span className="text-muted-foreground">{t('games.progress')}</span>
+                  <span className="font-medium">{gameState.progress.snake.gamesPlayed} {t('games.gamesPlayed')}</span>
                 </div>
                 <Progress 
                   value={Math.min(gameState.progress.snake.gamesPlayed * 10, 100)} 
@@ -150,7 +129,7 @@ const Games = () => {
                 onClick={() => navigate('/games/snake')} 
                 className="w-full"
               >
-                {translations.playNow}
+                {t('games.playNow')}
               </Button>
             </CardFooter>
           </Card>
@@ -162,25 +141,25 @@ const Games = () => {
                 <div className="space-y-1">
                   <CardTitle className="flex items-center gap-2 text-xl">
                     <Gamepad className="w-5 h-5 text-purple-600" />
-                    {translations.comingSoonTitle}
+                    {t('games.tetris')}
                   </CardTitle>
-                  <CardDescription>{translations.comingSoonDescription}</CardDescription>
+                  <CardDescription>{t('games.tetrisDesc')}</CardDescription>
                 </div>
                 <Badge variant="outline" className="font-medium">
                   <Star className="w-3 h-3 mr-1" />
-                  {translations.new}
+                  {t('games.new')}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="pb-3">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{translations.development}</span>
+                  <span className="text-muted-foreground">{t('games.development')}</span>
                   <span className="font-medium">85%</span>
                 </div>
                 <Progress value={85} className="h-2" />
                 <div className="bg-muted/50 p-2 mt-3 rounded text-sm text-muted-foreground">
-                  Classic puzzle game coming soon
+                  {t('games.classicPuzzle')}
                 </div>
               </div>
             </CardContent>
@@ -192,7 +171,7 @@ const Games = () => {
                 className="w-full"
               >
                 <Award className="w-4 h-4 mr-2" />
-                {translations.coming}
+                {t('games.comingSoon')}
               </Button>
             </CardFooter>
           </Card>
@@ -202,26 +181,26 @@ const Games = () => {
         <div className="mt-8 bg-card border rounded-lg p-6">
           <div className="flex items-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-yellow-600" />
-            <h2 className="text-xl font-semibold">Your Statistics</h2>
+            <h2 className="text-xl font-semibold">{t('games.yourStatistics')}</h2>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-muted/50 p-4 rounded-lg text-center">
-              <Badge variant="outline" className="mb-2">Trivia</Badge>
+              <Badge variant="outline" className="mb-2">{t('games.trivia')}</Badge>
               <p className="text-2xl font-bold">{bestScores.trivia}</p>
-              <p className="text-sm text-muted-foreground">Best Score</p>
+              <p className="text-sm text-muted-foreground">{t('games.bestScore')}</p>
             </div>
             
             <div className="bg-muted/50 p-4 rounded-lg text-center">
-              <Badge variant="outline" className="mb-2">Snake</Badge>
+              <Badge variant="outline" className="mb-2">{t('games.snake')}</Badge>
               <p className="text-2xl font-bold">{bestScores.snake}</p>
-              <p className="text-sm text-muted-foreground">Best Score</p>
+              <p className="text-sm text-muted-foreground">{t('games.bestScore')}</p>
             </div>
             
             <div className="bg-muted/50 p-4 rounded-lg text-center">
-              <Badge variant="outline" className="mb-2">Total</Badge>
+              <Badge variant="outline" className="mb-2">{t('games.total')}</Badge>
               <p className="text-2xl font-bold">{gameState.progress.snake.gamesPlayed + gameState.progress.trivia.gamesPlayed}</p>
-              <p className="text-sm text-muted-foreground">Games Played</p>
+              <p className="text-sm text-muted-foreground">{t('games.gamesPlayed')}</p>
             </div>
           </div>
         </div>
