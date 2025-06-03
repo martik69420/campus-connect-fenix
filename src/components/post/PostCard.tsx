@@ -1,7 +1,8 @@
+
 import React, { useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Link } from "react-router-dom";
-import { Heart, MessageCircle, MoreHorizontal } from "lucide-react";
+import { Heart, MessageCircle, MoreHorizontal, Flag } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -15,20 +16,17 @@ import { cn } from "@/lib/utils";
 import { supabase } from '@/integrations/supabase/client';
 import SavePostButton from "./SavePostButton";
 import { ShareButton } from "./ShareModal";
+import ReportModal from "@/components/ReportModal";
 
 // Helper function to safely format dates
 const safeFormatDate = (date: Date | string | null | undefined) => {
   if (!date) return "recently";
   
   try {
-    // If it's a string, try to convert it to a Date object
     const dateObj = typeof date === 'string' ? new Date(date) : date;
-    
-    // Check if date is valid
     if (isNaN(dateObj.getTime())) {
       return "recently";
     }
-    
     return formatDistanceToNow(dateObj, { addSuffix: true });
   } catch (error) {
     console.error("Error formatting date:", error, date);
@@ -44,12 +42,10 @@ const parseContent = (content: string) => {
   let match;
 
   while ((match = mentionRegex.exec(content)) !== null) {
-    // Add text before the match
     if (match.index > lastIndex) {
       parts.push(content.substring(lastIndex, match.index));
     }
     
-    // Add the mention as a link
     const username = match[1];
     parts.push(
       <Link 
@@ -64,7 +60,6 @@ const parseContent = (content: string) => {
     lastIndex = match.index + match[0].length;
   }
   
-  // Add any remaining text
   if (lastIndex < content.length) {
     parts.push(content.substring(lastIndex));
   }
@@ -84,10 +79,13 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [postUser, setPostUser] = useState<any>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
   
   React.useEffect(() => {
     const fetchPostUser = async () => {
       if (post.userId) {
+        setIsLoadingUser(true);
         const { data, error } = await supabase
           .from('profiles')
           .select('username, display_name, avatar_url')
@@ -97,6 +95,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
         if (!error && data) {
           setPostUser(data);
         }
+        setIsLoadingUser(false);
       }
     };
     
@@ -140,6 +139,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
     if (onAction) onAction();
   };
 
+  const handleCopyLink = () => {
+    const postUrl = `${window.location.origin}/post/${post.id}`;
+    navigator.clipboard.writeText(postUrl);
+  };
+
   const cardVariants = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
@@ -159,22 +163,38 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
           <div className="flex items-start gap-3">
             <Link to={postUser ? `/profile/${postUser.username}` : "#"}>
               <Avatar className="h-10 w-10 border border-border">
-                <AvatarImage src={postUser?.avatar_url || "/placeholder.svg"} alt={postUser?.display_name || "User"} />
-                <AvatarFallback className="bg-muted text-foreground font-medium">
-                  {postUser?.display_name ? postUser.display_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
-                </AvatarFallback>
+                {!isLoadingUser ? (
+                  <>
+                    <AvatarImage src={postUser?.avatar_url || "/placeholder.svg"} alt={postUser?.display_name || "User"} />
+                    <AvatarFallback className="bg-muted text-foreground font-medium">
+                      {postUser?.display_name ? postUser.display_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
+                    </AvatarFallback>
+                  </>
+                ) : (
+                  <div className="w-full h-full bg-muted animate-pulse rounded-full" />
+                )}
               </Avatar>
             </Link>
             <div>
               <div className="flex items-center gap-2">
-                <Link to={postUser ? `/profile/${postUser.username}` : "#"} className="font-medium hover:underline">
-                  {postUser?.display_name || "User"}
-                </Link>
+                {!isLoadingUser ? (
+                  <Link to={postUser ? `/profile/${postUser.username}` : "#"} className="font-medium hover:underline">
+                    {postUser?.display_name || "User"}
+                  </Link>
+                ) : (
+                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
+                )}
               </div>
               <div className="flex items-center text-xs text-muted-foreground">
-                <span>@{postUser?.username || "user"}</span>
-                <span className="px-1">•</span>
-                <span>{safeFormatDate(post.createdAt)}</span>
+                {!isLoadingUser ? (
+                  <>
+                    <span>@{postUser?.username || "user"}</span>
+                    <span className="px-1">•</span>
+                    <span>{safeFormatDate(post.createdAt)}</span>
+                  </>
+                ) : (
+                  <div className="h-3 w-32 bg-muted animate-pulse rounded" />
+                )}
               </div>
             </div>
           </div>
@@ -187,13 +207,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {user?.id === post.userId && (
+              {user?.id === post.userId ? (
                 <DropdownMenuItem onClick={handleDelete} className="text-destructive">
                   Delete post
                 </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => setShowReportModal(true)}>
+                  <Flag className="h-4 w-4 mr-2" />
+                  Report post
+                </DropdownMenuItem>
               )}
-              <DropdownMenuItem>Report post</DropdownMenuItem>
-              <DropdownMenuItem>Copy link</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleCopyLink}>
+                Copy link
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </CardHeader>
@@ -276,6 +302,16 @@ const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
           )}
         </CardFooter>
       </Card>
+
+      {showReportModal && (
+        <ReportModal
+          open={showReportModal}
+          onClose={() => setShowReportModal(false)}
+          type="post"
+          targetId={post.id}
+          targetName={post.content.substring(0, 50)}
+        />
+      )}
     </motion.div>
   );
 };
