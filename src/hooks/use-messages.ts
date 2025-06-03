@@ -38,30 +38,42 @@ export const useMessages = (): UseMessagesResult => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { data, error } = await supabase
-        .from('friendships')
-        .select(`
-          id,
-          friend:profiles!friendships_friend_id_fkey(
-            id,
-            username,
-            display_name,
-            avatar_url
-          )
-        `)
+      // First, get the friend relationships
+      const { data: friendsData, error: friendsError } = await supabase
+        .from('friends')
+        .select('friend_id')
         .eq('user_id', user.id)
         .eq('status', 'accepted');
 
-      if (error) {
-        console.error('Error fetching friends:', error);
+      if (friendsError) {
+        console.error('Error fetching friends:', friendsError);
         return;
       }
 
-      const friendsList = data?.map(friendship => ({
-        id: friendship.friend.id,
-        username: friendship.friend.username,
-        displayName: friendship.friend.display_name || friendship.friend.username,
-        avatar: friendship.friend.avatar_url
+      if (!friendsData || friendsData.length === 0) {
+        setFriends([]);
+        return;
+      }
+
+      // Get the friend IDs
+      const friendIds = friendsData.map(f => f.friend_id);
+
+      // Then, get the profile data for those friends
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url')
+        .in('id', friendIds);
+
+      if (profilesError) {
+        console.error('Error fetching friend profiles:', profilesError);
+        return;
+      }
+
+      const friendsList = profilesData?.map(profile => ({
+        id: profile.id,
+        username: profile.username,
+        displayName: profile.display_name || profile.username,
+        avatar: profile.avatar_url
       })) || [];
 
       setFriends(friendsList);
