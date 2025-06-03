@@ -2,12 +2,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Smile, Paperclip, Loader2, Image, Mic } from 'lucide-react';
+import { Send, Smile, Paperclip, Loader2, Image, X } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
+import EmojiPicker from '@/components/messaging/EmojiPicker';
 
 interface MessageInputProps {
-  onSendMessage: (message: string) => Promise<void>;
+  onSendMessage: (message: string, imageFile?: File) => Promise<void>;
   isSending: boolean;
   disabled?: boolean;
 }
@@ -15,8 +17,12 @@ interface MessageInputProps {
 const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, disabled }) => {
   const { toast } = useToast();
   const [message, setMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset submitting state when isSending changes to false
   useEffect(() => {
@@ -26,11 +32,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
   }, [isSending, isSubmitting]);
 
   const handleSend = async () => {
-    if (message.trim() && !isSending && !isSubmitting) {
+    if ((message.trim() || selectedImage) && !isSending && !isSubmitting) {
       try {
         setIsSubmitting(true);
-        await onSendMessage(message);
+        await onSendMessage(message, selectedImage || undefined);
         setMessage('');
+        setSelectedImage(null);
+        setImagePreview(null);
       } catch (error) {
         console.error('Failed to send message:', error);
         toast({
@@ -49,6 +57,49 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
     }
   };
 
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: "File too large",
+          description: "Please select an image smaller than 5MB.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setImagePreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removeImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const insertEmoji = (emoji: string) => {
+    setMessage(prev => prev + emoji);
+    setShowEmojiPicker(false);
+    
+    // Focus the textarea
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        const cursorPos = textareaRef.current.value.length;
+        textareaRef.current.setSelectionRange(cursorPos, cursorPos);
+      }
+    }, 0);
+  };
+
   // Auto-resize textarea based on content
   useEffect(() => {
     if (textareaRef.current) {
@@ -64,14 +115,28 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
     }
   }, []);
 
-  const handleFeatureNotReady = () => {
-    toast({
-      description: "This feature is coming soon!",
-    });
-  };
-
   return (
     <div className="border-t p-3 dark:border-gray-800 bg-background/95 backdrop-blur-sm">
+      {/* Image Preview */}
+      {imagePreview && (
+        <div className="mb-3 relative inline-block">
+          <img 
+            src={imagePreview} 
+            alt="Preview" 
+            className="max-w-32 max-h-32 rounded-lg object-cover border"
+          />
+          <Button
+            type="button"
+            variant="destructive"
+            size="icon"
+            className="absolute -top-2 -right-2 h-6 w-6"
+            onClick={removeImage}
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
       <div className="flex gap-2 items-end">
         <Textarea
           ref={textareaRef}
@@ -88,12 +153,12 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
-                  type="button"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                   disabled={isSending || isSubmitting || disabled}
-                  onClick={handleFeatureNotReady}
+                  onClick={() => fileInputRef.current?.click()}
                 >
                   <Image className="h-5 w-5" />
                   <span className="sr-only">Attach image</span>
@@ -102,45 +167,29 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
               <TooltipContent>Attach image</TooltipContent>
             </Tooltip>
           
-            <Tooltip>
-              <TooltipTrigger asChild>
+            <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+              <PopoverTrigger asChild>
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
-                  type="button"
                   className="text-muted-foreground hover:text-foreground transition-colors"
                   disabled={isSending || isSubmitting || disabled}
-                  onClick={handleFeatureNotReady}
-                >
-                  <Paperclip className="h-5 w-5" />
-                  <span className="sr-only">Attach file</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Attach file</TooltipContent>
-            </Tooltip>
-          
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  type="button"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={isSending || isSubmitting || disabled}
-                  onClick={handleFeatureNotReady}
                 >
                   <Smile className="h-5 w-5" />
                   <span className="sr-only">Add emoji</span>
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent>Add emoji</TooltipContent>
-            </Tooltip>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-0" side="top" align="end">
+                <EmojiPicker onEmojiSelect={insertEmoji} />
+              </PopoverContent>
+            </Popover>
           </TooltipProvider>
           
           <Button
             variant="default"
             size="icon"
-            disabled={!message.trim() || isSending || isSubmitting || disabled}
+            disabled={(!message.trim() && !selectedImage) || isSending || isSubmitting || disabled}
             onClick={handleSend}
             className="bg-primary hover:bg-primary/90 transition-colors"
           >
@@ -153,6 +202,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
           </Button>
         </div>
       </div>
+
+      <input
+        type="file"
+        accept="image/*"
+        className="hidden"
+        ref={fileInputRef}
+        onChange={handleImageSelect}
+      />
     </div>
   );
 };

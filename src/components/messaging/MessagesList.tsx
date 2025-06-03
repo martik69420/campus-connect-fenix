@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Loader2 } from 'lucide-react';
@@ -13,6 +14,7 @@ interface Message {
   sender_id: string;
   receiver_id: string;
   is_read: boolean;
+  image_url?: string;
 }
 
 interface MessagesListProps {
@@ -42,7 +44,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
     if (isLoading && !showFallback) {
       const timeoutId = setTimeout(() => {
         setShowFallback(true);
-      }, 5000); // Show fallback after 5 seconds of loading
+      }, 5000);
       setLoadingTimeoutId(timeoutId);
     } else if (!isLoading && loadingTimeoutId) {
       clearTimeout(loadingTimeoutId);
@@ -60,7 +62,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
   // Only scroll automatically on new messages if user is already at the bottom
   useEffect(() => {
     if (initialLoad && messages.length > 0) {
-      // On initial load, scroll to bottom once messages are loaded
       setTimeout(() => {
         if (endOfMessagesRef.current) {
           endOfMessagesRef.current.scrollIntoView({ behavior: 'auto' });
@@ -70,7 +71,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
       return;
     }
 
-    // Check if new messages arrived and we should auto-scroll
     if (shouldAutoScroll && isAtBottom && endOfMessagesRef.current) {
       endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
     }
@@ -82,7 +82,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
       setShouldAutoScroll(true);
       setIsAtBottom(true);
       
-      // Scroll to bottom when user sends a message
       setTimeout(() => {
         if (endOfMessagesRef.current) {
           endOfMessagesRef.current.scrollIntoView({ behavior: 'smooth' });
@@ -97,7 +96,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
       const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
       const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
       
-      // Consider "at bottom" if within 50px of the bottom
       setIsAtBottom(distanceFromBottom < 50);
     }
   };
@@ -106,7 +104,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
     try {
       const messageDate = new Date(dateString);
       
-      // If today, show only time
       if (messageDate.toDateString() === new Date().toDateString()) {
         return messageDate.toLocaleTimeString(undefined, {
           hour: '2-digit',
@@ -114,7 +111,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
         });
       }
       
-      // Otherwise show relative time
       return formatDistanceToNow(messageDate, { addSuffix: true });
     } catch (e) {
       console.error('Date formatting error:', e);
@@ -122,7 +118,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
     }
   };
 
-  // Show fallback UI if loading takes too long (prevents infinite loading)
   if (isLoading && (showFallback || messages.length === 0)) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
@@ -140,14 +135,12 @@ const MessagesList: React.FC<MessagesListProps> = ({
   // Combine real and optimistic messages, ensuring no duplicates
   const allMessages = [...messages];
   
-  // Only add optimistic messages that don't have real counterparts
   optimisticMessages.forEach(optMsg => {
     if (!allMessages.some(msg => msg.id === optMsg.id)) {
       allMessages.push(optMsg);
     }
   });
   
-  // Sort by creation date
   allMessages.sort((a, b) => 
     new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
@@ -181,7 +174,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
   // Group messages by date
   const groupedMessages: { [date: string]: (Message | { id: string; isDateDivider: true; date: string })[] } = {};
   
-  // Helper to add a date divider
   const addDateDivider = (date: string, messageDate: Date) => {
     if (!groupedMessages[date]) {
       groupedMessages[date] = [
@@ -198,7 +190,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
     }
   };
   
-  // Group all messages
   allMessages.forEach(message => {
     const messageDate = new Date(message.created_at);
     const dateKey = messageDate.toDateString();
@@ -207,7 +198,6 @@ const MessagesList: React.FC<MessagesListProps> = ({
     groupedMessages[dateKey].push(message);
   });
   
-  // Sort dates in ascending order
   const sortedDates = Object.keys(groupedMessages).sort(
     (a, b) => new Date(a).getTime() - new Date(b).getTime()
   );
@@ -257,7 +247,21 @@ const MessagesList: React.FC<MessagesListProps> = ({
                           isOptimistic && 'opacity-70'
                         )}
                       >
-                        {msg.content}
+                        {/* Image message */}
+                        {msg.image_url && (
+                          <div className="mb-2">
+                            <img 
+                              src={msg.image_url} 
+                              alt="Shared image" 
+                              className="max-w-full max-h-64 rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                              onClick={() => window.open(msg.image_url, '_blank')}
+                            />
+                          </div>
+                        )}
+                        {/* Text content */}
+                        {msg.content && (
+                          <div>{msg.content}</div>
+                        )}
                       </div>
                       <div
                         className={cn(

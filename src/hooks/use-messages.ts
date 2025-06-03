@@ -1,5 +1,5 @@
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface Message {
@@ -9,6 +9,7 @@ export interface Message {
   receiver_id: string;
   content: string;
   is_read: boolean;
+  image_url?: string;
 }
 
 export interface Friend {
@@ -22,7 +23,7 @@ interface UseMessagesResult {
   friends: Friend[];
   messages: Message[];
   loading: boolean;
-  sendMessage: (receiverId: string, content: string) => Promise<void>;
+  sendMessage: (receiverId: string, content: string, imageFile?: File) => Promise<void>;
   fetchMessages: (contactId: string) => Promise<void>;
   fetchFriends: () => Promise<void>;
 }
@@ -31,6 +32,7 @@ const useMessages = (): UseMessagesResult => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
+  const [currentContactId, setCurrentContactId] = useState<string | null>(null);
 
   const fetchFriends = useCallback(async () => {
     setLoading(true);
@@ -112,6 +114,7 @@ const useMessages = (): UseMessagesResult => {
 
   const fetchMessages = useCallback(async (contactId: string) => {
     setLoading(true);
+    setCurrentContactId(contactId);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -142,20 +145,86 @@ const useMessages = (): UseMessagesResult => {
     }
   }, []);
 
-  const sendMessage = useCallback(async (receiverId: string, content: string) => {
+  // Set up real-time subscription for messages
+  useEffect(() => {
+    if (!currentContactId) return;
+
+    const { data: { user } } = supabase.auth.getUser();
+    if (!user) return;
+
+    console.log('Setting up real-time subscription for messages');
+
+    const channel = supabase
+      .channel('messages-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+          filter: `or(and(sender_id.eq.${user.then(u => u.user?.id)},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.then(u => u.user?.id)}))`
+        },
+        (payload) => {
+          console.log('New message received:', payload);
+          setMessages(prev => [...prev, payload.new as Message]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('Cleaning up real-time subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [currentContactId]);
+
+  const uploadImage = async (imageFile: File): Promise<string | null> => {
+    try {
+      const fileName = `${Date.now()}-${imageFile.name}`;
+      const { data, error } = await supabase.storage
+        .from('message-images')
+        .upload(`public/${fileName}`, imageFile);
+
+      if (error) {
+        console.error('Error uploading image:', error);
+        return null;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('message-images')
+        .getPublicUrl(`public/${fileName}`);
+
+      return publicUrl;
+    } catch (error) {
+      console.error('Exception during image upload:', error);
+      return null;
+    }
+  };
+
+  const sendMessage = useCallback(async (receiverId: string, content: string, imageFile?: File) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
       console.log('Sending message from', user.id, 'to', receiverId, ':', content);
 
+      let imageUrl: string | null = null;
+      if (imageFile) {
+        imageUrl = await uploadImage(imageFile);
+      }
+
+      const messageData: any = {
+        sender_id: user.id,
+        receiver_id: receiverId,
+        content: content,
+      };
+
+      if (imageUrl) {
+        messageData.image_url = imageUrl;
+      }
+
       const { data, error } = await supabase
         .from('messages')
-        .insert([{
-          sender_id: user.id,
-          receiver_id: receiverId,
-          content: content,
-        }])
+        .insert([messageData])
         .select('*')
         .single();
 
@@ -165,8 +234,7 @@ const useMessages = (): UseMessagesResult => {
       }
 
       console.log('Message sent successfully:', data);
-      // Add the new message to the current messages
-      setMessages(prev => [...prev, data]);
+      // The real-time subscription will handle adding the message to the UI
     } catch (error) {
       console.error('Error sending message:', error);
     }

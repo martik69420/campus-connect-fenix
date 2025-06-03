@@ -64,11 +64,11 @@ const Messages = () => {
     setSelectedUser(friend);
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, imageFile?: File) => {
     if (selectedUserId) {
       setIsSending(true);
       try {
-        await sendMessage(selectedUserId, content);
+        await sendMessage(selectedUserId, content, imageFile);
       } finally {
         setIsSending(false);
       }
@@ -82,7 +82,6 @@ const Messages = () => {
   };
 
   const handleNewChat = () => {
-    // Handle new chat functionality
     console.log('New chat clicked');
   };
 
