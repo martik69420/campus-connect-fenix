@@ -27,7 +27,7 @@ interface UseMessagesResult {
   fetchFriends: () => Promise<void>;
 }
 
-export const useMessages = (): UseMessagesResult => {
+const useMessages = (): UseMessagesResult => {
   const [friends, setFriends] = useState<Friend[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -36,7 +36,12 @@ export const useMessages = (): UseMessagesResult => {
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        console.log('No authenticated user found');
+        return;
+      }
+
+      console.log('Fetching friends for user:', user.id);
 
       // First, get the friend relationships
       const { data: friendsData, error: friendsError } = await supabase
@@ -50,13 +55,17 @@ export const useMessages = (): UseMessagesResult => {
         return;
       }
 
+      console.log('Friends data from database:', friendsData);
+
       if (!friendsData || friendsData.length === 0) {
+        console.log('No friends found for user');
         setFriends([]);
         return;
       }
 
       // Get the friend IDs
       const friendIds = friendsData.map(f => f.friend_id);
+      console.log('Friend IDs:', friendIds);
 
       // Then, get the profile data for those friends
       const { data: profilesData, error: profilesError } = await supabase
@@ -69,6 +78,8 @@ export const useMessages = (): UseMessagesResult => {
         return;
       }
 
+      console.log('Profiles data:', profilesData);
+
       const friendsList = profilesData?.map(profile => ({
         id: profile.id,
         username: profile.username,
@@ -76,6 +87,7 @@ export const useMessages = (): UseMessagesResult => {
         avatar: profile.avatar_url
       })) || [];
 
+      console.log('Final friends list:', friendsList);
       setFriends(friendsList);
     } catch (error) {
       console.error('Error fetching friends:', error);
@@ -90,6 +102,8 @@ export const useMessages = (): UseMessagesResult => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      console.log('Fetching messages between', user.id, 'and', contactId);
+
       const { data, error } = await supabase
         .from('messages')
         .select('*')
@@ -101,6 +115,7 @@ export const useMessages = (): UseMessagesResult => {
         return;
       }
 
+      console.log('Messages fetched:', data);
       setMessages(data || []);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -113,6 +128,8 @@ export const useMessages = (): UseMessagesResult => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
+
+      console.log('Sending message from', user.id, 'to', receiverId, ':', content);
 
       const { data, error } = await supabase
         .from('messages')
@@ -129,6 +146,7 @@ export const useMessages = (): UseMessagesResult => {
         return;
       }
 
+      console.log('Message sent successfully:', data);
       // Add the new message to the current messages
       setMessages(prev => [...prev, data]);
     } catch (error) {

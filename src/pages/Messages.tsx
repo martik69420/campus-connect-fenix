@@ -9,7 +9,7 @@ import MessageInput from '@/components/messaging/MessageInput';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/LanguageContext';
-import { useMessages } from '@/hooks/use-messages';
+import useMessages from '@/hooks/use-messages';
 import { MessageCircle } from 'lucide-react';
 
 const Messages = () => {
