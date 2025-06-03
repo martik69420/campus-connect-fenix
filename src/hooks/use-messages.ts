@@ -149,31 +149,38 @@ const useMessages = (): UseMessagesResult => {
   useEffect(() => {
     if (!currentContactId) return;
 
-    const { data: { user } } = supabase.auth.getUser();
-    if (!user) return;
+    const setupRealtimeSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-    console.log('Setting up real-time subscription for messages');
+      console.log('Setting up real-time subscription for messages');
 
-    const channel = supabase
-      .channel('messages-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'messages',
-          filter: `or(and(sender_id.eq.${user.then(u => u.user?.id)},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.then(u => u.user?.id)}))`
-        },
-        (payload) => {
-          console.log('New message received:', payload);
-          setMessages(prev => [...prev, payload.new as Message]);
-        }
-      )
-      .subscribe();
+      const channel = supabase
+        .channel('messages-changes')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.id}))`
+          },
+          (payload) => {
+            console.log('New message received:', payload);
+            setMessages(prev => [...prev, payload.new as Message]);
+          }
+        )
+        .subscribe();
 
+      return () => {
+        console.log('Cleaning up real-time subscription');
+        supabase.removeChannel(channel);
+      };
+    };
+
+    const cleanup = setupRealtimeSubscription();
     return () => {
-      console.log('Cleaning up real-time subscription');
-      supabase.removeChannel(channel);
+      cleanup.then(cleanupFn => cleanupFn?.());
     };
   }, [currentContactId]);
 
