@@ -18,6 +18,8 @@ const Messages = () => {
   const [searchParams] = useSearchParams();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSending, setIsSending] = useState(false);
   
   const {
     friends,
@@ -62,8 +64,23 @@ const Messages = () => {
 
   const handleSendMessage = async (content: string) => {
     if (selectedUserId) {
-      await sendMessage(selectedUserId, content);
+      setIsSending(true);
+      try {
+        await sendMessage(selectedUserId, content);
+      } finally {
+        setIsSending(false);
+      }
     }
+  };
+
+  const setActiveContact = (contact: any) => {
+    setSelectedUserId(contact.id);
+    setSelectedUser(contact);
+  };
+
+  const handleNewChat = () => {
+    // Handle new chat functionality
+    console.log('New chat clicked');
   };
 
   return (
@@ -79,10 +96,13 @@ const Messages = () => {
           <div className="lg:col-span-4">
             <Card className="h-full">
               <ContactsList
-                friends={friends}
-                loading={loading}
-                onSelectUser={handleSelectUser}
-                selectedUserId={selectedUserId}
+                contacts={friends}
+                activeContactId={selectedUserId || ''}
+                setActiveContact={setActiveContact}
+                isLoading={loading}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                onNewChat={handleNewChat}
               />
             </Card>
           </div>
@@ -92,15 +112,22 @@ const Messages = () => {
             <Card className="h-full flex flex-col">
               {selectedUser ? (
                 <>
-                  <ChatHeader user={selectedUser} />
+                  <ChatHeader 
+                    contact={selectedUser} 
+                    onOpenUserActions={() => console.log('Open user actions')}
+                  />
                   <div className="flex-1 min-h-0">
                     <MessagesList
                       messages={messages}
+                      optimisticMessages={[]}
                       currentUserId={user?.id || ''}
-                      loading={loading}
+                      isLoading={loading}
                     />
                   </div>
-                  <MessageInput onSendMessage={handleSendMessage} />
+                  <MessageInput 
+                    onSendMessage={handleSendMessage}
+                    isSending={isSending}
+                  />
                 </>
               ) : (
                 <div className="flex-1 flex items-center justify-center">
