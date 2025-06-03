@@ -41,6 +41,7 @@ const Messages = () => {
   // Fetch friends on mount
   useEffect(() => {
     if (user?.id) {
+      console.log('User authenticated, fetching friends...');
       fetchFriends();
     }
   }, [user?.id, fetchFriends]);
@@ -57,6 +58,7 @@ const Messages = () => {
   }, [selectedUserId, user?.id, fetchMessages, friends]);
 
   const handleSelectUser = (userId: string) => {
+    console.log('Selecting user:', userId);
     setSelectedUserId(userId);
     const friend = friends.find(f => f.id === userId);
     setSelectedUser(friend);
@@ -74,6 +76,7 @@ const Messages = () => {
   };
 
   const setActiveContact = (contact: any) => {
+    console.log('Setting active contact:', contact);
     setSelectedUserId(contact.id);
     setSelectedUser(contact);
   };
@@ -137,6 +140,11 @@ const Messages = () => {
                     <p className="text-muted-foreground mt-1">
                       {t('messages.selectContact')}
                     </p>
+                    {friends.length === 0 && !loading && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        You don't have any friends yet. Add some friends to start messaging!
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
