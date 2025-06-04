@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/LanguageContext';
 import AppLayout from '@/components/layout/AppLayout';
+import { ProfilePictureSettings } from '@/components/settings/ProfilePictureSettings';
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { AccountSettings } from '@/components/settings/AccountSettings';
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
@@ -32,6 +33,7 @@ const Settings = () => {
         </div>
 
         <div className="space-y-12">
+          <ProfilePictureSettings />
           <ProfileSettings />
           <AccountSettings />
           <AppearanceSettings />

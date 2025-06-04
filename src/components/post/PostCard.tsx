@@ -1,318 +1,265 @@
 
-import React, { useState } from "react";
-import { formatDistanceToNow } from "date-fns";
-import { Link } from "react-router-dom";
-import { Heart, MessageCircle, MoreHorizontal, Flag } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Post, usePost } from "@/context/PostContext";
-import { useAuth } from "@/context/auth";
-import CommentSection from "./CommentSection";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { supabase } from '@/integrations/supabase/client';
-import SavePostButton from "./SavePostButton";
-import { ShareButton } from "./ShareModal";
-import ReportModal from "@/components/ReportModal";
-
-// Helper function to safely format dates
-const safeFormatDate = (date: Date | string | null | undefined) => {
-  if (!date) return "recently";
-  
-  try {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    if (isNaN(dateObj.getTime())) {
-      return "recently";
-    }
-    return formatDistanceToNow(dateObj, { addSuffix: true });
-  } catch (error) {
-    console.error("Error formatting date:", error, date);
-    return "recently";
-  }
-};
-
-// Function to parse content and convert @mentions to links
-const parseContent = (content: string) => {
-  const mentionRegex = /@(\w+)/g;
-  const parts = [];
-  let lastIndex = 0;
-  let match;
-
-  while ((match = mentionRegex.exec(content)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(content.substring(lastIndex, match.index));
-    }
-    
-    const username = match[1];
-    parts.push(
-      <Link 
-        key={`mention-${match.index}`} 
-        to={`/profile/${username}`} 
-        className="text-primary font-medium hover:underline"
-      >
-        @{username}
-      </Link>
-    );
-    
-    lastIndex = match.index + match[0].length;
-  }
-  
-  if (lastIndex < content.length) {
-    parts.push(content.substring(lastIndex));
-  }
-  
-  return parts.length > 0 ? parts : content;
-};
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Heart, MessageCircle, Share2, Bookmark, MoreHorizontal, ExternalLink, Crown, Flag } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { formatDistanceToNow } from 'date-fns';
+import { usePost } from '@/context/PostContext';
+import { useAuth } from '@/context/auth';
+import CommentSection from './CommentSection';
+import ShareModal from './ShareModal';
+import ReportModal from '@/components/ReportModal';
+import { useToast } from '@/hooks/use-toast';
+import type { Post } from '@/context/PostContext';
 
 interface PostCardProps {
   post: Post;
-  onAction?: () => void | Promise<void>;
 }
 
-const PostCard: React.FC<PostCardProps> = ({ post, onAction }) => {
-  const { likePost, unlikePost, commentOnPost, sharePost, deletePost } = usePost();
-  const { user } = useAuth();
+const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
-  const [newComment, setNewComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [postUser, setPostUser] = useState<any>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const [isLoadingUser, setIsLoadingUser] = useState(true);
-  
-  React.useEffect(() => {
-    const fetchPostUser = async () => {
-      if (post.userId) {
-        setIsLoadingUser(true);
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('username, display_name, avatar_url')
-          .eq('id', post.userId)
-          .single();
-          
-        if (!error && data) {
-          setPostUser(data);
-        }
-        setIsLoadingUser(false);
-      }
-    };
-    
-    fetchPostUser();
-  }, [post.userId]);
-  
+  const { likePost, unlikePost, deletePost } = usePost();
+  const { user } = useAuth();
+  const { toast } = useToast();
+
   const isLiked = user ? post.likes.includes(user.id) : false;
-  
-  const handleLike = () => {
-    if (isLiked) {
-      unlikePost(post.id);
-    } else {
-      likePost(post.id);
+  const isOwnPost = user ? post.userId === user.id : false;
+
+  const handleLike = async () => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to like posts.",
+        variant: "destructive"
+      });
+      return;
     }
-    if (onAction) onAction();
+
+    try {
+      if (isLiked) {
+        await unlikePost(post.id);
+      } else {
+        await likePost(post.id);
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
   };
-  
-  const handleComment = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newComment.trim() && !isSubmitting) {
-      setIsSubmitting(true);
-      commentOnPost(post.id, newComment)
-        .then(() => {
-          setNewComment("");
-          setShowComments(true);
-          if (onAction) onAction();
-        })
-        .finally(() => {
-          setIsSubmitting(false);
+
+  const handleDelete = async () => {
+    if (window.confirm('Are you sure you want to delete this post?')) {
+      try {
+        await deletePost(post.id);
+        toast({
+          title: "Post deleted",
+          description: "Your post has been deleted successfully.",
         });
+      } catch (error) {
+        console.error('Error deleting post:', error);
+        toast({
+          title: "Error",
+          description: "Failed to delete post. Please try again.",
+          variant: "destructive"
+        });
+      }
     }
   };
-  
+
   const handleShare = () => {
-    sharePost(post.id);
-    if (onAction) onAction();
-  };
-  
-  const handleDelete = () => {
-    deletePost(post.id);
-    if (onAction) onAction();
+    setShowShareModal(true);
   };
 
-  const handleCopyLink = () => {
-    const postUrl = `${window.location.origin}/post/${post.id}`;
-    navigator.clipboard.writeText(postUrl);
+  const handleReport = () => {
+    setShowReportModal(true);
   };
 
-  const cardVariants = {
-    initial: { opacity: 0, y: 20 },
-    animate: { opacity: 1, y: 0, transition: { duration: 0.4 } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } }
+  const getPostUrl = () => {
+    return `${window.location.origin}/post/${post.id}`;
+  };
+
+  const renderImages = () => {
+    if (!post.images || post.images.length === 0) return null;
+
+    return (
+      <div className="mt-3 space-y-2">
+        {post.images.map((imageUrl, index) => {
+          // For now, we'll default to preview mode since we don't have display type stored
+          // In a real implementation, you'd store the display type with each image
+          const isPreview = true; // This would come from your image data structure
+          
+          if (isPreview) {
+            return (
+              <div key={index} className="rounded-lg overflow-hidden border border-border">
+                <img 
+                  src={imageUrl} 
+                  alt={`Post image ${index + 1}`}
+                  className="w-full h-auto max-h-96 object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                  onClick={() => window.open(imageUrl, '_blank')}
+                />
+              </div>
+            );
+          } else {
+            return (
+              <div key={index} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <a 
+                  href={imageUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex-1 text-sm text-primary hover:underline truncate"
+                >
+                  {imageUrl}
+                </a>
+              </div>
+            );
+          }
+        })}
+      </div>
+    );
   };
 
   return (
-    <motion.div
-      variants={cardVariants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
-      layout
-    >
-      <Card className="overflow-hidden mb-4 border-border shadow-md hover:shadow-lg transition-shadow duration-300">
-        <CardHeader className="p-4 pb-0 flex flex-row items-start justify-between space-y-0">
-          <div className="flex items-start gap-3">
-            <Link to={postUser ? `/profile/${postUser.username}` : "#"}>
+    <>
+      <Card className="mb-4 shadow-sm border-border/50 hover:shadow-md transition-shadow">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center space-x-3">
               <Avatar className="h-10 w-10 border border-border">
-                {!isLoadingUser ? (
-                  <>
-                    <AvatarImage src={postUser?.avatar_url || "/placeholder.svg"} alt={postUser?.display_name || "User"} />
-                    <AvatarFallback className="bg-muted text-foreground font-medium">
-                      {postUser?.display_name ? postUser.display_name.split(' ').map((n: string) => n[0]).join('') : 'U'}
-                    </AvatarFallback>
-                  </>
-                ) : (
-                  <div className="w-full h-full bg-muted animate-pulse rounded-full" />
-                )}
+                <AvatarImage 
+                  src={post.user?.avatar || '/placeholder.svg'} 
+                  alt={post.user?.displayName || 'User'} 
+                />
+                <AvatarFallback className="text-sm bg-primary/10">
+                  {post.user?.displayName?.charAt(0) || '?'}
+                </AvatarFallback>
               </Avatar>
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                {!isLoadingUser ? (
-                  <Link to={postUser ? `/profile/${postUser.username}` : "#"} className="font-medium hover:underline">
-                    {postUser?.display_name || "User"}
-                  </Link>
-                ) : (
-                  <div className="h-4 w-24 bg-muted animate-pulse rounded" />
-                )}
-              </div>
-              <div className="flex items-center text-xs text-muted-foreground">
-                {!isLoadingUser ? (
-                  <>
-                    <span>@{postUser?.username || "user"}</span>
-                    <span className="px-1">•</span>
-                    <span>{safeFormatDate(post.createdAt)}</span>
-                  </>
-                ) : (
-                  <div className="h-3 w-32 bg-muted animate-pulse rounded" />
-                )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <p className="font-semibold text-sm hover:underline cursor-pointer">
+                    {post.user?.displayName || 'Unknown User'}
+                  </p>
+                  {post.user?.isAdmin && (
+                    <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                      <Crown className="h-3 w-3" />
+                      Admin
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <span>@{post.user?.username || 'unknown'}</span>
+                  <span>·</span>
+                  <span>{formatDistanceToNow(new Date(post.createdAt), { addSuffix: true })}</span>
+                </div>
               </div>
             </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {isOwnPost ? (
+                  <DropdownMenuItem onClick={handleDelete} className="text-destructive">
+                    Delete Post
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem onClick={handleReport}>
+                    <Flag className="h-4 w-4 mr-2" />
+                    Report Post
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <MoreHorizontal className="h-4 w-4" />
-                <span className="sr-only">More options</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {user?.id === post.userId ? (
-                <DropdownMenuItem onClick={handleDelete} className="text-destructive">
-                  Delete post
-                </DropdownMenuItem>
-              ) : (
-                <DropdownMenuItem onClick={() => setShowReportModal(true)}>
-                  <Flag className="h-4 w-4 mr-2" />
-                  Report post
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem onClick={handleCopyLink}>
-                Copy link
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </CardHeader>
         
-        <CardContent className="p-4">
-          <p className="whitespace-pre-wrap">{parseContent(post.content)}</p>
-          
-          {post.images && post.images.length > 0 && (
-            <div className={cn(
-              "grid gap-2 mt-3 rounded-lg overflow-hidden", 
-              post.images.length > 1 ? "grid-cols-2" : "grid-cols-1"
-            )}>
-              {post.images.map((img, index) => (
-                <img 
-                  key={index} 
-                  src={img} 
-                  alt={`Post image ${index + 1}`}
-                  onError={(e) => {
-                    console.error(`Failed to load image: ${img}`);
-                    e.currentTarget.src = '/placeholder.svg';
-                  }}
-                  className={cn(
-                    "w-full h-auto object-cover rounded-lg", 
-                    post.images && post.images.length === 1 && "max-h-[350px]"
-                  )}
-                />
-              ))}
-            </div>
-          )}
-        </CardContent>
-        
-        <CardFooter className="px-4 pt-0 pb-4 flex flex-col">
-          <div className="flex items-center justify-between w-full mb-2 bg-secondary/30 rounded-full px-2 py-1">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className={cn(
-                "gap-2 font-normal rounded-full transition-colors", 
-                isLiked ? "text-fenix-dark hover:bg-fenix-dark/10" : "hover:bg-secondary"
-              )}
-              onClick={handleLike}
-            >
-              <Heart className={cn("h-4 w-4", isLiked && "fill-current text-fenix-dark")} />
-              <span>{post.likes.length}</span>
-            </Button>
+        <CardContent className="pt-0">
+          <div className="space-y-3">
+            <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+              {post.content}
+            </p>
             
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="gap-2 font-normal rounded-full transition-colors hover:bg-secondary"
-              onClick={() => setShowComments(!showComments)}
-            >
-              <MessageCircle className="h-4 w-4" />
-              <span>{post.comments.length}</span>
-            </Button>
+            {renderImages()}
             
-            <ShareButton postId={post.id} postTitle={post.content.substring(0, 30)} />
+            <Separator className="my-4" />
             
-            <SavePostButton postId={post.id} />
-          </div>
-          
-          {showComments && (
-            <AnimatePresence>
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
+            <div className="flex items-center justify-between text-muted-foreground">
+              <div className="flex items-center space-x-6">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleLike}
+                  className={`flex items-center space-x-2 hover:text-red-500 transition-colors ${
+                    isLiked ? 'text-red-500' : ''
+                  }`}
+                >
+                  <Heart className={`h-4 w-4 ${isLiked ? 'fill-current' : ''}`} />
+                  <span className="text-xs">{post.likes.length}</span>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowComments(!showComments)}
+                  className="flex items-center space-x-2 hover:text-blue-500 transition-colors"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="text-xs">{post.comments.length}</span>
+                </Button>
+                
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleShare}
+                  className="flex items-center space-x-2 hover:text-green-500 transition-colors"
+                >
+                  <Share2 className="h-4 w-4" />
+                  <span className="text-xs">{post.shares || 0}</span>
+                </Button>
+              </div>
+              
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hover:text-yellow-500 transition-colors"
               >
-                <Separator className="my-3" />
-                <CommentSection 
-                  post={post} 
-                  newComment={newComment}
-                  setNewComment={setNewComment}
-                  handleComment={handleComment}
-                />
-              </motion.div>
-            </AnimatePresence>
-          )}
-        </CardFooter>
+                <Bookmark className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {showComments && (
+              <>
+                <Separator className="my-4" />
+                <CommentSection postId={post.id} comments={post.comments} />
+              </>
+            )}
+          </div>
+        </CardContent>
       </Card>
 
-      {showReportModal && (
-        <ReportModal
-          open={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          type="post"
-          targetId={post.id}
-          targetName={post.content.substring(0, 50)}
-        />
-      )}
-    </motion.div>
+      <ShareModal
+        isOpen={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        postUrl={getPostUrl()}
+        postContent={post.content}
+      />
+
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        targetType="post"
+        targetId={post.id}
+        targetUserId={post.userId}
+      />
+    </>
   );
 };
 
