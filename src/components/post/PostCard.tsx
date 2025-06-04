@@ -24,7 +24,8 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [showComments, setShowComments] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
-  const { likePost, unlikePost, deletePost } = usePost();
+  const [newComment, setNewComment] = useState('');
+  const { likePost, unlikePost, deletePost, addComment } = usePost();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -77,6 +78,32 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
 
   const handleReport = () => {
     setShowReportModal(true);
+  };
+
+  const handleComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to comment.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!newComment.trim()) return;
+
+    try {
+      await addComment(post.id, newComment);
+      setNewComment('');
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add comment. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const getPostUrl = () => {
@@ -238,7 +265,12 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
             {showComments && (
               <>
                 <Separator className="my-4" />
-                <CommentSection postId={post.id} comments={post.comments} />
+                <CommentSection 
+                  post={post}
+                  newComment={newComment}
+                  setNewComment={setNewComment}
+                  handleComment={handleComment}
+                />
               </>
             )}
           </div>
@@ -246,18 +278,18 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
       </Card>
 
       <ShareModal
-        isOpen={showShareModal}
-        onClose={() => setShowShareModal(false)}
-        postUrl={getPostUrl()}
-        postContent={post.content}
+        open={showShareModal}
+        onOpenChange={setShowShareModal}
+        postId={post.id}
+        postTitle={post.content}
       />
 
       <ReportModal
-        isOpen={showReportModal}
+        open={showReportModal}
         onClose={() => setShowReportModal(false)}
-        targetType="post"
+        type="post"
         targetId={post.id}
-        targetUserId={post.userId}
+        targetName={post.user?.displayName}
       />
     </>
   );
