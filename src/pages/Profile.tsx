@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import AppLayout from '@/components/layout/AppLayout';
 import ProfileHeader from '@/components/profile/ProfileHeader';
@@ -27,11 +27,10 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { earnedBadges } = useAchievements();
 
-  // Combine achievement badges with admin badge if user is admin
-  const getUserBadges = (): UserBadge[] => {
+  // Memoize the computed values to prevent unnecessary re-renders
+  const getUserBadges = useMemo((): UserBadge[] => {
     const allBadges = [...earnedBadges];
     
-    // Add admin badge if user is an admin
     if (profileUser?.isAdmin) {
       const adminBadge: UserBadge = {
         id: 'admin',
@@ -43,12 +42,16 @@ const Profile: React.FC = () => {
         earned: true
       };
       
-      // Insert admin badge at the beginning
       allBadges.unshift(adminBadge);
     }
     
     return allBadges;
-  };
+  }, [earnedBadges, profileUser?.isAdmin]);
+
+  // Memoize the current user check to prevent unnecessary updates
+  const isOwnProfile = useMemo(() => {
+    return user && user.username === username;
+  }, [user?.username, username]);
 
   useEffect(() => {
     const loadProfileData = async () => {
@@ -85,20 +88,19 @@ const Profile: React.FC = () => {
         console.log('Profile loaded successfully:', data);
         setProfileUser(data);
         
-        // Check if this is the current user's profile
-        if (user && user.username === username) {
-          setIsCurrentUser(true);
-        }
+        // Set current user status
+        setIsCurrentUser(isOwnProfile);
         
-        // Check if user is a friend
+        // Check friendship status only if needed
         if (user && user.id && data.id && user.id !== data.id) {
           const { data: friendData } = await supabase
             .from('friends')
             .select('*')
             .or(`and(user_id.eq.${user.id},friend_id.eq.${data.id}),and(friend_id.eq.${user.id},user_id.eq.${data.id})`)
-            .eq('status', 'accepted');
+            .eq('status', 'accepted')
+            .maybeSingle();
             
-          setIsFriend(friendData && friendData.length > 0);
+          setIsFriend(!!friendData);
         }
       } catch (error) {
         console.error('Error loading profile:', error);
@@ -108,14 +110,16 @@ const Profile: React.FC = () => {
       }
     };
     
-    loadProfileData();
-  }, [user, username, t]);
+    // Only load if username exists and has changed
+    if (username) {
+      loadProfileData();
+    }
+  }, [username, t, user?.id, isOwnProfile]);
 
   const handleAddFriend = async () => {
     if (!user || !profileUser) return;
     
     try {
-      // Send friend request
       await supabase
         .from('friends')
         .insert([
@@ -130,7 +134,6 @@ const Profile: React.FC = () => {
     if (!user || !profileUser) return;
     
     try {
-      // Remove friend relationship
       await supabase
         .from('friends')
         .delete()
@@ -146,16 +149,24 @@ const Profile: React.FC = () => {
     return (
       <AppLayout>
         <div className="container py-6 max-w-4xl mx-auto">
-          <Card className="mb-6 border-2 border-primary/10 shadow-sm">
-            <div className="flex items-center space-x-4 p-6">
-              <Skeleton className="h-16 w-16 rounded-full" />
-              <div className="space-y-3 flex-1">
-                <Skeleton className="h-5 w-[250px]" />
-                <Skeleton className="h-4 w-[200px]" />
+          <Card className="mb-8 border border-border/50 shadow-lg">
+            <div className="h-32 md:h-40 bg-gradient-to-r from-primary/20 via-primary/10 to-primary/20 animate-pulse"></div>
+            <div className="px-6 pb-6 -mt-16 relative">
+              <div className="flex flex-col md:flex-row md:items-end gap-6">
+                <Skeleton className="h-24 w-24 md:h-32 md:w-32 rounded-full border-4 border-background shadow-lg" />
+                <div className="flex-1 space-y-3">
+                  <Skeleton className="h-8 w-48" />
+                  <Skeleton className="h-5 w-32" />
+                  <Skeleton className="h-4 w-64" />
+                </div>
+                <div className="flex gap-3">
+                  <Skeleton className="h-10 w-24" />
+                  <Skeleton className="h-10 w-24" />
+                </div>
               </div>
             </div>
           </Card>
-          <Card className="shadow-sm">
+          <Card className="border shadow-sm">
             <div className="p-6">
               <div className="flex justify-between mb-6">
                 <Skeleton className="h-10 w-32" />
@@ -173,10 +184,18 @@ const Profile: React.FC = () => {
     return (
       <AppLayout>
         <div className="container py-6 max-w-4xl mx-auto">
-          <Card className="mb-6 border-2 border-destructive/20 shadow-sm">
-            <CardContent className="p-6 text-center">
-              <h2 className="text-xl font-semibold mb-2">{t('profile.notFound')}</h2>
-              <p className="text-muted-foreground">{error}</p>
+          <Card className="mb-6 border-2 border-destructive/20 shadow-lg">
+            <CardContent className="p-8 text-center">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="p-4 rounded-full bg-destructive/10">
+                  <Shield className="h-8 w-8 text-destructive" />
+                </div>
+                <h2 className="text-2xl font-bold text-foreground">{t('profile.notFound')}</h2>
+                <p className="text-muted-foreground text-lg">{error}</p>
+                <Button variant="outline" onClick={() => window.history.back()}>
+                  Go Back
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -188,19 +207,38 @@ const Profile: React.FC = () => {
     <AppLayout>
       <div className="container py-6 md:py-8 max-w-4xl mx-auto">
         {isEditingProfile ? (
-          <Card className="mb-8 border-2 border-primary/10 shadow-md">
-            <CardContent className="p-6">
-              <h3 className="text-xl font-semibold mb-6">{t('profile.editProfile')}</h3>
+          <Card className="mb-8 border-2 border-primary/20 shadow-lg">
+            <CardContent className="p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Star className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold">{t('profile.editProfile')}</h3>
+              </div>
               <ProfilePictureUpload />
-              <Button variant="secondary" onClick={() => setIsEditingProfile(false)} className="mt-6">
-                {t('common.cancel')}
-              </Button>
+              <div className="flex gap-3 mt-8">
+                <Button variant="outline" onClick={() => setIsEditingProfile(false)}>
+                  {t('common.cancel')}
+                </Button>
+                <Button onClick={() => setIsEditingProfile(false)}>
+                  Save Changes
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
           <div className="mb-8">
-            <Card className="overflow-hidden border-2 border-primary/10 profile-card shadow-md rounded-xl">
-              <div className="h-32 md:h-40 bg-gradient-to-r from-fenix/30 via-primary/20 to-fenix/30"></div>
+            <Card className="overflow-hidden border border-border/50 shadow-xl rounded-2xl backdrop-blur-sm">
+              <div className="h-32 md:h-40 bg-gradient-to-r from-primary/30 via-accent/20 to-primary/30 relative">
+                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                <div className="absolute top-4 right-4">
+                  <div className="flex gap-2">
+                    <div className="p-2 rounded-full bg-background/80 backdrop-blur-sm">
+                      <Sparkles className="h-4 w-4 text-primary" />
+                    </div>
+                  </div>
+                </div>
+              </div>
               <div className="px-6 pb-6 -mt-16 relative">
                 <ProfileHeader 
                   user={profileUser || { id: '', username: username || '', displayName: username || '' }}
@@ -215,8 +253,8 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-        <Card className="border shadow-sm rounded-xl">
-          <CardContent className="p-4 md:p-6">
+        <Card className="border border-border/50 shadow-lg rounded-2xl backdrop-blur-sm">
+          <CardContent className="p-6 md:p-8">
             <ProfileTabs 
               username={username || ''} 
               isOwnProfile={isCurrentUser}

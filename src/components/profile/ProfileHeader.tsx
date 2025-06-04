@@ -1,28 +1,34 @@
 
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Users, MapPin, Calendar, Briefcase, Edit, UserPlus, UserMinus, Loader2, MessageCircle, MoreHorizontal, ShieldAlert, UserX } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
+import React, { memo } from 'react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Card } from '@/components/ui/card';
 import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuSeparator, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { useAuth } from "@/context/auth";
-import { useLanguage } from "@/context/LanguageContext";
-import OnlineStatus from "@/components/OnlineStatus";
-import ReportModal from "@/components/ReportModal";
-import type { User } from "@/context/auth";
-import { formatDistanceToNow } from "date-fns";
-import { motion } from "framer-motion";
+  MapPin, 
+  Calendar, 
+  Users, 
+  Settings, 
+  UserPlus, 
+  UserMinus, 
+  Shield,
+  Star,
+  Crown,
+  Verified
+} from 'lucide-react';
+import { useLanguage } from '@/context/LanguageContext';
 
 interface ProfileHeaderProps {
-  user: User;
+  user: {
+    id: string;
+    username: string;
+    displayName: string;
+    bio?: string;
+    avatar_url?: string;
+    school?: string;
+    created_at?: string;
+    isAdmin?: boolean;
+  };
   isCurrentUser: boolean;
   isFriend: boolean;
   onAddFriend: () => void;
@@ -30,218 +36,145 @@ interface ProfileHeaderProps {
   loading: boolean;
 }
 
-const ProfileHeader: React.FC<ProfileHeaderProps> = ({
+const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
   user,
   isCurrentUser,
   isFriend,
   onAddFriend,
   onRemoveFriend,
-  loading,
+  loading
 }) => {
   const { t } = useLanguage();
-  const { user: loggedInUser } = useAuth();
-  const navigate = useNavigate();
-  const [showFullBio, setShowFullBio] = useState(false);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
 
-  const toggleBio = () => {
-    setShowFullBio(!showFullBio);
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Recently';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric'
+    });
   };
 
-  const bioDisplay = user?.bio
-    ? showFullBio
-      ? user.bio
-      : user.bio.substring(0, 150)
-    : 'No bio available';
-
-  const showReadMore = user?.bio && user.bio.length > 150;
-
-  const handleReportProfile = () => {
-    setShowReportModal(true);
-    setIsDropdownOpen(false);
-  };
-
-  const handleBlockProfile = () => {
-    console.log('Block profile clicked');
-    setIsDropdownOpen(false);
-  };
-
-  const handleMessage = () => {
-    // Navigate to messages with this user preselected
-    if (user && user.id) {
-      navigate(`/messages?user=${user.id}`);
-    } else {
-      navigate('/messages');
-    }
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
   };
 
   return (
-    <motion.div
-      className="relative overflow-hidden rounded-xl"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      {/* Cover image/gradient banner */}
-      <div className="h-36 md:h-48 w-full bg-gradient-to-r from-primary/40 via-primary/20 to-primary/60 dark:from-primary/20 dark:to-primary/50 rounded-t-xl"></div>
-      
-      {/* Main profile section */}
-      <div className="relative bg-card dark:bg-card/95 shadow-xl rounded-b-xl px-4 md:px-8 pb-6">
-        {/* Avatar positioned to overlap the cover image and card */}
-        <div className="-mt-16 md:-mt-20 flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
-          <Avatar className="w-28 h-28 md:w-36 md:h-36 border-4 border-background shadow-md">
-            <AvatarImage src={user?.avatar || '/placeholder.svg'} alt={user?.displayName} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
-              {user?.displayName?.split(' ').map(n => n[0]).join('') || 'U'}
-            </AvatarFallback>
-          </Avatar>
-          
-          <div className="flex flex-col md:flex-row w-full justify-between md:items-end gap-4 pt-2">
-            <div>
-              <h1 className="text-2xl md:text-3xl font-bold">{user?.displayName || user?.username}</h1>
-              <p className="text-muted-foreground flex items-center gap-2">
-                <span>@{user?.username}</span>
-                {user?.id && <OnlineStatus userId={user.id} className="ml-2" />}
-              </p>
+    <div className="flex flex-col md:flex-row md:items-end gap-6">
+      {/* Avatar Section */}
+      <div className="relative">
+        <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-background shadow-xl ring-2 ring-primary/20">
+          <AvatarImage 
+            src={user.avatar_url || "/placeholder.svg"} 
+            alt={user.displayName}
+            className="object-cover"
+          />
+          <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-bold text-lg md:text-2xl">
+            {getInitials(user.displayName)}
+          </AvatarFallback>
+        </Avatar>
+        
+        {/* Status Indicators */}
+        <div className="absolute -bottom-1 -right-1 flex gap-1">
+          {user.isAdmin && (
+            <div className="p-1.5 rounded-full bg-destructive shadow-lg ring-2 ring-background">
+              <Shield className="h-3 w-3 text-white" />
             </div>
-            
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-              {!isCurrentUser && (
-                <>
-                  {isFriend ? (
-                    <Button variant="outline" onClick={onRemoveFriend} disabled={loading} className="shadow-sm">
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t('profile.removing')}
-                        </>
-                      ) : (
-                        <>
-                          <UserMinus className="mr-2 h-4 w-4" />
-                          {t('profile.removeFriend')}
-                        </>
-                      )}
-                    </Button>
-                  ) : (
-                    <Button onClick={onAddFriend} disabled={loading} className="shadow-sm">
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {t('profile.adding')}
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="mr-2 h-4 w-4" />
-                          {t('profile.addFriend')}
-                        </>
-                      )}
-                    </Button>
-                  )}
-                  <Button variant="outline" onClick={handleMessage} className="shadow-sm">
-                    <MessageCircle className="mr-2 h-4 w-4" />
-                    {t('profile.message')}
-                  </Button>
-                </>
-              )}
-
-              {isCurrentUser && (
-                <Button variant="secondary" onClick={() => navigate('/settings')} className="shadow-sm">
-                  <Edit className="mr-2 h-4 w-4" />
-                  {t('profile.editProfile')}
-                </Button>
-              )}
-
-              {/* Dropdown Menu */}
-              {!isCurrentUser && (
-                <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-9 w-9">
-                      <MoreHorizontal className="h-5 w-5" />
-                      <span className="sr-only">More options</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[200px]">
-                    <DropdownMenuItem onClick={handleReportProfile}>
-                      <ShieldAlert className="mr-2 h-4 w-4" />
-                      {t('profile.reportProfile')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={handleBlockProfile}>
-                      <UserX className="mr-2 h-4 w-4" />
-                      {t('profile.blockProfile')}
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    {/* Only show privacy settings when viewing own profile */}
-                    {isCurrentUser && (
-                      <DropdownMenuItem asChild>
-                        <Link to="/settings" className="w-full flex items-center">
-                          <Users className="mr-2 h-4 w-4" />
-                          {t('profile.privacySettings')}
-                        </Link>
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
+          )}
+          <div className="p-1.5 rounded-full bg-green-500 shadow-lg ring-2 ring-background">
+            <div className="h-2 w-2 rounded-full bg-white"></div>
           </div>
         </div>
-
-        {/* User info badges */}
-        <div className="flex flex-wrap gap-3 mt-6">
-          {user?.school && (
-            <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1.5">
-              <Briefcase className="w-3.5 h-3.5" />
-              <span>{user.school}</span>
-            </Badge>
-          )}
-          
-          {user?.location && (
-            <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1.5">
-              <MapPin className="w-3.5 h-3.5" />
-              <span>{user.location}</span>
-            </Badge>
-          )}
-          
-          {user?.createdAt && (
-            <Badge variant="secondary" className="flex items-center gap-1 px-3 py-1.5">
-              <Calendar className="w-3.5 h-3.5" />
-              <span>
-                {t('profile.joined')} {formatDistanceToNow(new Date(user.createdAt), { addSuffix: true })}
-              </span>
-            </Badge>
-          )}
-        </div>
-
-        {/* User Bio */}
-        {user?.bio && (
-          <div className="mt-6 bg-background/50 dark:bg-background/10 rounded-lg p-4 border border-border/50">
-            <h3 className="text-lg font-medium mb-2">{t('profile.aboutMe')}</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              {bioDisplay}
-              {showReadMore && (
-                <button onClick={toggleBio} className="text-primary ml-1 font-medium hover:underline">
-                  {showFullBio ? t('profile.readLess') : t('profile.readMore')}
-                </button>
-              )}
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Report Modal */}
-      {showReportModal && user && (
-        <ReportModal
-          open={showReportModal}
-          onClose={() => setShowReportModal(false)}
-          type="user"
-          targetId={user.id}
-          targetName={user.displayName || user.username}
-        />
-      )}
-    </motion.div>
+      {/* User Info Section */}
+      <div className="flex-1 space-y-3">
+        <div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
+              {user.displayName}
+            </h1>
+            {user.isAdmin && (
+              <Badge variant="destructive" className="flex items-center gap-1 font-medium">
+                <Crown className="h-3 w-3" />
+                Admin
+              </Badge>
+            )}
+            <Badge variant="secondary" className="flex items-center gap-1">
+              <Verified className="h-3 w-3" />
+              Verified
+            </Badge>
+          </div>
+          <p className="text-muted-foreground text-lg">@{user.username}</p>
+        </div>
+        
+        {user.bio && (
+          <p className="text-foreground leading-relaxed max-w-md">
+            {user.bio}
+          </p>
+        )}
+        
+        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+          {user.school && (
+            <div className="flex items-center gap-1.5">
+              <MapPin className="h-4 w-4" />
+              <span>{user.school}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5">
+            <Calendar className="h-4 w-4" />
+            <span>Joined {formatDate(user.created_at)}</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Users className="h-4 w-4" />
+            <span>1.2K followers</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="flex gap-3 md:flex-col md:items-end">
+        {isCurrentUser ? (
+          <Button variant="outline" className="flex items-center gap-2 shadow-sm">
+            <Settings className="h-4 w-4" />
+            Edit Profile
+          </Button>
+        ) : (
+          <>
+            {isFriend ? (
+              <Button 
+                variant="outline" 
+                onClick={onRemoveFriend}
+                disabled={loading}
+                className="flex items-center gap-2 shadow-sm"
+              >
+                <UserMinus className="h-4 w-4" />
+                Unfollow
+              </Button>
+            ) : (
+              <Button 
+                onClick={onAddFriend}
+                disabled={loading}
+                className="flex items-center gap-2 shadow-sm"
+              >
+                <UserPlus className="h-4 w-4" />
+                Follow
+              </Button>
+            )}
+            <Button variant="outline" className="shadow-sm">
+              Message
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
   );
-};
+});
+
+ProfileHeader.displayName = 'ProfileHeader';
 
 export default ProfileHeader;
