@@ -25,7 +25,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
   const [showShareModal, setShowShareModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [newComment, setNewComment] = useState('');
-  const { likePost, unlikePost, deletePost, addComment } = usePost();
+  const { likePost, unlikePost, deletePost, commentOnPost } = usePost();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -94,7 +94,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
     if (!newComment.trim()) return;
 
     try {
-      await addComment(post.id, newComment);
+      await commentOnPost(post.id, newComment);
       setNewComment('');
     } catch (error) {
       console.error('Error adding comment:', error);
