@@ -54,7 +54,11 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
     });
   };
 
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string) => {
+    if (!name || typeof name !== 'string') {
+      return '?';
+    }
+    
     return name
       .split(' ')
       .map(n => n[0])
@@ -63,24 +67,27 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
       .slice(0, 2);
   };
 
+  // Ensure we have a valid display name
+  const displayName = user?.displayName || user?.username || 'Unknown User';
+
   return (
     <div className="flex flex-col md:flex-row md:items-end gap-6">
       {/* Avatar Section */}
       <div className="relative">
         <Avatar className="h-24 w-24 md:h-32 md:w-32 border-4 border-background shadow-xl ring-2 ring-primary/20">
           <AvatarImage 
-            src={user.avatar_url || "/placeholder.svg"} 
-            alt={user.displayName}
+            src={user?.avatar_url || "/placeholder.svg"} 
+            alt={displayName}
             className="object-cover"
           />
           <AvatarFallback className="bg-gradient-to-br from-primary/20 to-accent/20 text-foreground font-bold text-lg md:text-2xl">
-            {getInitials(user.displayName)}
+            {getInitials(displayName)}
           </AvatarFallback>
         </Avatar>
         
         {/* Status Indicators */}
         <div className="absolute -bottom-1 -right-1 flex gap-1">
-          {user.isAdmin && (
+          {user?.isAdmin && (
             <div className="p-1.5 rounded-full bg-destructive shadow-lg ring-2 ring-background">
               <Shield className="h-3 w-3 text-white" />
             </div>
@@ -96,9 +103,9 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
         <div>
           <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-              {user.displayName}
+              {displayName}
             </h1>
-            {user.isAdmin && (
+            {user?.isAdmin && (
               <Badge variant="destructive" className="flex items-center gap-1 font-medium">
                 <Crown className="h-3 w-3" />
                 Admin
@@ -109,17 +116,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
               Verified
             </Badge>
           </div>
-          <p className="text-muted-foreground text-lg">@{user.username}</p>
+          <p className="text-muted-foreground text-lg">@{user?.username || 'unknown'}</p>
         </div>
         
-        {user.bio && (
+        {user?.bio && (
           <p className="text-foreground leading-relaxed max-w-md">
             {user.bio}
           </p>
         )}
         
         <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-          {user.school && (
+          {user?.school && (
             <div className="flex items-center gap-1.5">
               <MapPin className="h-4 w-4" />
               <span>{user.school}</span>
@@ -127,7 +134,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
           )}
           <div className="flex items-center gap-1.5">
             <Calendar className="h-4 w-4" />
-            <span>Joined {formatDate(user.created_at)}</span>
+            <span>Joined {formatDate(user?.created_at)}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <Users className="h-4 w-4" />
