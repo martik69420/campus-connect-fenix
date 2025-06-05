@@ -20,25 +20,32 @@ const PostViewCounter: React.FC<PostViewCounterProps> = ({ postId, initialViews 
 
       try {
         // Check if user has already viewed this post
-        const { data: existingView } = await supabase
+        const { data: existingView, error: checkError } = await supabase
           .from('post_views')
           .select('id')
           .eq('post_id', postId)
           .eq('user_id', user.id)
           .maybeSingle();
 
+        if (checkError) {
+          console.error('Error checking existing view:', checkError);
+          return;
+        }
+
         if (!existingView) {
           // Record the view
-          const { error } = await supabase
+          const { error: insertError } = await supabase
             .from('post_views')
             .insert([{
               post_id: postId,
               user_id: user.id
             }]);
 
-          if (!error) {
+          if (!insertError) {
             setViewCount(prev => prev + 1);
             setHasViewed(true);
+          } else {
+            console.error('Error recording post view:', insertError);
           }
         } else {
           setHasViewed(true);
@@ -64,6 +71,8 @@ const PostViewCounter: React.FC<PostViewCounterProps> = ({ postId, initialViews 
 
         if (!error && data) {
           setViewCount(data.length);
+        } else if (error) {
+          console.error('Error fetching view count:', error);
         }
       } catch (error) {
         console.error('Error fetching view count:', error);
