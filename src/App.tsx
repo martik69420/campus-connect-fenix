@@ -45,9 +45,9 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <LanguageProvider>
-          <TooltipProvider>
-            <AuthProvider>
+        <TooltipProvider>
+          <AuthProvider>
+            <LanguageProvider>
               <GameProvider>
                 <AchievementProvider>
                   <NotificationProvider>
@@ -76,9 +76,9 @@ function App() {
                   </NotificationProvider>
                 </AchievementProvider>
               </GameProvider>
-            </AuthProvider>
-          </TooltipProvider>
-        </LanguageProvider>
+            </LanguageProvider>
+          </AuthProvider>
+        </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>
   );
