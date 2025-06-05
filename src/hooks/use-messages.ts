@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,6 +25,7 @@ interface UseMessagesResult {
   sendMessage: (receiverId: string, content: string, imageFile?: File) => Promise<void>;
   fetchMessages: (contactId: string) => Promise<void>;
   fetchFriends: () => Promise<void>;
+  markMessagesAsRead: (senderId: string) => Promise<void>;
 }
 
 const useMessages = (): UseMessagesResult => {
@@ -145,6 +145,34 @@ const useMessages = (): UseMessagesResult => {
     }
   }, []);
 
+  const markMessagesAsRead = useCallback(async (senderId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('sender_id', senderId)
+        .eq('receiver_id', user.id)
+        .eq('is_read', false);
+
+      if (error) {
+        console.error('Error marking messages as read:', error);
+        return;
+      }
+
+      // Update local state
+      setMessages(prev => prev.map(msg => 
+        msg.sender_id === senderId && msg.receiver_id === user.id && !msg.is_read
+          ? { ...msg, is_read: true }
+          : msg
+      ));
+    } catch (error) {
+      console.error('Error marking messages as read:', error);
+    }
+  }, []);
+
   // Set up real-time subscription for messages
   useEffect(() => {
     if (!currentContactId) return;
@@ -223,6 +251,7 @@ const useMessages = (): UseMessagesResult => {
         sender_id: user.id,
         receiver_id: receiverId,
         content: content,
+        is_read: false
       };
 
       if (imageUrl) {
@@ -253,7 +282,8 @@ const useMessages = (): UseMessagesResult => {
     loading,
     sendMessage,
     fetchMessages,
-    fetchFriends
+    fetchFriends,
+    markMessagesAsRead
   };
 };
 

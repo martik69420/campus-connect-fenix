@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
@@ -11,6 +10,8 @@ interface Message {
   content: string;
   created_at: string;
   sender_id: string;
+  receiver_id: string;
+  is_read: boolean;
   sender?: {
     username: string;
     display_name: string;
@@ -52,19 +53,35 @@ const MessagesList: React.FC<MessagesListProps> = ({
     } else if (isYesterday(date)) {
       return `Yesterday ${format(date, 'HH:mm')}`;
     } else {
-      return format(date, 'MMM d, HH:mm');
+      return `MMM d, HH:mm`;
     }
+  };
+
+  const getMessageStatus = (message: Message, isOwn: boolean): 'sending' | 'sent' | 'delivered' | 'read' => {
+    if (!isOwn) return 'read'; // Other person's messages are always considered read by us
+    
+    // If message has explicit status, use it
+    if (message.status) return message.status;
+    
+    // For optimistic messages (no id yet), show as sending
+    if (!message.id || message.id.startsWith('temp-')) return 'sending';
+    
+    // Check if message is read
+    if (message.is_read) return 'read';
+    
+    // Otherwise it's delivered but not read
+    return 'delivered';
   };
 
   const renderMessageStatus = (message: Message, isOwn: boolean) => {
     if (!isOwn) return null;
     
-    const status = message.status || 'sent';
+    const status = getMessageStatus(message, isOwn);
     const iconClass = "h-3 w-3";
     
     switch (status) {
       case 'sending':
-        return <Clock className={`${iconClass} text-muted-foreground`} />;
+        return <Clock className={`${iconClass} text-muted-foreground animate-pulse`} />;
       case 'sent':
         return <Check className={`${iconClass} text-muted-foreground`} />;
       case 'delivered':
@@ -108,7 +125,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
 
           return (
             <div
-              key={message.id}
+              key={message.id || `temp-${index}`}
               className={`flex gap-3 mb-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
             >
               {!isOwn && (
@@ -135,11 +152,11 @@ const MessagesList: React.FC<MessagesListProps> = ({
                 )}
                 
                 <div
-                  className={`rounded-2xl px-4 py-2 relative group ${
+                  className={`rounded-2xl px-4 py-2 relative group transition-all duration-200 ${
                     isOwn
-                      ? 'bg-primary text-primary-foreground ml-auto rounded-br-md'
+                      ? 'bg-primary text-primary-foreground ml-auto rounded-br-md shadow-sm'
                       : 'bg-muted text-foreground rounded-bl-md'
-                  }`}
+                  } ${getMessageStatus(message, isOwn) === 'sending' ? 'opacity-70' : 'opacity-100'}`}
                 >
                   {message.image_url && (
                     <div className="mb-2">

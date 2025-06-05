@@ -7,10 +7,11 @@ import ChatHeader from '@/components/messaging/ChatHeader';
 import MessagesList from '@/components/messaging/MessagesList';
 import MessageInput from '@/components/messaging/MessageInput';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/LanguageContext';
 import useMessages from '@/hooks/use-messages';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, RefreshCw } from 'lucide-react';
 
 const Messages = () => {
   const { user } = useAuth();
@@ -20,6 +21,7 @@ const Messages = () => {
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   const {
     friends,
@@ -27,7 +29,8 @@ const Messages = () => {
     loading,
     sendMessage,
     fetchMessages,
-    fetchFriends
+    fetchFriends,
+    markMessagesAsRead
   } = useMessages();
 
   // Check for userId in URL params
@@ -54,8 +57,11 @@ const Messages = () => {
       // Find the selected user from friends list
       const friend = friends.find(f => f.id === selectedUserId);
       setSelectedUser(friend);
+      
+      // Mark messages as read
+      markMessagesAsRead(selectedUserId);
     }
-  }, [selectedUserId, user?.id, fetchMessages, friends]);
+  }, [selectedUserId, user?.id, fetchMessages, friends, markMessagesAsRead]);
 
   const handleSelectUser = (userId: string) => {
     console.log('Selecting user:', userId);
@@ -71,6 +77,17 @@ const Messages = () => {
         await sendMessage(selectedUserId, content, imageFile);
       } finally {
         setIsSending(false);
+      }
+    }
+  };
+
+  const handleRefreshChat = async () => {
+    if (selectedUserId) {
+      setIsRefreshing(true);
+      try {
+        await fetchMessages(selectedUserId);
+      } finally {
+        setIsRefreshing(false);
       }
     }
   };
@@ -114,16 +131,27 @@ const Messages = () => {
             <Card className="h-full flex flex-col">
               {selectedUser ? (
                 <>
-                  <ChatHeader 
-                    contact={selectedUser} 
-                    onOpenUserActions={() => console.log('Open user actions')}
-                  />
+                  <div className="flex items-center justify-between border-b">
+                    <ChatHeader 
+                      contact={selectedUser} 
+                      onOpenUserActions={() => console.log('Open user actions')}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleRefreshChat}
+                      disabled={isRefreshing}
+                      className="mr-3"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </div>
                   <div className="flex-1 min-h-0">
                     <MessagesList
                       messages={messages}
                       optimisticMessages={[]}
                       currentUserId={user?.id || ''}
-                      isLoading={loading}
+                      isLoading={loading && !isRefreshing}
                     />
                   </div>
                   <MessageInput 
