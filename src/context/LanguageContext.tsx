@@ -1,10 +1,13 @@
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useAuth } from '@/context/auth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 // Define the shape of the translation object for each language
 type TranslationKey = string;
 
-// Define the available languages
+// Define the available languages - restricted to 3 languages only
 type Language = 'en' | 'nl' | 'fr';
 
 // Define the shape of translations
@@ -16,11 +19,12 @@ type LanguageContextType = {
   t: (key: TranslationKey) => string;
   setLanguage: (language: Language) => void;
   availableLanguages: { code: Language, name: string }[];
+  isLoading: boolean;
 };
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-// Available languages for the UI
+// Available languages for the UI - only 3 languages
 const availableLanguages: { code: Language, name: string }[] = [
   { code: 'en', name: 'English' },
   { code: 'nl', name: 'Dutch (Nederlands)' },
@@ -969,7 +973,34 @@ const translations: Translations = {
 
 // Language Provider component
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [language, setLanguage] = useState<Language>('nl'); // Default to Dutch
+  const [language, setLanguageState] = useState<Language>('en'); // Default to English
+  const [isLoading, setIsLoading] = useState(true);
+  const { user, session } = useAuth();
+  const { toast } = useToast();
+
+  // Load language from database on auth
+  useEffect(() => {
+    const loadLanguageFromDB = async () => {
+      if (user?.id) {
+        try {
+          const { data, error } = await supabase
+            .from('user_settings')
+            .select('language')
+            .eq('user_id', user.id)
+            .single();
+
+          if (data?.language && availableLanguages.find(lang => lang.code === data.language)) {
+            setLanguageState(data.language as Language);
+          }
+        } catch (error) {
+          console.log('No user settings found, using default language');
+        }
+      }
+      setIsLoading(false);
+    };
+
+    loadLanguageFromDB();
+  }, [user?.id]);
 
   // Function to get translation
   const t = useCallback((key: TranslationKey): string => {
@@ -980,8 +1011,57 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return translations[key][language] || translations[key]['en'] || key;
   }, [language]);
 
+  // Function to set language and save to database
+  const setLanguage = useCallback(async (newLanguage: Language) => {
+    setLanguageState(newLanguage);
+    
+    if (user?.id) {
+      try {
+        // Try to update existing settings
+        const { error: updateError } = await supabase
+          .from('user_settings')
+          .update({ language: newLanguage })
+          .eq('user_id', user.id);
+
+        if (updateError) {
+          // If update fails, try to insert new settings
+          const { error: insertError } = await supabase
+            .from('user_settings')
+            .insert({ 
+              user_id: user.id, 
+              language: newLanguage 
+            });
+
+          if (insertError) {
+            console.error('Failed to save language preference:', insertError);
+            toast({
+              title: t('settings.languageUpdateError'),
+              variant: "destructive"
+            });
+          } else {
+            toast({
+              title: t('settings.languageUpdated'),
+              description: t('settings.languageUpdatedDesc'),
+            });
+          }
+        } else {
+          toast({
+            title: t('settings.languageUpdated'),
+            description: t('settings.languageUpdatedDesc'),
+          });
+        }
+      } catch (error) {
+        console.error('Error saving language preference:', error);
+        toast({
+          title: t('settings.languageUpdateError'),
+          variant: "destructive"
+        });
+      }
+    }
+  }, [user?.id, t, toast]);
+
   return (
-    <LanguageContext.Provider value={{ language, t, setLanguage, availableLanguages }}>
+    <LanguageContext.Provider value={{ language, t, setLanguage, availableLanguages, isLoading }}>
       {children}
     </LanguageContext.Provider>
   );

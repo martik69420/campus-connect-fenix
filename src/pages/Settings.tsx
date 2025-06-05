@@ -8,6 +8,7 @@ import { ProfilePictureSettings } from '@/components/settings/ProfilePictureSett
 import { ProfileSettings } from '@/components/settings/ProfileSettings';
 import { AccountSettings } from '@/components/settings/AccountSettings';
 import { AppearanceSettings } from '@/components/settings/AppearanceSettings';
+import { LanguageSettings } from '@/components/settings/LanguageSettings';
 import { NotificationSettings } from '@/components/settings/NotificationSettings';
 import { PrivacySettings } from '@/components/settings/PrivacySettings';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ const Settings = () => {
           <ProfileSettings />
           <AccountSettings />
           <AppearanceSettings />
+          <LanguageSettings />
           <NotificationSettings />
           <PrivacySettings />
         </div>

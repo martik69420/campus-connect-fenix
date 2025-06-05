@@ -6,14 +6,47 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { Camera, Upload, Trash2, User } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 import ProfilePictureUpload from '../profile/ProfilePictureUpload';
 
 export const ProfilePictureSettings = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshUser } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const uploadToStorage = async (file: File): Promise<string | null> => {
+    if (!user?.id) return null;
+
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+
+      // Upload file to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Storage upload error:', error);
+      return null;
+    }
+  };
 
   const handleFileSelect = (file: File) => {
     setSelectedFile(file);
@@ -24,9 +57,25 @@ export const ProfilePictureSettings = () => {
 
     setIsUploading(true);
     try {
-      // Here you would normally upload to your storage service
-      // For now, we'll simulate the upload
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Upload to storage
+      const avatarUrl = await uploadToStorage(selectedFile);
+      
+      if (!avatarUrl) {
+        throw new Error('Failed to upload image');
+      }
+
+      // Update user profile in database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Refresh user data
+      await refreshUser();
       
       toast({
         title: "Profile picture updated",
@@ -36,6 +85,7 @@ export const ProfilePictureSettings = () => {
       setSelectedFile(null);
       setPreviewUrl(null);
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
         description: "Failed to update profile picture. Please try again.",
@@ -49,7 +99,19 @@ export const ProfilePictureSettings = () => {
   const handleRemove = async () => {
     setIsUploading(true);
     try {
-      // Here you would remove the profile picture
+      // Update user profile to remove avatar
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: '/placeholder.svg' })
+        .eq('id', user?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Refresh user data
+      await refreshUser();
+      
       toast({
         title: "Profile picture removed",
         description: "Your profile picture has been removed.",
@@ -58,6 +120,7 @@ export const ProfilePictureSettings = () => {
       setPreviewUrl(null);
       setSelectedFile(null);
     } catch (error) {
+      console.error('Remove error:', error);
       toast({
         title: "Error",
         description: "Failed to remove profile picture. Please try again.",
@@ -133,7 +196,7 @@ export const ProfilePictureSettings = () => {
               </div>
             )}
             
-            {currentAvatar && !selectedFile && (
+            {currentAvatar && currentAvatar !== '/placeholder.svg' && !selectedFile && (
               <Button 
                 variant="destructive" 
                 onClick={handleRemove}

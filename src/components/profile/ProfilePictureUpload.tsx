@@ -1,9 +1,11 @@
+
 import * as React from 'react';
 import { useAuth } from '@/context/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { UserRound, Camera, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ProfilePictureUploadProps {
   currentAvatar?: string | null;
@@ -18,13 +20,45 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
   previewUrl,
   setPreviewUrl
 }) => {
-  const { user, uploadProfilePicture } = useAuth();
+  const { user, refreshUser } = useAuth();
   const { toast } = useToast();
   const [isUploading, setIsUploading] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const handleButtonClick = () => {
     fileInputRef.current?.click();
+  };
+
+  const uploadToStorage = async (file: File): Promise<string | null> => {
+    if (!user?.id) return null;
+
+    try {
+      // Generate unique filename
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+
+      // Upload file to Supabase storage
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      // Get public URL
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(fileName);
+
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Storage upload error:', error);
+      return null;
+    }
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,9 +104,39 @@ const ProfilePictureUpload: React.FC<ProfilePictureUploadProps> = ({
     // Otherwise use the default behavior
     try {
       setIsUploading(true);
-      await uploadProfilePicture(file);
+      
+      // Upload to storage
+      const avatarUrl = await uploadToStorage(file);
+      
+      if (!avatarUrl) {
+        throw new Error('Failed to upload image');
+      }
+
+      // Update user profile in database
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: avatarUrl })
+        .eq('id', user?.id);
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Refresh user data
+      await refreshUser();
+
+      toast({
+        title: "Profile picture updated",
+        description: "Your profile picture has been successfully updated.",
+      });
+
     } catch (error) {
       console.error("Error uploading profile picture:", error);
+      toast({
+        title: "Upload failed",
+        description: "Failed to update profile picture. Please try again.",
+        variant: "destructive"
+      });
     } finally {
       setIsUploading(false);
       // Clear the input
