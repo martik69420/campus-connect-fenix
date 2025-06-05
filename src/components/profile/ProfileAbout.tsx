@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon, BookIcon, MapPinIcon, Pencil } from 'lucide-react';
 import { useAuth } from '@/context/auth';
+import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@/context/auth/types';
 
 interface ProfileAboutProps {
@@ -18,53 +19,87 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // In a real app, this would fetch the user data from the API
-    // For now, we'll simulate by checking if the username matches the current user
-    if (username && user && user.username === username) {
-      setProfileUser(user);
-    } else if (username) {
-      // For demo purposes, create a mock user
-      setProfileUser({
-        id: '123',
-        email: '',
-        username: username,
-        displayName: username,
-        avatar: '/placeholder.svg',
-        bio: `This is the bio for ${username}. In a real application, this would be fetched from the database.`,
-        school: 'Example University',
-        location: 'New York, NY',
-        createdAt: new Date().toISOString(),
-        coins: 0,
-        isAdmin: false,
-        interests: [], // Add missing required properties
-        settings: {  // Add missing required properties
-          publicLikedPosts: false,
-          publicSavedPosts: false,
-          emailNotifications: true,
-          pushNotifications: true,
-          theme: 'system',
-          privacy: {
-            profileVisibility: 'everyone',
-            onlineStatus: true,
-            friendRequests: true,
-            showActivity: true,
-            allowMessages: 'everyone',
-            allowTags: true,
-            dataSharing: false,
-            showEmail: false
-          }
+    const fetchUserProfile = async () => {
+      if (!username) {
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        // Check if it's the current user first
+        if (user && user.username === username) {
+          setProfileUser(user);
+          setIsLoading(false);
+          return;
         }
-      });
-    }
-    
-    // Simulate loading delay
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 500);
-    
-    return () => clearTimeout(timer);
+
+        // Fetch user profile from database
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('username', username)
+          .maybeSingle();
+
+        if (error) {
+          console.error('Error fetching profile:', error);
+          setError('Failed to load profile');
+          return;
+        }
+
+        if (!data) {
+          setError('User not found');
+          return;
+        }
+
+        // Transform the database profile to match User type
+        const transformedUser: User = {
+          id: data.id,
+          email: data.email || '',
+          username: data.username,
+          displayName: data.display_name || data.username,
+          avatar: data.avatar_url,
+          bio: data.bio,
+          school: data.school,
+          location: '', // Add location if available in your schema
+          createdAt: data.created_at,
+          coins: data.coins || 0,
+          isAdmin: data.is_admin || false,
+          interests: data.interests || [],
+          settings: {
+            publicLikedPosts: false,
+            publicSavedPosts: false,
+            emailNotifications: true,
+            pushNotifications: true,
+            theme: 'system',
+            privacy: {
+              profileVisibility: 'everyone',
+              onlineStatus: true,
+              friendRequests: true,
+              showActivity: true,
+              allowMessages: 'everyone',
+              allowTags: true,
+              dataSharing: false,
+              showEmail: false
+            }
+          }
+        };
+
+        setProfileUser(transformedUser);
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        setError('Failed to load profile');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUserProfile();
   }, [username, user]);
 
   const handleEdit = () => {
@@ -89,11 +124,13 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
     );
   }
 
-  if (!profileUser) {
+  if (error || !profileUser) {
     return (
       <Card>
         <CardContent className="p-6">
-          <p className="text-center text-muted-foreground">User not found</p>
+          <p className="text-center text-muted-foreground">
+            {error || 'User not found'}
+          </p>
         </CardContent>
       </Card>
     );

@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -46,7 +47,6 @@ const useMessages = (): UseMessagesResult => {
 
       console.log('Fetching friends for user:', user.id);
 
-      // Get both directions of friendships (where user is either user_id or friend_id)
       const { data: friendsData, error: friendsError } = await supabase
         .from('friends')
         .select('user_id, friend_id')
@@ -68,7 +68,6 @@ const useMessages = (): UseMessagesResult => {
         return;
       }
 
-      // Get the friend IDs (exclude current user's ID)
       const friendIds = friendsData.map(f => 
         f.user_id === user.id ? f.friend_id : f.user_id
       ).filter(id => id !== user.id);
@@ -82,7 +81,6 @@ const useMessages = (): UseMessagesResult => {
         return;
       }
 
-      // Get the profile data for those friends
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('id, username, display_name, avatar_url')
@@ -138,6 +136,9 @@ const useMessages = (): UseMessagesResult => {
 
       console.log('Messages fetched:', data);
       setMessages(data || []);
+      
+      // Mark messages as read when fetching
+      await markMessagesAsRead(contactId);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
@@ -196,6 +197,21 @@ const useMessages = (): UseMessagesResult => {
           (payload) => {
             console.log('New message received:', payload);
             setMessages(prev => [...prev, payload.new as Message]);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'messages',
+            filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.id}))`
+          },
+          (payload) => {
+            console.log('Message updated:', payload);
+            setMessages(prev => prev.map(msg => 
+              msg.id === payload.new.id ? payload.new as Message : msg
+            ));
           }
         )
         .subscribe();
@@ -270,7 +286,6 @@ const useMessages = (): UseMessagesResult => {
       }
 
       console.log('Message sent successfully:', data);
-      // The real-time subscription will handle adding the message to the UI
     } catch (error) {
       console.error('Error sending message:', error);
     }

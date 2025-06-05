@@ -27,7 +27,6 @@ const Profile: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const { earnedBadges } = useAchievements();
 
-  // Memoize the computed values to prevent unnecessary re-renders
   const getUserBadges = useMemo((): UserBadge[] => {
     const allBadges = [...earnedBadges];
     
@@ -48,7 +47,6 @@ const Profile: React.FC = () => {
     return allBadges;
   }, [earnedBadges, profileUser?.isAdmin]);
 
-  // Memoize the current user check to prevent unnecessary updates
   const isOwnProfile = useMemo(() => {
     return user && user.username === username;
   }, [user?.username, username]);
@@ -66,6 +64,14 @@ const Profile: React.FC = () => {
       
       try {
         console.log('Loading profile for username:', username);
+        
+        // Check if it's the current user first
+        if (user && user.username === username) {
+          setProfileUser(user);
+          setIsCurrentUser(true);
+          setIsLoading(false);
+          return;
+        }
         
         const { data, error } = await supabase
           .from('profiles')
@@ -87,11 +93,9 @@ const Profile: React.FC = () => {
         
         console.log('Profile loaded successfully:', data);
         setProfileUser(data);
+        setIsCurrentUser(false);
         
-        // Set current user status
-        setIsCurrentUser(isOwnProfile);
-        
-        // Check friendship status only if needed
+        // Check friendship status only if needed and user is authenticated
         if (user && user.id && data.id && user.id !== data.id) {
           const { data: friendData } = await supabase
             .from('friends')
@@ -110,11 +114,8 @@ const Profile: React.FC = () => {
       }
     };
     
-    // Only load if username exists and has changed
-    if (username) {
-      loadProfileData();
-    }
-  }, [username, t, user?.id, isOwnProfile]);
+    loadProfileData();
+  }, [username, t, user?.id, user?.username]);
 
   const handleAddFriend = async () => {
     if (!user || !profileUser) return;
@@ -241,7 +242,12 @@ const Profile: React.FC = () => {
               </div>
               <div className="px-6 pb-6 -mt-16 relative">
                 <ProfileHeader 
-                  user={profileUser || { id: '', username: username || '', displayName: username || '' }}
+                  user={profileUser || { 
+                    id: '', 
+                    username: username || '', 
+                    displayName: username || '',
+                    display_name: username || ''
+                  }}
                   isCurrentUser={isCurrentUser}
                   isFriend={isFriend}
                   onAddFriend={handleAddFriend}
