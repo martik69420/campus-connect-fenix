@@ -7,6 +7,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { motion } from 'framer-motion';
 
 interface SavePostButtonProps {
   postId: string;
@@ -32,7 +33,10 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
 
   useEffect(() => {
     const checkIfSaved = async () => {
-      if (!user) return;
+      if (!user) {
+        setIsCheckingSaved(false);
+        return;
+      }
       
       try {
         setIsCheckingSaved(true);
@@ -41,7 +45,7 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
           .select('id')
           .eq('user_id', user.id)
           .eq('post_id', postId)
-          .single();
+          .maybeSingle();
           
         if (error && error.code !== 'PGRST116') {
           console.error('Error checking saved status:', error);
@@ -116,31 +120,50 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
   };
 
   return (
-    <Button
-      variant={variant}
-      size={size}
-      className={cn(
-        `text-muted-foreground hover:text-foreground transition-colors duration-200`,
-        isSaved && 'text-yellow-500 hover:text-yellow-600',
-        className
-      )}
-      onClick={handleSaveToggle}
-      disabled={isSaving || isCheckingSaved}
+    <motion.div
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      transition={{ duration: 0.2 }}
     >
-      <Bookmark 
+      <Button
+        variant={variant}
+        size={size}
         className={cn(
-          "h-4 w-4", 
-          showText && "mr-1.5", 
-          "transition-colors duration-200",
-          isSaved && "fill-yellow-500 text-yellow-500"
-        )} 
-      />
-      {showText && (
-        <span className={isSaved ? "text-yellow-500" : ""}>
-          {isSaved ? t('post.saved') : t('post.save')}
-        </span>
-      )}
-    </Button>
+          `text-muted-foreground hover:text-foreground transition-all duration-300`,
+          isSaved && 'text-yellow-500 hover:text-yellow-600',
+          className
+        )}
+        onClick={handleSaveToggle}
+        disabled={isSaving || isCheckingSaved}
+      >
+        <motion.div
+          animate={{ 
+            scale: isSaved ? [1, 1.3, 1] : 1,
+            rotate: isSaved ? [0, 15, -15, 0] : 0
+          }}
+          transition={{ duration: 0.5 }}
+        >
+          <Bookmark 
+            className={cn(
+              "h-4 w-4", 
+              showText && "mr-1.5", 
+              "transition-all duration-300",
+              isSaved && "fill-yellow-500 text-yellow-500"
+            )} 
+          />
+        </motion.div>
+        {showText && (
+          <motion.span 
+            className={isSaved ? "text-yellow-500" : ""}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+          >
+            {isSaved ? t('post.saved') : t('post.save')}
+          </motion.span>
+        )}
+      </Button>
+    </motion.div>
   );
 };
 

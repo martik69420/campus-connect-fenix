@@ -11,7 +11,7 @@ import PostForm from '@/components/posts/PostForm';
 import PostList from '@/components/posts/PostList';
 import { Loader2, RefreshCw, AlertCircle, TrendingUp, Clock } from 'lucide-react';
 import AdBanner from '@/components/ads/AdBanner';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useViewport } from '@/hooks/use-viewport';
@@ -116,9 +116,19 @@ const Index = () => {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
+      <motion.div 
+        className="flex items-center justify-center h-screen"
+        initial={{ opacity: 0, scale: 0.8 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.5 }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </motion.div>
+      </motion.div>
     );
   }
 
@@ -129,33 +139,67 @@ const Index = () => {
 
   return (
     <MentionsProvider>
-      <div className="container mx-auto py-4 md:py-8">
+      <motion.div 
+        className="container mx-auto py-4 md:py-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
         {/* Main content - no sidebar here since it's handled in Home.tsx */}
         <div className="w-full">
           {user && (
-            <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-3">
-                <CardTitle className="text-lg">Create Post</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <PostForm />
-              </CardContent>
-            </Card>
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              whileHover={{ scale: 1.01 }}
+            >
+              <Card className="mb-4 md:mb-6 shadow-md border-primary/10 overflow-hidden hover:shadow-lg transition-shadow duration-300">
+                <CardHeader className="bg-gradient-to-r from-primary/5 to-primary/10 pb-3">
+                  <CardTitle className="text-lg">Create Post</CardTitle>
+                </CardHeader>
+                <CardContent className="p-4">
+                  <PostForm />
+                </CardContent>
+              </Card>
+            </motion.div>
           )}
 
           <Tabs defaultValue="for-you" onValueChange={handleTabChange}>
-            <div className="flex items-center justify-between mb-4">
+            <motion.div 
+              className="flex items-center justify-between mb-4"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: 0.3 }}
+            >
               <TabsList className="grid grid-cols-2 w-[200px] md:w-[300px]">
                 <TabsTrigger value="for-you" className="text-sm flex items-center">
-                  <TrendingUp className="h-4 w-4 mr-2" />
+                  <motion.div
+                    animate={{ scale: activeTab === 'for-you' ? [1, 1.2, 1] : 1 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                  </motion.div>
                   For You
                 </TabsTrigger>
                 <TabsTrigger value="latest" className="text-sm flex items-center">
-                  <Clock className="h-4 w-4 mr-2" />
+                  <motion.div
+                    animate={{ 
+                      rotate: activeTab === 'latest' ? [0, 360] : 0,
+                      scale: activeTab === 'latest' ? [1, 1.2, 1] : 1 
+                    }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Clock className="h-4 w-4 mr-2" />
+                  </motion.div>
                   Latest
                 </TabsTrigger>
               </TabsList>
-              <motion.div whileTap={{ rotate: 360 }} transition={{ duration: 0.5 }}>
+              <motion.div 
+                whileTap={{ rotate: 360 }} 
+                transition={{ duration: 0.5 }}
+                whileHover={{ scale: 1.05 }}
+              >
                 <Button 
                   variant="outline" 
                   size={isMobile ? "sm" : "default"} 
@@ -163,31 +207,62 @@ const Index = () => {
                   disabled={isRefreshing}
                   className={cn("gap-2", isRefreshing && "opacity-70")}
                 >
-                  <RefreshCw className={cn(
-                    "h-4 w-4", 
-                    isRefreshing && "animate-spin"
-                  )} />
+                  <motion.div
+                    animate={{ rotate: isRefreshing ? 360 : 0 }}
+                    transition={{ 
+                      duration: 1, 
+                      repeat: isRefreshing ? Infinity : 0,
+                      ease: "linear"
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                  </motion.div>
                   {!isMobile && "Refresh"}
                 </Button>
               </motion.div>
-            </div>
+            </motion.div>
             
-            {loadError && (
-              <div className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center">
-                <AlertCircle className="h-4 w-4 mr-2" />
-                <span className="flex-1">{loadError}</span>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={handleRefresh} 
-                  className="ml-2"
+            <AnimatePresence>
+              {loadError && (
+                <motion.div 
+                  className="mb-4 p-3 bg-destructive/10 text-destructive rounded-md text-sm flex items-center"
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
                 >
-                  Try Again
-                </Button>
-              </div>
-            )}
+                  <motion.div
+                    animate={{ rotate: [0, 10, -10, 0] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                  >
+                    <AlertCircle className="h-4 w-4 mr-2" />
+                  </motion.div>
+                  <span className="flex-1">{loadError}</span>
+                  <motion.div
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleRefresh} 
+                      className="ml-2"
+                    >
+                      Try Again
+                    </Button>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
             
-            <Separator className="mb-4" />
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: 0.4 }}
+            >
+              <Separator className="mb-4" />
+            </motion.div>
+            
             <TabsContent value="for-you" className="focus-visible:outline-none">
               <PostList 
                 posts={displayedPosts} 
@@ -206,8 +281,14 @@ const Index = () => {
         </div>
         
         {/* AdSense banner */}
-        <AdBanner adSlot="2813542194" className="mt-8" />
-      </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.6 }}
+        >
+          <AdBanner adSlot="2813542194" className="mt-8" />
+        </motion.div>
+      </motion.div>
     </MentionsProvider>
   );
 };
