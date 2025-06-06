@@ -19,12 +19,15 @@ const PostViewCounter: React.FC<PostViewCounterProps> = ({ postId, initialViews 
       if (!user || hasViewed) return;
 
       try {
-        // Check if user has already viewed this post
+        // Check if user has already viewed this post recently (within last hour)
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        
         const { data: existingView, error: checkError } = await supabase
           .from('post_views')
-          .select('id')
+          .select('id, created_at')
           .eq('post_id', postId)
           .eq('user_id', user.id)
+          .gte('created_at', oneHourAgo)
           .maybeSingle();
 
         if (checkError) {
@@ -55,8 +58,8 @@ const PostViewCounter: React.FC<PostViewCounterProps> = ({ postId, initialViews 
       }
     };
 
-    // Record view after a short delay to ensure user actually sees the post
-    const timer = setTimeout(recordView, 1000);
+    // Record view after user has been viewing for 3 seconds to ensure they actually read it
+    const timer = setTimeout(recordView, 3000);
     return () => clearTimeout(timer);
   }, [postId, user, hasViewed]);
 
@@ -64,13 +67,13 @@ const PostViewCounter: React.FC<PostViewCounterProps> = ({ postId, initialViews 
     // Fetch current view count
     const fetchViewCount = async () => {
       try {
-        const { data, error } = await supabase
+        const { count, error } = await supabase
           .from('post_views')
-          .select('id')
+          .select('*', { count: 'exact', head: true })
           .eq('post_id', postId);
 
-        if (!error && data) {
-          setViewCount(data.length);
+        if (!error && count !== null) {
+          setViewCount(count);
         } else if (error) {
           console.error('Error fetching view count:', error);
         }
@@ -83,9 +86,9 @@ const PostViewCounter: React.FC<PostViewCounterProps> = ({ postId, initialViews 
   }, [postId]);
 
   return (
-    <div className="flex items-center gap-1 text-muted-foreground text-sm">
+    <div className="flex items-center gap-1 text-muted-foreground text-sm hover:text-primary transition-colors">
       <Eye className="h-4 w-4" />
-      <span>{viewCount}</span>
+      <span>{viewCount.toLocaleString()}</span>
     </div>
   );
 };

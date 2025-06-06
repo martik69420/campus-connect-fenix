@@ -1,3 +1,4 @@
+
 import React from 'react';
 import useOnlineStatus from '@/hooks/use-online-status';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -10,6 +11,7 @@ interface OnlineStatusProps {
   className?: string;
   showLastActive?: boolean;
   showIcon?: boolean;
+  size?: 'sm' | 'md' | 'lg';
 }
 
 const OnlineStatus: React.FC<OnlineStatusProps> = ({ 
@@ -17,7 +19,8 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   showLabel = false, 
   className = '',
   showLastActive = true,
-  showIcon = false
+  showIcon = false,
+  size = 'sm'
 }) => {
   const { isUserOnline, onlineStatuses, getUserStatus } = useOnlineStatus([userId]);
   
@@ -27,49 +30,60 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   const status = getUserStatus(userId);
   
   const getLastActiveText = () => {
-    if (!lastActive) return 'Never active';
+    if (!lastActive) return 'Never seen';
     
     try {
-      return formatDistanceToNow(new Date(lastActive), { addSuffix: true });
+      const now = new Date();
+      const lastActiveDate = new Date(lastActive);
+      const diffInMinutes = (now.getTime() - lastActiveDate.getTime()) / (1000 * 60);
+      
+      if (diffInMinutes < 5) return 'Just now';
+      return `Active ${formatDistanceToNow(lastActiveDate, { addSuffix: true })}`;
     } catch (error) {
       console.error("Error formatting last active time:", error);
-      return 'Never active';
+      return 'Never seen';
     }
   };
   
   const isOnline = status === 'online';
   const isAway = status === 'away';
   
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'lg': return 'h-4 w-4';
+      case 'md': return 'h-3 w-3';
+      default: return 'h-2.5 w-2.5';
+    }
+  };
+  
   const getStatusColor = () => {
-    if (isOnline) return 'bg-green-500';
-    if (isAway) return 'bg-yellow-500';
+    if (isOnline) return 'bg-green-500 shadow-green-500/50';
+    if (isAway) return 'bg-yellow-500 shadow-yellow-500/50';
     return 'bg-gray-400';
   };
   
   const getStatusAnimation = () => {
-    if (isOnline) return 'animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75';
-    if (isAway) return 'animate-pulse absolute inline-flex h-full w-full rounded-full bg-yellow-400 opacity-75';
+    if (isOnline) return 'animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60';
     return '';
   };
   
   const getStatusText = () => {
     if (isOnline) return 'Online';
     if (isAway) return 'Away';
-    return 'Offline';
+    return getLastActiveText();
   };
   
   const getStatusIcon = () => {
-    if (isOnline) return <Wifi className="h-3.5 w-3.5 text-green-500" />;
-    if (isAway) return <Clock className="h-3.5 w-3.5 text-yellow-500" />;
-    return <WifiOff className="h-3.5 w-3.5 text-gray-400" />;
+    const iconSize = size === 'lg' ? 'h-4 w-4' : 'h-3.5 w-3.5';
+    if (isOnline) return <Wifi className={`${iconSize} text-green-500`} />;
+    if (isAway) return <Clock className={`${iconSize} text-yellow-500`} />;
+    return <WifiOff className={`${iconSize} text-gray-400`} />;
   };
   
   const getTooltipText = () => {
-    if (isOnline) return 'Online';
+    if (isOnline) return 'Online now';
     if (isAway) return 'Away';
-    return lastActive 
-      ? `Last seen ${getLastActiveText()}`
-      : 'Offline';
+    return getLastActiveText();
   };
   
   return (
@@ -80,29 +94,29 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
             getStatusIcon()
           ) : (
             <span 
-              className={`relative flex h-2.5 w-2.5 ${getStatusColor()} rounded-full`}
+              className={`relative flex ${getSizeClasses()} ${getStatusColor()} rounded-full shadow-sm border border-background`}
             >
-              {(isOnline || isAway) && (
+              {isOnline && (
                 <span className={getStatusAnimation()}></span>
               )}
             </span>
           )}
           
           {showLabel && (
-            <span className="text-xs text-muted-foreground">
-              {getStatusText()}
+            <span className={`text-xs ${isOnline ? 'text-green-600 dark:text-green-400' : 'text-muted-foreground'}`}>
+              {isOnline ? 'Online' : 'Offline'}
             </span>
           )}
           
-          {showLastActive && !isOnline && lastActive && (
-            <span className="text-xs text-muted-foreground ml-1">
+          {showLastActive && !isOnline && !showLabel && (
+            <span className="text-xs text-muted-foreground">
               {getLastActiveText()}
             </span>
           )}
         </div>
       </TooltipTrigger>
       <TooltipContent>
-        <p>{getTooltipText()}</p>
+        <p className="text-sm">{getTooltipText()}</p>
       </TooltipContent>
     </Tooltip>
   );

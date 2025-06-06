@@ -33,7 +33,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ contact, onOpenUserActions }) =
   if (!contact) return null;
 
   return (
-    <div className="border-b p-3 flex justify-between items-center dark:border-gray-800">
+    <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4 flex justify-between items-center dark:border-gray-800 sticky top-0 z-10">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -44,41 +44,42 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ contact, onOpenUserActions }) =
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="relative">
-          <Avatar className="h-10 w-10">
+          <Avatar className="h-12 w-12 border-2 border-background shadow-sm">
             <AvatarImage src={contact.avatar || "/placeholder.svg"} alt={contact.displayName || contact.username} />
-            <AvatarFallback>
-              {contact.displayName?.charAt(0) || contact.username.charAt(0)}
+            <AvatarFallback className="bg-gradient-to-br from-blue-500 to-purple-500 text-white font-semibold">
+              {(contact.displayName || contact.username).charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <OnlineStatus userId={contact.id} className="absolute -bottom-1 -right-1" />
+          <div className="absolute -bottom-1 -right-1">
+            <OnlineStatus userId={contact.id} size="md" />
+          </div>
         </div>
         <div>
-          <h3 className="font-medium line-clamp-1">
-            {contact.displayName} 
-            <span className="font-normal text-muted-foreground text-sm ml-1">
-              @{contact.username}
-            </span>
+          <h3 className="font-semibold text-lg line-clamp-1">
+            {contact.displayName}
           </h3>
-          <div className="flex items-center text-xs text-muted-foreground">
-            <OnlineStatus userId={contact.id} showLabel showLastActive />
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>@{contact.username}</span>
+            <span>•</span>
+            <OnlineStatus userId={contact.id} showLastActive showLabel />
           </div>
         </div>
       </div>
       
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
           <Phone className="h-5 w-5" />
         </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground">
+        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
           <Video className="h-5 w-5" />
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
               <MoreVertical className="h-5 w-5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+          <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={() => navigate(`/profile/${contact.username}`)}>
               {t('messages.viewProfile')}
             </DropdownMenuItem>

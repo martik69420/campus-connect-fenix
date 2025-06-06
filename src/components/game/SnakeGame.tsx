@@ -1,14 +1,11 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Play, Pause, RotateCcw, Trophy, Zap } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Pause, Play, RotateCcw, Trophy } from 'lucide-react';
 
-interface Position {
-  x: number;
-  y: number;
-}
+type Direction = 'UP' | 'DOWN' | 'LEFT' | 'RIGHT';
+type Position = { x: number; y: number };
 
 interface SnakeGameProps {
   onGameEnd?: (score: number) => void;
@@ -16,38 +13,178 @@ interface SnakeGameProps {
 
 const GRID_SIZE = 20;
 const INITIAL_SNAKE = [{ x: 10, y: 10 }];
+const INITIAL_DIRECTION: Direction = 'RIGHT';
 const INITIAL_FOOD = { x: 15, y: 15 };
-const INITIAL_DIRECTION = { x: 0, y: -1 };
 
 const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
-  const [snake, setSnake] = useState<Position[]>(INITIAL_SNAKE);
-  const [food, setFood] = useState<Position>(INITIAL_FOOD);
-  const [direction, setDirection] = useState<Position>(INITIAL_DIRECTION);
-  const [gameOver, setGameOver] = useState(false);
-  const [gameStarted, setGameStarted] = useState(false);
-  const [score, setScore] = useState(0);
-  const [highScore, setHighScore] = useState(() => {
-    return parseInt(localStorage.getItem('snakeHighScore') || '0');
-  });
-  const [isPaused, setIsPaused] = useState(false);
-  const [speed, setSpeed] = useState(150);
-  const gameLoopRef = useRef<NodeJS.Timeout>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [snake, setSnake] = useState<Position[]>(INITIAL_SNAKE);
+  const [direction, setDirection] = useState<Direction>(INITIAL_DIRECTION);
+  const [food, setFood] = useState<Position>(INITIAL_FOOD);
+  const [gameOver, setGameOver] = useState(false);
+  const [score, setScore] = useState(0);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [highScore, setHighScore] = useState(0);
 
-  const generateFood = useCallback((): Position => {
-    const newFood = {
-      x: Math.floor(Math.random() * GRID_SIZE),
-      y: Math.floor(Math.random() * GRID_SIZE),
-    };
+  const gameLoopRef = useRef<NodeJS.Timeout>();
+  const directionRef = useRef<Direction>(INITIAL_DIRECTION);
+
+  // Load high score from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('snake-high-score');
+    if (saved) {
+      setHighScore(parseInt(saved, 10));
+    }
+  }, []);
+
+  const generateFood = useCallback((currentSnake: Position[]): Position => {
+    let newFood: Position;
+    do {
+      newFood = {
+        x: Math.floor(Math.random() * GRID_SIZE),
+        y: Math.floor(Math.random() * GRID_SIZE),
+      };
+    } while (currentSnake.some(segment => segment.x === newFood.x && segment.y === newFood.y));
     return newFood;
   }, []);
 
-  const drawGame = useCallback(() => {
+  const moveSnake = useCallback(() => {
+    setSnake(currentSnake => {
+      const newSnake = [...currentSnake];
+      const head = { ...newSnake[0] };
+
+      // Move head based on current direction
+      switch (directionRef.current) {
+        case 'UP':
+          head.y -= 1;
+          break;
+        case 'DOWN':
+          head.y += 1;
+          break;
+        case 'LEFT':
+          head.x -= 1;
+          break;
+        case 'RIGHT':
+          head.x += 1;
+          break;
+      }
+
+      // Check wall collision
+      if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+        setGameOver(true);
+        setIsPlaying(false);
+        const finalScore = (currentSnake.length - 1) * 10;
+        if (finalScore > highScore) {
+          setHighScore(finalScore);
+          localStorage.setItem('snake-high-score', finalScore.toString());
+        }
+        onGameEnd?.(finalScore);
+        return currentSnake;
+      }
+
+      // Check self collision
+      if (currentSnake.some(segment => segment.x === head.x && segment.y === head.y)) {
+        setGameOver(true);
+        setIsPlaying(false);
+        const finalScore = (currentSnake.length - 1) * 10;
+        if (finalScore > highScore) {
+          setHighScore(finalScore);
+          localStorage.setItem('snake-high-score', finalScore.toString());
+        }
+        onGameEnd?.(finalScore);
+        return currentSnake;
+      }
+
+      newSnake.unshift(head);
+
+      // Check food collision
+      if (head.x === food.x && head.y === food.y) {
+        setScore(prev => prev + 10);
+        setFood(generateFood(newSnake));
+      } else {
+        newSnake.pop();
+      }
+
+      return newSnake;
+    });
+  }, [food, generateFood, onGameEnd, highScore]);
+
+  // Game loop
+  useEffect(() => {
+    if (isPlaying && !isPaused && !gameOver) {
+      const speed = Math.max(50, 200 - Math.floor(score / 100) * 10);
+      gameLoopRef.current = setTimeout(moveSnake, speed);
+    }
+
+    return () => {
+      if (gameLoopRef.current) {
+        clearTimeout(gameLoopRef.current);
+      }
+    };
+  }, [isPlaying, isPaused, gameOver, moveSnake, score]);
+
+  // Handle keyboard input
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (!isPlaying || isPaused || gameOver) return;
+
+      const key = e.key;
+      const currentDirection = directionRef.current;
+
+      switch (key) {
+        case 'ArrowUp':
+        case 'w':
+        case 'W':
+          if (currentDirection !== 'DOWN') {
+            setDirection('UP');
+            directionRef.current = 'UP';
+          }
+          break;
+        case 'ArrowDown':
+        case 's':
+        case 'S':
+          if (currentDirection !== 'UP') {
+            setDirection('DOWN');
+            directionRef.current = 'DOWN';
+          }
+          break;
+        case 'ArrowLeft':
+        case 'a':
+        case 'A':
+          if (currentDirection !== 'RIGHT') {
+            setDirection('LEFT');
+            directionRef.current = 'LEFT';
+          }
+          break;
+        case 'ArrowRight':
+        case 'd':
+        case 'D':
+          if (currentDirection !== 'LEFT') {
+            setDirection('RIGHT');
+            directionRef.current = 'RIGHT';
+          }
+          break;
+        case ' ':
+          e.preventDefault();
+          setIsPaused(!isPaused);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [isPlaying, isPaused, gameOver]);
+
+  // Render game
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    const cellSize = canvas.width / GRID_SIZE;
 
     // Clear canvas with gradient background
     const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
@@ -61,276 +198,176 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= GRID_SIZE; i++) {
       ctx.beginPath();
-      ctx.moveTo(i * (canvas.width / GRID_SIZE), 0);
-      ctx.lineTo(i * (canvas.width / GRID_SIZE), canvas.height);
+      ctx.moveTo(i * cellSize, 0);
+      ctx.lineTo(i * cellSize, canvas.height);
       ctx.stroke();
       
       ctx.beginPath();
-      ctx.moveTo(0, i * (canvas.height / GRID_SIZE));
-      ctx.lineTo(canvas.width, i * (canvas.height / GRID_SIZE));
+      ctx.moveTo(0, i * cellSize);
+      ctx.lineTo(canvas.width, i * cellSize);
       ctx.stroke();
     }
 
-    // Draw snake with gradient
+    // Draw snake with gradient and better styling
     snake.forEach((segment, index) => {
-      const x = segment.x * (canvas.width / GRID_SIZE);
-      const y = segment.y * (canvas.height / GRID_SIZE);
-      const size = canvas.width / GRID_SIZE;
-      
-      const snakeGradient = ctx.createRadialGradient(
-        x + size/2, y + size/2, 0,
-        x + size/2, y + size/2, size/2
-      );
+      const x = segment.x * cellSize;
+      const y = segment.y * cellSize;
       
       if (index === 0) {
-        // Head
-        snakeGradient.addColorStop(0, '#22c55e');
-        snakeGradient.addColorStop(1, '#16a34a');
+        // Snake head with eyes
+        const headGradient = ctx.createRadialGradient(
+          x + cellSize/2, y + cellSize/2, 0,
+          x + cellSize/2, y + cellSize/2, cellSize/2
+        );
+        headGradient.addColorStop(0, '#22c55e');
+        headGradient.addColorStop(1, '#16a34a');
+        
+        ctx.fillStyle = headGradient;
+        ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+        
+        // Draw eyes
+        ctx.fillStyle = '#ffffff';
+        const eyeSize = cellSize * 0.15;
+        ctx.fillRect(x + cellSize * 0.25, y + cellSize * 0.25, eyeSize, eyeSize);
+        ctx.fillRect(x + cellSize * 0.6, y + cellSize * 0.25, eyeSize, eyeSize);
+        
+        // Eye pupils
+        ctx.fillStyle = '#000000';
+        const pupilSize = eyeSize * 0.6;
+        ctx.fillRect(x + cellSize * 0.25 + eyeSize * 0.2, y + cellSize * 0.25 + eyeSize * 0.2, pupilSize, pupilSize);
+        ctx.fillRect(x + cellSize * 0.6 + eyeSize * 0.2, y + cellSize * 0.25 + eyeSize * 0.2, pupilSize, pupilSize);
       } else {
-        // Body
-        snakeGradient.addColorStop(0, '#4ade80');
-        snakeGradient.addColorStop(1, '#22c55e');
-      }
-      
-      ctx.fillStyle = snakeGradient;
-      ctx.fillRect(x + 1, y + 1, size - 2, size - 2);
-      
-      // Add shine effect
-      if (index === 0) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.fillRect(x + 2, y + 2, size/3, size/3);
+        // Snake body with gradient
+        const bodyGradient = ctx.createRadialGradient(
+          x + cellSize/2, y + cellSize/2, 0,
+          x + cellSize/2, y + cellSize/2, cellSize/2
+        );
+        const intensity = Math.max(0.3, 1 - index * 0.1);
+        bodyGradient.addColorStop(0, `rgba(34, 197, 94, ${intensity})`);
+        bodyGradient.addColorStop(1, `rgba(22, 163, 74, ${intensity})`);
+        
+        ctx.fillStyle = bodyGradient;
+        ctx.fillRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+        
+        // Add scales pattern
+        ctx.fillStyle = `rgba(16, 185, 129, ${intensity * 0.5})`;
+        ctx.fillRect(x + cellSize * 0.3, y + cellSize * 0.3, cellSize * 0.4, cellSize * 0.4);
       }
     });
 
-    // Draw food with pulsing effect
-    const foodX = food.x * (canvas.width / GRID_SIZE);
-    const foodY = food.y * (canvas.height / GRID_SIZE);
-    const foodSize = canvas.width / GRID_SIZE;
+    // Draw food as an apple
+    const foodX = food.x * cellSize;
+    const foodY = food.y * cellSize;
     
-    const time = Date.now() / 200;
-    const pulse = Math.sin(time) * 0.1 + 0.9;
-    
-    const foodGradient = ctx.createRadialGradient(
-      foodX + foodSize/2, foodY + foodSize/2, 0,
-      foodX + foodSize/2, foodY + foodSize/2, foodSize/2 * pulse
+    // Apple body
+    const appleGradient = ctx.createRadialGradient(
+      foodX + cellSize/2, foodY + cellSize/2, 0,
+      foodX + cellSize/2, foodY + cellSize/2, cellSize/2
     );
-    foodGradient.addColorStop(0, '#ef4444');
-    foodGradient.addColorStop(1, '#dc2626');
+    appleGradient.addColorStop(0, '#fbbf24');
+    appleGradient.addColorStop(0.7, '#f59e0b');
+    appleGradient.addColorStop(1, '#d97706');
     
-    ctx.fillStyle = foodGradient;
-    ctx.fillRect(
-      foodX + (1 - pulse) * foodSize/2, 
-      foodY + (1 - pulse) * foodSize/2, 
-      foodSize * pulse, 
-      foodSize * pulse
-    );
+    ctx.fillStyle = appleGradient;
+    ctx.beginPath();
+    ctx.arc(foodX + cellSize/2, foodY + cellSize/2, cellSize/2 - 2, 0, Math.PI * 2);
+    ctx.fill();
     
-    // Add sparkle effect
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.fillRect(foodX + foodSize/3, foodY + foodSize/4, 3, 3);
+    // Apple highlight
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(foodX + cellSize * 0.35, foodY + cellSize * 0.35, cellSize * 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Apple stem
+    ctx.fillStyle = '#065f46';
+    ctx.fillRect(foodX + cellSize/2 - 1, foodY + cellSize * 0.1, 2, cellSize * 0.2);
+
   }, [snake, food]);
 
-  const moveSnake = useCallback(() => {
-    if (gameOver || isPaused || !gameStarted) return;
-
-    setSnake(currentSnake => {
-      const newSnake = [...currentSnake];
-      const head = { ...newSnake[0] };
-      
-      head.x += direction.x;
-      head.y += direction.y;
-
-      // Check wall collision
-      if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
-        setGameOver(true);
-        return currentSnake;
-      }
-
-      // Check self collision
-      if (newSnake.some(segment => segment.x === head.x && segment.y === head.y)) {
-        setGameOver(true);
-        return currentSnake;
-      }
-
-      newSnake.unshift(head);
-
-      // Check food collision
-      if (head.x === food.x && head.y === food.y) {
-        setScore(prev => {
-          const newScore = prev + 10;
-          if (newScore > highScore) {
-            setHighScore(newScore);
-            localStorage.setItem('snakeHighScore', newScore.toString());
-          }
-          return newScore;
-        });
-        setFood(generateFood());
-        setSpeed(prev => Math.max(80, prev - 2)); // Increase speed slightly
-      } else {
-        newSnake.pop();
-      }
-
-      return newSnake;
-    });
-  }, [direction, food, gameOver, isPaused, gameStarted, generateFood, highScore]);
-
-  const handleKeyPress = useCallback((e: KeyboardEvent) => {
-    if (!gameStarted || gameOver) return;
-
-    switch (e.key) {
-      case 'ArrowUp':
-        if (direction.y !== 1) setDirection({ x: 0, y: -1 });
-        break;
-      case 'ArrowDown':
-        if (direction.y !== -1) setDirection({ x: 0, y: 1 });
-        break;
-      case 'ArrowLeft':
-        if (direction.x !== 1) setDirection({ x: -1, y: 0 });
-        break;
-      case 'ArrowRight':
-        if (direction.x !== -1) setDirection({ x: 1, y: 0 });
-        break;
-      case ' ':
-        e.preventDefault();
-        setIsPaused(prev => !prev);
-        break;
-    }
-  }, [direction, gameStarted, gameOver]);
-
   const startGame = () => {
-    setGameStarted(true);
+    setSnake(INITIAL_SNAKE);
+    setDirection(INITIAL_DIRECTION);
+    directionRef.current = INITIAL_DIRECTION;
+    setFood(generateFood(INITIAL_SNAKE));
     setGameOver(false);
     setScore(0);
-    setSnake(INITIAL_SNAKE);
-    setFood(generateFood());
-    setDirection(INITIAL_DIRECTION);
-    setSpeed(150);
+    setIsPlaying(true);
     setIsPaused(false);
+  };
+
+  const togglePause = () => {
+    if (isPlaying && !gameOver) {
+      setIsPaused(!isPaused);
+    }
   };
 
   const resetGame = () => {
-    setGameStarted(false);
+    setSnake(INITIAL_SNAKE);
+    setDirection(INITIAL_DIRECTION);
+    directionRef.current = INITIAL_DIRECTION;
+    setFood(generateFood(INITIAL_SNAKE));
     setGameOver(false);
     setScore(0);
-    setSnake(INITIAL_SNAKE);
-    setFood(INITIAL_FOOD);
-    setDirection(INITIAL_DIRECTION);
-    setSpeed(150);
+    setIsPlaying(false);
     setIsPaused(false);
   };
 
-  useEffect(() => {
-    if (gameStarted && !gameOver && !isPaused) {
-      gameLoopRef.current = setInterval(moveSnake, speed);
-    } else {
-      if (gameLoopRef.current) {
-        clearInterval(gameLoopRef.current);
-      }
-    }
-
-    return () => {
-      if (gameLoopRef.current) {
-        clearInterval(gameLoopRef.current);
-      }
-    };
-  }, [moveSnake, gameStarted, gameOver, isPaused, speed]);
-
-  useEffect(() => {
-    drawGame();
-  }, [drawGame]);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [handleKeyPress]);
-
-  useEffect(() => {
-    if (gameOver && onGameEnd) {
-      onGameEnd(score);
-    }
-  }, [gameOver, score, onGameEnd]);
-
   return (
-    <div className="max-w-2xl mx-auto space-y-4">
-      <div className="flex justify-between items-center">
-        <div className="flex gap-4">
-          <Badge variant="secondary" className="text-lg px-3 py-1">
-            <Zap className="h-4 w-4 mr-1" />
-            Score: {score}
-          </Badge>
-          <Badge variant="outline" className="text-lg px-3 py-1">
-            <Trophy className="h-4 w-4 mr-1" />
-            Best: {highScore}
-          </Badge>
+    <div className="flex flex-col items-center space-y-4">
+      <div className="flex items-center gap-8 text-lg font-semibold">
+        <div className="flex items-center gap-2">
+          <span>Score: {score}</span>
         </div>
-        <div className="flex gap-2">
-          {!gameStarted ? (
-            <Button onClick={startGame} className="bg-green-600 hover:bg-green-700">
-              <Play className="h-4 w-4 mr-2" />
-              Start Game
-            </Button>
-          ) : (
-            <>
-              <Button onClick={() => setIsPaused(!isPaused)} variant="outline">
-                {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
-              </Button>
-              <Button onClick={resetGame} variant="outline">
-                <RotateCcw className="h-4 w-4" />
-              </Button>
-            </>
-          )}
+        <div className="flex items-center gap-2 text-yellow-600">
+          <Trophy className="h-5 w-5" />
+          <span>Best: {highScore}</span>
         </div>
       </div>
-
-      <Card className="overflow-hidden border-2">
-        <CardContent className="p-0">
-          <canvas
-            ref={canvasRef}
-            width={600}
-            height={600}
-            className="w-full max-w-[600px] h-auto border-0 bg-slate-900"
-          />
-        </CardContent>
+      
+      <Card className="p-4 bg-slate-900 border-slate-700">
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={400}
+          className="border border-slate-600 rounded-lg shadow-2xl"
+        />
       </Card>
+
+      <div className="flex gap-4">
+        {!isPlaying ? (
+          <Button onClick={startGame} className="flex items-center gap-2">
+            <Play className="h-4 w-4" />
+            {gameOver ? 'Play Again' : 'Start Game'}
+          </Button>
+        ) : (
+          <Button onClick={togglePause} variant="outline" className="flex items-center gap-2">
+            {isPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+            {isPaused ? 'Resume' : 'Pause'}
+          </Button>
+        )}
+        
+        <Button onClick={resetGame} variant="outline" className="flex items-center gap-2">
+          <RotateCcw className="h-4 w-4" />
+          Reset
+        </Button>
+      </div>
 
       {gameOver && (
-        <Card className="border-2 border-red-500 bg-red-50 dark:bg-red-950">
-          <CardHeader className="text-center">
-            <CardTitle className="text-red-700 dark:text-red-300">Game Over!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-lg">Final Score: <strong>{score}</strong></p>
-            {score === highScore && score > 0 && (
-              <p className="text-yellow-600 dark:text-yellow-400 font-semibold">
-                🎉 New High Score! 🎉
-              </p>
-            )}
-            <Button onClick={startGame} className="bg-green-600 hover:bg-green-700">
-              <Play className="h-4 w-4 mr-2" />
-              Play Again
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="text-center space-y-2">
+          <h3 className="text-xl font-bold text-red-500">Game Over!</h3>
+          <p className="text-muted-foreground">Final Score: {score}</p>
+          {score === highScore && score > 0 && (
+            <p className="text-yellow-500 font-semibold">🎉 New High Score! 🎉</p>
+          )}
+        </div>
       )}
 
-      {isPaused && gameStarted && !gameOver && (
-        <Card className="border-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-950">
-          <CardContent className="text-center py-4">
-            <p className="text-yellow-700 dark:text-yellow-300 font-semibold">Game Paused</p>
-            <p className="text-sm text-yellow-600 dark:text-yellow-400">Press Space or click Play to continue</p>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card className="bg-muted/50">
-        <CardContent className="pt-6">
-          <h3 className="font-semibold mb-2">Controls:</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>↑↓←→ Arrow keys to move</div>
-            <div>Space to pause/resume</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="text-center text-sm text-muted-foreground space-y-1">
+        <p>Use arrow keys or WASD to move</p>
+        <p>Press spacebar to pause</p>
+        <p>Eat the golden apples to grow and score points!</p>
+      </div>
     </div>
   );
 };

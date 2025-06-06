@@ -1,6 +1,6 @@
+
 import React, { useEffect, useRef } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Check, CheckCheck, Clock } from 'lucide-react';
 import { format, isToday, isYesterday } from 'date-fns';
@@ -53,23 +53,15 @@ const MessagesList: React.FC<MessagesListProps> = ({
     } else if (isYesterday(date)) {
       return `Yesterday ${format(date, 'HH:mm')}`;
     } else {
-      return `MMM d, HH:mm`;
+      return format(date, 'MMM d, HH:mm');
     }
   };
 
   const getMessageStatus = (message: Message, isOwn: boolean): 'sending' | 'sent' | 'delivered' | 'read' => {
-    if (!isOwn) return 'read'; // Other person's messages are always considered read by us
-    
-    // If message has explicit status, use it
+    if (!isOwn) return 'read';
     if (message.status) return message.status;
-    
-    // For optimistic messages (no id yet), show as sending
     if (!message.id || message.id.startsWith('temp-')) return 'sending';
-    
-    // Check if message is read
     if (message.is_read) return 'read';
-    
-    // Otherwise it's delivered but not read
     return 'delivered';
   };
 
@@ -95,13 +87,13 @@ const MessagesList: React.FC<MessagesListProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex-1 p-4 space-y-4 overflow-y-auto">
+      <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-background">
         {[...Array(5)].map((_, i) => (
           <div key={i} className="flex gap-3">
-            <Skeleton className="h-8 w-8 rounded-full" />
+            <Skeleton className="h-10 w-10 rounded-full flex-shrink-0" />
             <div className="space-y-2 flex-1">
               <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-16 w-full max-w-xs" />
+              <Skeleton className="h-20 w-full max-w-xs rounded-2xl" />
             </div>
           </div>
         ))}
@@ -110,7 +102,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto bg-background">
       <div className="p-4 space-y-1">
         {allMessages.map((message, index) => {
           const isOwn = message.sender_id === currentUserId;
@@ -126,18 +118,20 @@ const MessagesList: React.FC<MessagesListProps> = ({
           return (
             <div
               key={message.id || `temp-${index}`}
-              className={`flex gap-3 mb-1 ${isOwn ? 'justify-end' : 'justify-start'}`}
+              className={`flex gap-3 group hover:bg-muted/30 rounded-lg p-2 transition-colors ${
+                isOwn ? 'justify-end' : 'justify-start'
+              }`}
             >
               {!isOwn && (
-                <div className="w-8 flex justify-center">
+                <div className="w-10 flex justify-center items-end">
                   {showAvatar ? (
-                    <Avatar className="h-8 w-8">
+                    <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
                       <AvatarImage 
                         src={message.sender?.avatar_url || '/placeholder.svg'} 
                         alt={message.sender?.display_name || 'User'} 
                       />
-                      <AvatarFallback className="text-xs">
-                        {message.sender?.display_name?.charAt(0) || '?'}
+                      <AvatarFallback className="text-sm font-medium bg-gradient-to-br from-blue-500 to-purple-500 text-white">
+                        {(message.sender?.display_name || message.sender?.username || '?').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   ) : null}
@@ -146,24 +140,25 @@ const MessagesList: React.FC<MessagesListProps> = ({
               
               <div className={`max-w-[70%] space-y-1 ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
                 {showName && !isOwn && (
-                  <span className="text-xs font-medium text-muted-foreground px-3">
+                  <span className="text-sm font-semibold text-foreground px-4">
                     {message.sender?.display_name || message.sender?.username || 'Unknown'}
                   </span>
                 )}
                 
                 <div
-                  className={`rounded-2xl px-4 py-2 relative group transition-all duration-200 ${
+                  className={`relative group/message ${
                     isOwn
-                      ? 'bg-primary text-primary-foreground ml-auto rounded-br-md shadow-sm'
-                      : 'bg-muted text-foreground rounded-bl-md'
-                  } ${getMessageStatus(message, isOwn) === 'sending' ? 'opacity-70' : 'opacity-100'}`}
+                      ? 'bg-primary text-primary-foreground ml-auto rounded-[20px] rounded-br-md shadow-md'
+                      : 'bg-muted text-foreground rounded-[20px] rounded-bl-md border border-border/50'
+                  } ${getMessageStatus(message, isOwn) === 'sending' ? 'opacity-70' : 'opacity-100'}
+                  px-4 py-3 max-w-full break-words transition-all duration-200 hover:shadow-lg`}
                 >
                   {message.image_url && (
-                    <div className="mb-2">
+                    <div className="mb-3">
                       <img
                         src={message.image_url}
                         alt="Message attachment"
-                        className="rounded-lg max-w-full h-auto max-h-64 object-cover"
+                        className="rounded-xl max-w-full h-auto max-h-80 object-cover border border-border/20"
                       />
                     </div>
                   )}
@@ -174,8 +169,12 @@ const MessagesList: React.FC<MessagesListProps> = ({
                     </p>
                   )}
                   
-                  <div className={`flex items-center gap-1 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
-                    <span className={`text-xs opacity-70 ${isOwn ? 'text-primary-foreground/70' : 'text-muted-foreground'}`}>
+                  <div className={`flex items-center gap-1.5 mt-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
+                    <span className={`text-xs ${
+                      isOwn 
+                        ? 'text-primary-foreground/70' 
+                        : 'text-muted-foreground'
+                    }`}>
                       {formatMessageTime(message.created_at)}
                     </span>
                     {renderMessageStatus(message, isOwn)}
@@ -183,7 +182,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
                 </div>
               </div>
               
-              {isOwn && <div className="w-8" />}
+              {isOwn && <div className="w-10" />}
             </div>
           );
         })}
