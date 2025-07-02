@@ -83,7 +83,10 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
           .eq('user_id', user.id)
           .eq('post_id', postId);
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error unsaving post:', error);
+          throw error;
+        }
         
         setIsSaved(false);
         toast({
@@ -99,7 +102,15 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
             post_id: postId,
           });
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error saving post:', error);
+          // Handle duplicate key error gracefully
+          if (error.code === '23505') {
+            setIsSaved(true);
+            return;
+          }
+          throw error;
+        }
         
         setIsSaved(true);
         toast({
@@ -123,14 +134,15 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
     <motion.div
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
-      transition={{ duration: 0.2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
     >
       <Button
         variant={variant}
         size={size}
         className={cn(
           `text-muted-foreground hover:text-foreground transition-all duration-300`,
-          isSaved && 'text-yellow-500 hover:text-yellow-600',
+          isSaved && 'text-amber-500 hover:text-amber-600',
+          isSaving && 'opacity-70 cursor-not-allowed',
           className
         )}
         onClick={handleSaveToggle}
@@ -138,28 +150,36 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
       >
         <motion.div
           animate={{ 
-            scale: isSaved ? [1, 1.3, 1] : 1,
-            rotate: isSaved ? [0, 15, -15, 0] : 0
+            scale: isSaved ? [1, 1.4, 1.1, 1] : 1,
+            rotate: isSaving ? 360 : 0,
+            y: isSaved ? [0, -3, 0] : 0
           }}
-          transition={{ duration: 0.5 }}
+          transition={{ 
+            duration: isSaving ? 1 : 0.6,
+            repeat: isSaving ? Infinity : 0,
+            ease: isSaving ? "linear" : "easeOut"
+          }}
         >
           <Bookmark 
             className={cn(
               "h-4 w-4", 
               showText && "mr-1.5", 
               "transition-all duration-300",
-              isSaved && "fill-yellow-500 text-yellow-500"
+              isSaved && "fill-amber-500 text-amber-500 drop-shadow-sm"
             )} 
           />
         </motion.div>
         {showText && (
           <motion.span 
-            className={isSaved ? "text-yellow-500" : ""}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3 }}
+            className={cn(
+              "transition-colors duration-300",
+              isSaved && "text-amber-500 font-medium"
+            )}
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
           >
-            {isSaved ? t('post.saved') : t('post.save')}
+            {isSaving ? 'Saving...' : (isSaved ? t('post.saved') : t('post.save'))}
           </motion.span>
         )}
       </Button>
