@@ -15,6 +15,7 @@ import ShareModal from './ShareModal';
 import ReportModal from '@/components/ReportModal';
 import { useToast } from '@/hooks/use-toast';
 import type { Post } from '@/context/PostContext';
+import { motion } from 'framer-motion';
 
 interface PostCardProps {
   post: Post;
@@ -253,13 +254,26 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 </Button>
               </div>
               
-              <Button
-                variant="ghost"
-                size="sm"
-                className="hover:text-yellow-500 transition-colors"
+              <motion.div
+                whileTap={{ scale: 0.9 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
-                <Bookmark className="h-4 w-4" />
-              </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:text-yellow-500 active:text-yellow-400 active:bg-yellow-50 transition-colors"
+                >
+                  <motion.div
+                    whileTap={{ 
+                      scale: 1.2,
+                      rotate: [0, -10, 10, 0]
+                    }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <Bookmark className="h-4 w-4" />
+                  </motion.div>
+                </Button>
+              </motion.div>
             </div>
             
             {showComments && (
