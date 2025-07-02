@@ -282,7 +282,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
                       height="16"
                       viewBox="0 0 16 16"
                       className="transition-colors"
-                      whileTap={{ fill: "#eab308" }}
+                      whileTap={{ fill: "#eab308", stroke: "#eab308" }}
                     >
                       <path
                         d="M3 2a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v11.5a0.5 0.5 0 0 1-0.8 0.4L8 11.333 3.8 13.9A0.5 0.5 0 0 1 3 13.5V2z"

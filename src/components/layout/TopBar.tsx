@@ -214,13 +214,6 @@ const TopBar: React.FC = () => {
             </DropdownMenu>
           </div>
 
-          {/* Coins display */}
-          <NavLink to="/earn" className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-secondary rounded-full hover:bg-secondary/80 transition-colors">
-            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-xs text-white font-bold">C</span>
-            </div>
-            <span className="text-sm font-medium">{user?.coins || 0}</span>
-          </NavLink>
 
           {/* User dropdown */}
           <DropdownMenu>
