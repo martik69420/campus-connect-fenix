@@ -261,13 +261,12 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="hover:text-yellow-500 active:text-yellow-600 active:bg-yellow-100 transition-colors"
+                  className="hover:text-yellow-500 transition-colors"
                 >
                   <motion.div
                     whileTap={{ 
                       scale: 1.3,
-                      rotate: [0, -15, 15, 0],
-                      color: "#eab308"
+                      rotate: [0, -15, 15, 0]
                     }}
                     animate={{
                       scale: [1, 1.1, 1],
@@ -278,7 +277,20 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
                       animate: { duration: 0.4, delay: 0.1 }
                     }}
                   >
-                    <Bookmark className="h-4 w-4" />
+                    <motion.svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      className="transition-colors"
+                      whileTap={{ fill: "#eab308" }}
+                    >
+                      <path
+                        d="M3 2a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v11.5a0.5 0.5 0 0 1-0.8 0.4L8 11.333 3.8 13.9A0.5 0.5 0 0 1 3 13.5V2z"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        strokeWidth="0.5"
+                      />
+                    </motion.svg>
                   </motion.div>
                 </Button>
               </motion.div>
