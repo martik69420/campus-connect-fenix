@@ -229,18 +229,25 @@ const Profile: React.FC = () => {
           </Card>
         ) : (
           <div className="mb-8">
-            <Card className="overflow-hidden border border-border/50 shadow-xl rounded-2xl backdrop-blur-sm">
-              <div className="h-32 md:h-40 bg-gradient-to-r from-primary/30 via-accent/20 to-primary/30 relative">
-                <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
-                <div className="absolute top-4 right-4">
-                  <div className="flex gap-2">
-                    <div className="p-2 rounded-full bg-background/80 backdrop-blur-sm">
-                      <Sparkles className="h-4 w-4 text-primary" />
+            <Card className="overflow-hidden border border-border/50 shadow-xl rounded-3xl backdrop-blur-sm bg-gradient-to-br from-background via-background to-muted/30">
+              <div className="h-40 md:h-48 bg-gradient-to-br from-primary/40 via-primary/20 to-accent/30 relative overflow-hidden">
+                <div className="absolute inset-0 bg-gradient-to-t from-background/60 via-transparent to-transparent"></div>
+                <div className="absolute inset-0">
+                  <div className="absolute top-8 right-8 w-32 h-32 bg-primary/10 rounded-full blur-2xl animate-pulse"></div>
+                  <div className="absolute bottom-4 left-8 w-24 h-24 bg-accent/20 rounded-full blur-xl"></div>
+                </div>
+                <div className="absolute top-6 right-6">
+                  <div className="flex gap-3">
+                    <div className="p-3 rounded-2xl bg-background/90 backdrop-blur-md shadow-lg border border-white/20">
+                      <Award className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="p-3 rounded-2xl bg-background/90 backdrop-blur-md shadow-lg border border-white/20">
+                      <Sparkles className="h-5 w-5 text-accent" />
                     </div>
                   </div>
                 </div>
               </div>
-              <div className="px-6 pb-6 -mt-16 relative">
+              <div className="px-8 pb-8 -mt-20 relative">
                 <ProfileHeader 
                   user={profileUser || { 
                     id: '', 
@@ -259,8 +266,19 @@ const Profile: React.FC = () => {
           </div>
         )}
 
-        <Card className="border border-border/50 shadow-lg rounded-2xl backdrop-blur-sm">
-          <CardContent className="p-6 md:p-8">
+        <Card className="border border-border/50 shadow-xl rounded-3xl backdrop-blur-sm bg-gradient-to-br from-background to-muted/20">
+          <CardContent className="p-8 md:p-10">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2 rounded-xl bg-primary/10">
+                  <BookMarked className="h-6 w-6 text-primary" />
+                </div>
+                <h3 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+                  Profile Content
+                </h3>
+              </div>
+              <div className="h-px bg-gradient-to-r from-primary/20 via-accent/20 to-transparent mb-8"></div>
+            </div>
             <ProfileTabs 
               username={username || ''} 
               isOwnProfile={isCurrentUser}

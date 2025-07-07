@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { usePost } from '@/context/PostContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import PostViewCounter from '@/components/post/PostViewCounter';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Heart, MessageCircle, Share2 } from 'lucide-react';
 
@@ -133,7 +133,6 @@ const ProfilePosts: React.FC<ProfilePostsProps> = ({ username }) => {
                   <span className="text-sm">{post.shares || 0}</span>
                 </div>
               </div>
-              <PostViewCounter postId={post.id} />
             </div>
           </CardContent>
         </Card>

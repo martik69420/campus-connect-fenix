@@ -5,7 +5,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import OnlineStatus from '@/components/OnlineStatus';
-import { ArrowLeft, MoreVertical, Phone, Video } from 'lucide-react';
+import { ArrowLeft, MoreVertical } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,12 +67,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ contact, onOpenUserActions }) =
       </div>
       
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-          <Phone className="h-5 w-5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
-          <Video className="h-5 w-5" />
-        </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary">
