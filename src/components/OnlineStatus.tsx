@@ -108,9 +108,9 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
             </span>
           )}
           
-          {showLastActive && !isOnline && !showLabel && (
-            <span className="text-xs text-muted-foreground">
-              {getLastActiveText()}
+          {showLastActive && !showLabel && (
+            <span className={`text-xs font-medium ${isOnline ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+              {isOnline ? 'Online' : 'Offline'}
             </span>
           )}
         </div>
