@@ -140,8 +140,8 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
         variant={variant}
         size={size}
         className={cn(
-          `text-muted-foreground hover:text-foreground transition-all duration-300`,
-          isSaved && 'text-amber-500 hover:text-amber-600',
+          `text-muted-foreground hover:text-yellow-500 transition-all duration-300`,
+          isSaved && 'text-yellow-500 hover:text-yellow-600',
           isSaving && 'opacity-70 cursor-not-allowed',
           className
         )}
@@ -165,7 +165,7 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
               "h-4 w-4", 
               showText && "mr-1.5", 
               "transition-all duration-300",
-              isSaved && "fill-amber-500 text-amber-500 drop-shadow-sm"
+              isSaved && "fill-yellow-500 text-yellow-500 drop-shadow-sm"
             )} 
           />
         </motion.div>
@@ -173,7 +173,7 @@ const SavePostButton: React.FC<SavePostButtonProps> = ({
           <motion.span 
             className={cn(
               "transition-colors duration-300",
-              isSaved && "text-amber-500 font-medium"
+              isSaved && "text-yellow-500 font-medium"
             )}
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}

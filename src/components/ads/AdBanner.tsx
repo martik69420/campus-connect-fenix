@@ -58,7 +58,7 @@ const AdBanner: React.FC<AdBannerProps> = ({
       <ins
         className="adsbygoogle"
         style={{ display: 'block' }}
-        data-ad-client="ca-pub-3116464894083582"
+        data-ad-client="ca-pub-2400753081350870"
         data-ad-slot={adSlot}
         data-ad-format={adFormat}
         data-full-width-responsive="true"
