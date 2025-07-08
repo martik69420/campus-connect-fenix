@@ -27,7 +27,6 @@ import Games from './pages/Games';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
 import Snake from './pages/games/Snake';
-import Trivia from './pages/games/Trivia';
 import FriendRequests from './pages/FriendRequests';
 import Achievements from './pages/Achievements';
 
@@ -66,7 +65,6 @@ function App() {
                         <Route path="/add-friends" element={<AddFriends />} />
                         <Route path="/games" element={<Games />} />
                         <Route path="/games/snake" element={<Snake />} />
-                        <Route path="/games/trivia" element={<Trivia />} />
                         <Route path="/leaderboard" element={<Leaderboard />} />
                         <Route path="/achievements" element={<Achievements />} />
                         <Route path="/profile/:username" element={<Profile />} />

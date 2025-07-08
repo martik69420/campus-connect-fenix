@@ -5,7 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2, Image as ImageIcon, AtSign } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import MentionInput from '@/components/common/MentionInput';
+import TwitterMentionInput from '@/components/mentions/TwitterMentionInput';
 import { supabase } from '@/integrations/supabase/client';
 const PostForm: React.FC = () => {
   const [content, setContent] = useState('');
@@ -109,7 +109,7 @@ const PostForm: React.FC = () => {
         </Avatar>
         
         <div className="flex-1 space-y-4">
-          <MentionInput value={content} onChange={setContent} placeholder="What's on your mind? Use @ to mention friends" className="min-h-[80px] resize-none" rows={3} disabled={isSubmitting} />
+          <TwitterMentionInput value={content} onChange={setContent} placeholder="What's on your mind? Use @ to mention friends" className="min-h-[80px] resize-none" rows={3} disabled={isSubmitting} />
           
           <div className="flex justify-between items-center rounded-none">
             <div className="flex gap-2">

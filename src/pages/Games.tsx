@@ -48,7 +48,7 @@ const Games = () => {
             <Trophy className="h-5 w-5 text-yellow-600" />
             <div className="text-foreground">
               <span className="font-medium">
-                {t('games.yourProgress')}: <span className="text-primary">{gameState.progress.snake.gamesPlayed + gameState.progress.tetris.gamesPlayed + gameState.progress.trivia.gamesPlayed}</span>
+                {t('games.yourProgress')}: <span className="text-primary">{gameState.progress.snake.gamesPlayed + gameState.progress.tetris.gamesPlayed}</span>
               </span>
             </div>
           </div>
@@ -56,44 +56,6 @@ const Games = () => {
 
         {/* Game cards with consistent theme */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Trivia Game Card */}
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-xl">
-                    <BrainCircuit className="w-5 h-5 text-blue-600" />
-                    {t('games.triviaChallenge')}
-                  </CardTitle>
-                  <CardDescription>{t('games.testKnowledge')}</CardDescription>
-                </div>
-                <Badge variant="secondary" className="font-medium">
-                  <Crown className="w-3 h-3 mr-1" />
-                  {bestScores.trivia}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="pb-3">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('games.progress')}</span>
-                  <span className="font-medium">{gameState.progress.trivia.gamesPlayed} {t('games.gamesPlayed')}</span>
-                </div>
-                <Progress 
-                  value={Math.min(gameState.progress.trivia.gamesPlayed * 10, 100)} 
-                  className="h-2" 
-                />
-              </div>
-            </CardContent>
-            <CardFooter>
-              <Button 
-                onClick={() => navigate('/games/trivia')} 
-                className="w-full"
-              >
-                {t('games.playNow')}
-              </Button>
-            </CardFooter>
-          </Card>
 
           {/* Snake Game Card */}
           <Card className="hover:shadow-md transition-shadow duration-200">
@@ -186,12 +148,6 @@ const Games = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-muted/50 p-4 rounded-lg text-center">
-              <Badge variant="outline" className="mb-2">{t('games.trivia')}</Badge>
-              <p className="text-2xl font-bold">{bestScores.trivia}</p>
-              <p className="text-sm text-muted-foreground">{t('games.bestScore')}</p>
-            </div>
-            
-            <div className="bg-muted/50 p-4 rounded-lg text-center">
               <Badge variant="outline" className="mb-2">{t('games.snake')}</Badge>
               <p className="text-2xl font-bold">{bestScores.snake}</p>
               <p className="text-sm text-muted-foreground">{t('games.bestScore')}</p>
@@ -199,8 +155,14 @@ const Games = () => {
             
             <div className="bg-muted/50 p-4 rounded-lg text-center">
               <Badge variant="outline" className="mb-2">{t('games.total')}</Badge>
-              <p className="text-2xl font-bold">{gameState.progress.snake.gamesPlayed + gameState.progress.trivia.gamesPlayed}</p>
+              <p className="text-2xl font-bold">{gameState.progress.snake.gamesPlayed}</p>
               <p className="text-sm text-muted-foreground">{t('games.gamesPlayed')}</p>
+            </div>
+            
+            <div className="bg-muted/50 p-4 rounded-lg text-center">
+              <Badge variant="outline" className="mb-2">Coming Soon</Badge>
+              <p className="text-2xl font-bold">?</p>
+              <p className="text-sm text-muted-foreground">More games coming</p>
             </div>
           </div>
         </div>

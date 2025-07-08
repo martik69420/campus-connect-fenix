@@ -28,9 +28,7 @@ const Leaderboard = () => {
   const { t } = useLanguage();
   
   const [snakeLeaderboard, setSnakeLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [triviaLeaderboard, setTriviaLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('snake');
   
   useEffect(() => {
     if (!isAuthenticated && !isLoading) {
@@ -58,19 +56,6 @@ const Leaderboard = () => {
         
       if (snakeError) throw snakeError;
       
-      // Fetch Trivia leaderboard
-      const { data: triviaData, error: triviaError } = await supabase
-        .from('game_history')
-        .select(`
-          user_id,
-          score,
-          profiles!inner(id, username, display_name, avatar_url)
-        `)
-        .eq('game_type', 'trivia')
-        .order('score', { ascending: false });
-        
-      if (triviaError) throw triviaError;
-      
       // Process Snake data
       const snakeScores = new Map<string, LeaderboardEntry>();
       snakeData?.forEach(record => {
@@ -91,28 +76,7 @@ const Leaderboard = () => {
         }
       });
       
-      // Process Trivia data
-      const triviaScores = new Map<string, LeaderboardEntry>();
-      triviaData?.forEach(record => {
-        const userId = record.user_id;
-        const existing = triviaScores.get(userId);
-        
-        if (!existing || record.score > existing.max_score) {
-          triviaScores.set(userId, {
-            id: record.profiles.id,
-            username: record.profiles.username,
-            display_name: record.profiles.display_name,
-            avatar_url: record.profiles.avatar_url,
-            max_score: record.score,
-            total_games: (existing?.total_games || 0) + 1
-          });
-        } else {
-          existing.total_games += 1;
-        }
-      });
-      
       setSnakeLeaderboard(Array.from(snakeScores.values()).sort((a, b) => b.max_score - a.max_score));
-      setTriviaLeaderboard(Array.from(triviaScores.values()).sort((a, b) => b.max_score - a.max_score));
     } catch (error: any) {
       console.error('Error fetching leaderboard data:', error);
       toast({
@@ -194,40 +158,17 @@ const Leaderboard = () => {
           </div>
         </div>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="snake">
-              <Gamepad2 className="mr-2 h-4 w-4" />
-              {t('games.snake')}
-            </TabsTrigger>
-            <TabsTrigger value="trivia">
-              <Trophy className="mr-2 h-4 w-4" />
-              {t('games.trivia')}
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="snake">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('leaderboard.snakeHighScores')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderLeaderboard(snakeLeaderboard)}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="trivia">
-            <Card>
-              <CardHeader>
-                <CardTitle>{t('leaderboard.triviaHighScores')}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {renderLeaderboard(triviaLeaderboard)}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Gamepad2 className="h-5 w-5 text-green-600" />
+              {t('leaderboard.snakeHighScores')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {renderLeaderboard(snakeLeaderboard)}
+          </CardContent>
+        </Card>
       </div>
     </AppLayout>
   );
