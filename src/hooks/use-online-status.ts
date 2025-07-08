@@ -28,6 +28,19 @@ const useOnlineStatus = (userIds: string[]): OnlineStatusHook => {
   const [onlineStatuses, setOnlineStatuses] = useState<Record<string, UserStatus>>({});
   const { user } = useAuth();
 
+  // Helper function to determine status based on last activity
+  const getStatusFromLastActive = (isOnline: boolean, lastActive: string | null): 'online' | 'away' | 'offline' => {
+    if (!isOnline || !lastActive) return 'offline';
+    
+    const now = new Date();
+    const lastActiveDate = new Date(lastActive);
+    const diffInMinutes = (now.getTime() - lastActiveDate.getTime()) / (1000 * 60);
+    
+    if (diffInMinutes <= 2) return 'online';  // Active within 2 minutes
+    if (diffInMinutes <= 10) return 'away';   // Active within 10 minutes but not recent
+    return 'offline';  // Inactive for more than 10 minutes
+  };
+
   useEffect(() => {
     if (!userIds.length) {
       return;
@@ -48,10 +61,11 @@ const useOnlineStatus = (userIds: string[]): OnlineStatusHook => {
 
         const statusMap: Record<string, UserStatus> = {};
         data?.forEach(item => {
+          const status = getStatusFromLastActive(item.is_online || false, item.last_active);
           statusMap[item.user_id] = {
-            isOnline: item.is_online || false,
+            isOnline: status === 'online',
             lastActive: item.last_active || null,
-            status: item.is_online ? 'online' : 'offline'
+            status
           };
         });
 
@@ -85,12 +99,13 @@ const useOnlineStatus = (userIds: string[]): OnlineStatusHook => {
             
             // Verify required properties exist before using them
             if ('user_id' in newStatus) {
+              const status = getStatusFromLastActive(newStatus.is_online || false, newStatus.last_active);
               setOnlineStatuses(prev => ({
                 ...prev,
                 [newStatus.user_id]: {
-                  isOnline: newStatus.is_online || false,
+                  isOnline: status === 'online',
                   lastActive: newStatus.last_active || null,
-                  status: newStatus.is_online ? 'online' : 'offline'
+                  status
                 }
               }));
             }
@@ -110,24 +125,65 @@ const useOnlineStatus = (userIds: string[]): OnlineStatusHook => {
           { onConflict: 'user_id' }
         );
     };
+
+    // Periodic check to update status for all tracked users
+    const refreshStatuses = async () => {
+      if (userIds.length === 0) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('user_status')
+          .select('user_id, is_online, last_active')
+          .in('user_id', userIds);
+
+        if (error) return;
+
+        const statusMap: Record<string, UserStatus> = {};
+        data?.forEach(item => {
+          const status = getStatusFromLastActive(item.is_online || false, item.last_active);
+          statusMap[item.user_id] = {
+            isOnline: status === 'online',
+            lastActive: item.last_active || null,
+            status
+          };
+        });
+
+        setOnlineStatuses(statusMap);
+      } catch (error) {
+        console.error('Error refreshing statuses:', error);
+      }
+    };
     
     if (user?.id) {
       updateMyStatus();
       
-      // Set up interval to update status
-      const interval = setInterval(updateMyStatus, 60000); // Update every minute
+      // Set up intervals
+      const statusInterval = setInterval(updateMyStatus, 30000); // Update every 30 seconds
+      const refreshInterval = setInterval(refreshStatuses, 60000); // Refresh all statuses every minute
       
       // Set up event listeners for presence detection
-      window.addEventListener('beforeunload', async () => {
+      const handleBeforeUnload = async () => {
         await supabase
           .from('user_status')
           .update({ is_online: false, last_active: new Date().toISOString() })
           .eq('user_id', user.id);
-      });
+      };
+      
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          updateMyStatus();
+        }
+      };
+      
+      window.addEventListener('beforeunload', handleBeforeUnload);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
       
       return () => {
-        clearInterval(interval);
+        clearInterval(statusInterval);
+        clearInterval(refreshInterval);
         supabase.removeChannel(statusChannel);
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
       };
     }
     
