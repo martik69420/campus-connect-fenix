@@ -16,6 +16,27 @@ const INITIAL_SNAKE = [{ x: 12, y: 12 }];
 const INITIAL_DIRECTION: Direction = 'RIGHT';
 const INITIAL_FOOD = { x: 18, y: 18 };
 
+// Sound effects
+const playSound = (frequency: number, duration: number) => {
+  if (typeof window !== 'undefined' && window.AudioContext) {
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.value = frequency;
+    oscillator.type = 'square';
+    
+    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + duration);
+  }
+};
+
 const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [snake, setSnake] = useState<Position[]>(INITIAL_SNAKE);
@@ -26,6 +47,8 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [highScore, setHighScore] = useState(0);
+  const [combo, setCombo] = useState(0);
+  const [comboTimer, setComboTimer] = useState<NodeJS.Timeout | null>(null);
 
   const gameLoopRef = useRef<NodeJS.Timeout>();
   const directionRef = useRef<Direction>(INITIAL_DIRECTION);
@@ -51,6 +74,11 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
 
   const moveSnake = useCallback(() => {
     setSnake(currentSnake => {
+      // Ensure snake is valid before processing
+      if (!currentSnake || !Array.isArray(currentSnake) || currentSnake.length === 0) {
+        return INITIAL_SNAKE;
+      }
+      
       const newSnake = [...currentSnake];
       const head = { ...newSnake[0] };
 
@@ -74,6 +102,8 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
       if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
         setGameOver(true);
         setIsPlaying(false);
+        // Play game over sound
+        playSound(220, 0.5);
         const finalScore = (currentSnake.length - 1) * 10;
         if (finalScore > highScore) {
           setHighScore(finalScore);
@@ -87,6 +117,8 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
       if (currentSnake.some(segment => segment.x === head.x && segment.y === head.y)) {
         setGameOver(true);
         setIsPlaying(false);
+        // Play game over sound
+        playSound(220, 0.5);
         const finalScore = (currentSnake.length - 1) * 10;
         if (finalScore > highScore) {
           setHighScore(finalScore);
@@ -100,8 +132,19 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
 
       // Check food collision
       if (head.x === food.x && head.y === food.y) {
-        setScore(prev => prev + 10);
+        // Update combo and score with multiplier
+        setCombo(prev => prev + 1);
+        const multiplier = Math.min(5, 1 + Math.floor(combo / 3));
+        const points = 10 * multiplier;
+        setScore(prev => prev + points);
         setFood(generateFood(newSnake));
+        
+        // Play food eating sound with higher pitch for combo
+        playSound(440 + (combo * 50), 0.15);
+        
+        // Reset combo timer
+        if (comboTimer) clearTimeout(comboTimer);
+        setComboTimer(setTimeout(() => setCombo(0), 3000));
       } else {
         newSnake.pop();
       }
@@ -183,6 +226,9 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Ensure snake array is valid before rendering
+    if (!snake || !Array.isArray(snake) || snake.length === 0) return;
 
     // Add roundRect polyfill if not available
     if (!ctx.roundRect) {
@@ -388,6 +434,8 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
     setScore(0);
     setIsPlaying(true);
     setIsPaused(false);
+    setCombo(0);
+    if (comboTimer) clearTimeout(comboTimer);
   };
 
   const togglePause = () => {
@@ -405,7 +453,16 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
     setScore(0);
     setIsPlaying(false);
     setIsPaused(false);
+    setCombo(0);
+    if (comboTimer) clearTimeout(comboTimer);
   };
+
+  // Cleanup combo timer on unmount
+  useEffect(() => {
+    return () => {
+      if (comboTimer) clearTimeout(comboTimer);
+    };
+  }, [comboTimer]);
 
   return (
     <div className="flex flex-col items-center space-y-4">
@@ -417,6 +474,11 @@ const SnakeGame: React.FC<SnakeGameProps> = ({ onGameEnd }) => {
           <Trophy className="h-5 w-5" />
           <span>Best: {highScore}</span>
         </div>
+        {combo > 0 && (
+          <div className="flex items-center gap-2 text-orange-500 animate-pulse">
+            <span>Combo: {combo}x</span>
+          </div>
+        )}
       </div>
       
       <Card className="p-4 bg-slate-900/90 border-slate-700 backdrop-blur-sm">
