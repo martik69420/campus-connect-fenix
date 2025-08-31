@@ -30,7 +30,9 @@ const Messages = () => {
     sendMessage,
     fetchMessages,
     fetchFriends,
-    markMessagesAsRead
+    markMessagesAsRead,
+    deleteMessage,
+    reactToMessage
   } = useMessages();
 
   // Check for userId in URL params
@@ -152,6 +154,8 @@ const Messages = () => {
                       optimisticMessages={[]}
                       currentUserId={user?.id || ''}
                       isLoading={loading && !isRefreshing}
+                      onDeleteMessage={deleteMessage}
+                      onReactToMessage={reactToMessage}
                     />
                   </div>
                   <MessageInput 

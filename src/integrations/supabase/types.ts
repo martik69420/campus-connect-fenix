@@ -7,10 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.4"
   }
   public: {
     Tables: {
@@ -233,7 +233,9 @@ export type Database = {
           content: string
           created_at: string | null
           id: string
+          image_url: string | null
           is_read: boolean | null
+          reactions: Json | null
           receiver_id: string
           sender_id: string
         }
@@ -241,7 +243,9 @@ export type Database = {
           content: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_read?: boolean | null
+          reactions?: Json | null
           receiver_id: string
           sender_id: string
         }
@@ -249,7 +253,9 @@ export type Database = {
           content?: string
           created_at?: string | null
           id?: string
+          image_url?: string | null
           is_read?: boolean | null
+          reactions?: Json | null
           receiver_id?: string
           sender_id?: string
         }
@@ -783,7 +789,7 @@ export type Database = {
     }
     Functions: {
       validate_password: {
-        Args: { password: string } | { username: string; password: string }
+        Args: { password: string } | { password: string; username: string }
         Returns: boolean
       }
     }

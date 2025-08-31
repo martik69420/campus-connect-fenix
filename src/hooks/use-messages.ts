@@ -10,6 +10,7 @@ export interface Message {
   content: string;
   is_read: boolean;
   image_url?: string;
+  reactions?: Record<string, string[]>;
 }
 
 export interface Friend {
@@ -27,6 +28,8 @@ interface UseMessagesResult {
   fetchMessages: (contactId: string) => Promise<void>;
   fetchFriends: () => Promise<void>;
   markMessagesAsRead: (senderId: string) => Promise<void>;
+  deleteMessage: (messageId: string) => Promise<void>;
+  reactToMessage: (messageId: string, emoji: string) => Promise<void>;
 }
 
 const useMessages = (): UseMessagesResult => {
@@ -135,7 +138,11 @@ const useMessages = (): UseMessagesResult => {
       }
 
       console.log('Messages fetched:', data);
-      setMessages(data || []);
+      const typedMessages = (data || []).map(msg => ({
+        ...msg,
+        reactions: (msg.reactions || {}) as Record<string, string[]>
+      }));
+      setMessages(typedMessages);
       
       // Mark messages as read when fetching
       await markMessagesAsRead(contactId);
@@ -194,9 +201,13 @@ const useMessages = (): UseMessagesResult => {
             table: 'messages',
             filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.id}))`
           },
-          (payload) => {
+           (payload) => {
             console.log('New message received:', payload);
-            setMessages(prev => [...prev, payload.new as Message]);
+            const newMessage = {
+              ...payload.new,
+              reactions: (payload.new.reactions || {}) as Record<string, string[]>
+            } as Message;
+            setMessages(prev => [...prev, newMessage]);
           }
         )
         .on(
@@ -207,10 +218,14 @@ const useMessages = (): UseMessagesResult => {
             table: 'messages',
             filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.id}))`
           },
-          (payload) => {
+           (payload) => {
             console.log('Message updated:', payload);
+            const updatedMessage = {
+              ...payload.new,
+              reactions: (payload.new.reactions || {}) as Record<string, string[]>
+            } as Message;
             setMessages(prev => prev.map(msg => 
-              msg.id === payload.new.id ? payload.new as Message : msg
+              msg.id === payload.new.id ? updatedMessage : msg
             ));
           }
         )
@@ -291,6 +306,75 @@ const useMessages = (): UseMessagesResult => {
     }
   }, []);
 
+  const deleteMessage = useCallback(async (messageId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', user.id); // Only allow deleting own messages
+
+      if (error) {
+        console.error('Error deleting message:', error);
+        return;
+      }
+
+      // Remove from local state
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  }, []);
+
+  const reactToMessage = useCallback(async (messageId: string, emoji: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      // Get current message
+      const message = messages.find(m => m.id === messageId);
+      if (!message) return;
+
+      const currentReactions = message.reactions || {};
+      const userReactions = currentReactions[emoji] || [];
+      
+      let updatedReactions;
+      if (userReactions.includes(user.id)) {
+        // Remove reaction
+        const filteredUsers = userReactions.filter(id => id !== user.id);
+        if (filteredUsers.length === 0) {
+          updatedReactions = { ...currentReactions };
+          delete updatedReactions[emoji];
+        } else {
+          updatedReactions = { ...currentReactions, [emoji]: filteredUsers };
+        }
+      } else {
+        // Add reaction
+        updatedReactions = { ...currentReactions, [emoji]: [...userReactions, user.id] };
+      }
+
+      const { error } = await supabase
+        .from('messages')
+        .update({ reactions: updatedReactions })
+        .eq('id', messageId);
+
+      if (error) {
+        console.error('Error updating message reactions:', error);
+        return;
+      }
+
+      // Update local state
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId ? { ...msg, reactions: updatedReactions } : msg
+      ));
+    } catch (error) {
+      console.error('Error reacting to message:', error);
+    }
+  }, [messages]);
+
   return {
     friends,
     messages,
@@ -298,7 +382,9 @@ const useMessages = (): UseMessagesResult => {
     sendMessage,
     fetchMessages,
     fetchFriends,
-    markMessagesAsRead
+    markMessagesAsRead,
+    deleteMessage,
+    reactToMessage
   };
 };
 

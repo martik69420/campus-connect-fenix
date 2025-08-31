@@ -57,13 +57,13 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
   };
   
   const getStatusColor = () => {
-    if (isOnline) return 'bg-green-500 shadow-green-500/50';
-    if (isAway) return 'bg-yellow-500 shadow-yellow-500/50';
-    return 'bg-gray-400';
+    if (isOnline) return 'bg-green-500 border-green-500/20 shadow-sm shadow-green-500/30';
+    if (isAway) return 'bg-yellow-500 border-yellow-500/20 shadow-sm shadow-yellow-500/30';
+    return 'bg-gray-500 border-gray-500/20 shadow-sm';
   };
   
   const getStatusAnimation = () => {
-    if (isOnline) return 'animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-60';
+    if (isOnline) return 'animate-pulse absolute inline-flex h-full w-full rounded-full bg-green-400/60';
     return '';
   };
   
@@ -94,7 +94,7 @@ const OnlineStatus: React.FC<OnlineStatusProps> = ({
             getStatusIcon()
           ) : (
             <span 
-              className={`relative flex ${getSizeClasses()} ${getStatusColor()} rounded-full shadow-sm border border-background`}
+              className={`relative flex ${getSizeClasses()} ${getStatusColor()} rounded-full border-2 border-background`}
             >
               {isOnline && (
                 <span className={getStatusAnimation()}></span>

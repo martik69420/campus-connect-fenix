@@ -1,8 +1,10 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Check, CheckCheck, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Check, CheckCheck, Clock, Trash2, Heart, ThumbsUp, Laugh } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { format, isToday, isYesterday } from 'date-fns';
 
 interface Message {
@@ -18,6 +20,7 @@ interface Message {
     avatar_url?: string;
   };
   image_url?: string;
+  reactions?: Record<string, string[]>;
   status?: 'sending' | 'sent' | 'delivered' | 'read';
 }
 
@@ -26,24 +29,56 @@ interface MessagesListProps {
   optimisticMessages: Message[];
   currentUserId: string;
   isLoading: boolean;
+  onDeleteMessage?: (messageId: string) => void;
+  onReactToMessage?: (messageId: string, emoji: string) => void;
 }
 
 const MessagesList: React.FC<MessagesListProps> = ({
   messages,
   optimisticMessages,
   currentUserId,
-  isLoading
+  isLoading,
+  onDeleteMessage,
+  onReactToMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isUserScrolled, setIsUserScrolled] = useState(false);
   const allMessages = [...messages, ...optimisticMessages];
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    if (!isUserScrolled) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   };
 
+  // Only auto-scroll when new messages arrive and user hasn't scrolled up
   useEffect(() => {
     scrollToBottom();
-  }, [allMessages]);
+  }, [allMessages.length, isUserScrolled]);
+
+  // Track if user has scrolled up
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setIsUserScrolled(!isAtBottom);
+    };
+
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const handleDeleteMessage = (messageId: string) => {
+    onDeleteMessage?.(messageId);
+  };
+
+  const handleReactToMessage = (messageId: string, emoji: string) => {
+    onReactToMessage?.(messageId, emoji);
+  };
 
   const formatMessageTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -102,7 +137,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
   }
 
   return (
-    <div className="flex-1 overflow-y-auto bg-background">
+    <div ref={containerRef} className="flex-1 overflow-y-auto bg-background">
       <div className="p-4 space-y-1">
         {allMessages.map((message, index) => {
           const isOwn = message.sender_id === currentUserId;
@@ -153,6 +188,40 @@ const MessagesList: React.FC<MessagesListProps> = ({
                   } ${getMessageStatus(message, isOwn) === 'sending' ? 'opacity-70' : 'opacity-100'}
                   px-4 py-3 max-w-full break-words transition-all duration-200 hover:shadow-lg`}
                 >
+                  {/* Message Options Dropdown */}
+                  <div className="absolute -top-2 right-2 opacity-0 group-hover/message:opacity-100 transition-opacity">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-6 w-6 p-0 bg-background/90 hover:bg-background">
+                          <span className="text-xs">⋯</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-40">
+                        <DropdownMenuItem onClick={() => handleReactToMessage(message.id, '❤️')}>
+                          <Heart className="mr-2 h-4 w-4" />
+                          React with ❤️
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleReactToMessage(message.id, '👍')}>
+                          <ThumbsUp className="mr-2 h-4 w-4" />
+                          React with 👍
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleReactToMessage(message.id, '😂')}>
+                          <Laugh className="mr-2 h-4 w-4" />
+                          React with 😂
+                        </DropdownMenuItem>
+                        {isOwn && (
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteMessage(message.id)}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+
                   {message.image_url && (
                     <div className="mb-3">
                       <img
@@ -167,6 +236,26 @@ const MessagesList: React.FC<MessagesListProps> = ({
                     <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
                       {message.content}
                     </p>
+                  )}
+
+                  {/* Reactions */}
+                  {message.reactions && Object.keys(message.reactions).length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {Object.entries(message.reactions).map(([emoji, userIds]) => (
+                        <button
+                          key={emoji}
+                          onClick={() => handleReactToMessage(message.id, emoji)}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs transition-colors ${
+                            userIds.includes(currentUserId)
+                              ? 'bg-primary/20 text-primary border border-primary/30'
+                              : 'bg-muted hover:bg-muted/80 border border-border'
+                          }`}
+                        >
+                          <span>{emoji}</span>
+                          <span>{userIds.length}</span>
+                        </button>
+                      ))}
+                    </div>
                   )}
                   
                   <div className={`flex items-center gap-1.5 mt-2 ${isOwn ? 'justify-end' : 'justify-start'}`}>
