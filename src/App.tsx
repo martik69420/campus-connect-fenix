@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,7 +5,6 @@ import { ThemeProvider } from './context/ThemeContext';
 import { LanguageProvider } from './context/LanguageContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { PostProvider } from './context/PostContext';
-import { AchievementProvider } from './context/AchievementContext';
 import { GameProvider } from './context/GameContext';
 import { Toaster } from './components/ui/toaster';
 import { AuthProvider } from './context/auth';
@@ -48,31 +46,29 @@ function App() {
           <AuthProvider>
             <LanguageProvider>
               <GameProvider>
-                <AchievementProvider>
-                  <NotificationProvider>
-                    <PostProvider>
-                      <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/signup" element={<Signup />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/auth/callback" element={<AuthCallback />} />
-                        <Route path="/messages" element={<Messages />} />
-                        <Route path="/search" element={<Search />} />
-                        <Route path="/notifications" element={<Notifications />} />
-                        <Route path="/friends" element={<Friends />} />
-                        <Route path="/friend-requests" element={<FriendRequests />} />
-                        <Route path="/add-friends" element={<AddFriends />} />
-                        <Route path="/games" element={<Games />} />
-                        <Route path="/games/snake" element={<Snake />} />
-                        <Route path="/leaderboard" element={<Leaderboard />} />
-                        <Route path="/achievements" element={<Achievements />} />
-                        <Route path="/profile/:username" element={<Profile />} />
-                      </Routes>
-                      <Toaster />
-                    </PostProvider>
-                  </NotificationProvider>
-                </AchievementProvider>
+                <NotificationProvider>
+                  <PostProvider>
+                    <Routes>
+                      <Route path="/" element={<Home />} />
+                      <Route path="/login" element={<Login />} />
+                      <Route path="/signup" element={<Signup />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/auth/callback" element={<AuthCallback />} />
+                      <Route path="/messages" element={<Messages />} />
+                      <Route path="/search" element={<Search />} />
+                      <Route path="/notifications" element={<Notifications />} />
+                      <Route path="/friends" element={<Friends />} />
+                      <Route path="/friend-requests" element={<FriendRequests />} />
+                      <Route path="/add-friends" element={<AddFriends />} />
+                      <Route path="/games" element={<Games />} />
+                      <Route path="/games/snake" element={<Snake />} />
+                      <Route path="/leaderboard" element={<Leaderboard />} />
+                      <Route path="/achievements" element={<Achievements />} />
+                      <Route path="/profile/:username" element={<Profile />} />
+                    </Routes>
+                    <Toaster />
+                  </PostProvider>
+                </NotificationProvider>
               </GameProvider>
             </LanguageProvider>
           </AuthProvider>

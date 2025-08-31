@@ -5,6 +5,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Check, CheckCheck, Clock, Trash2, Heart, ThumbsUp, Laugh } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { format, isToday, isYesterday } from 'date-fns';
 
 interface Message {
@@ -52,25 +53,37 @@ const MessagesList: React.FC<MessagesListProps> = ({
     }
   };
 
-  // Only auto-scroll when new messages arrive and user hasn't scrolled up
+  // Only scroll to bottom on component mount or when user sends a message
+  const [shouldAutoScroll, setShouldAutoScroll] = useState(true);
+  const [isUserScrolling, setIsUserScrolling] = useState(false);
+
   useEffect(() => {
-    scrollToBottom();
-  }, [allMessages.length, isUserScrolled]);
+    if (messagesEndRef.current && shouldAutoScroll && !isLoading && !isUserScrolling) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      setShouldAutoScroll(false);
+    }
+  }, [messages.length, shouldAutoScroll, isLoading, isUserScrolling]);
 
-  // Track if user has scrolled up
+  // Reset auto scroll when new messages arrive
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const lastMessage = messages[messages.length - 1];
+    if (lastMessage && lastMessage.sender_id === currentUserId) {
+      setShouldAutoScroll(true);
+    }
+  }, [messages, currentUserId]);
 
-    const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = container;
-      const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
-      setIsUserScrolled(!isAtBottom);
-    };
-
-    container.addEventListener('scroll', handleScroll);
-    return () => container.removeEventListener('scroll', handleScroll);
-  }, []);
+  // Track user scrolling
+  const handleScroll = (e: React.UIEvent) => {
+    const element = e.currentTarget;
+    const isScrolledToBottom = element.scrollHeight - element.scrollTop <= element.clientHeight + 50;
+    
+    if (!isScrolledToBottom) {
+      setIsUserScrolling(true);
+    } else {
+      setIsUserScrolling(false);
+      setShouldAutoScroll(true);
+    }
+  };
 
   const handleDeleteMessage = (messageId: string) => {
     onDeleteMessage?.(messageId);
@@ -137,8 +150,9 @@ const MessagesList: React.FC<MessagesListProps> = ({
   }
 
   return (
-    <div ref={containerRef} className="flex-1 overflow-y-auto bg-background">
-      <div className="p-4 space-y-1">
+    <div className="flex-1 overflow-hidden flex flex-col">
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-1" onScroll={handleScroll}>
         {allMessages.map((message, index) => {
           const isOwn = message.sender_id === currentUserId;
           const showAvatar = !isOwn && (
@@ -276,7 +290,8 @@ const MessagesList: React.FC<MessagesListProps> = ({
           );
         })}
         <div ref={messagesEndRef} />
-      </div>
+        </div>
+      </ScrollArea>
     </div>
   );
 };

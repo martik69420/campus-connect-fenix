@@ -110,6 +110,7 @@ const PostForm: React.FC = () => {
       return;
     }
     
+    if (isSubmitting) return; // Prevent double submission
     setIsSubmitting(true);
     try {
       // Upload images first if any

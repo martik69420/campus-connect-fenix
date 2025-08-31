@@ -106,15 +106,15 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = memo(({
               {displayName}
             </h1>
             {user?.isAdmin && (
-              <Badge variant="destructive" className="flex items-center gap-1 font-medium">
-                <Crown className="h-3 w-3" />
+              <span className="text-sm font-medium text-destructive flex items-center gap-1">
+                <Shield className="h-3 w-3" />
                 Admin
-              </Badge>
+              </span>
             )}
-            <Badge variant="secondary" className="flex items-center gap-1">
-              <Verified className="h-3 w-3" />
-              Verified
-            </Badge>
+            <span className="text-sm text-muted-foreground flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              Joined {formatDate(user?.created_at)}
+            </span>
           </div>
           <p className="text-muted-foreground text-lg">@{user?.username || 'unknown'}</p>
         </div>

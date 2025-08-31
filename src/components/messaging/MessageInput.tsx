@@ -19,22 +19,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
   const [message, setMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset submitting state when isSending changes to false
-  useEffect(() => {
-    if (!isSending && isSubmitting) {
-      setIsSubmitting(false);
-    }
-  }, [isSending, isSubmitting]);
-
   const handleSend = async () => {
-    if ((message.trim() || selectedImage) && !isSending && !isSubmitting) {
+    if ((message.trim() || selectedImage) && !isSending) {
       try {
-        setIsSubmitting(true);
         await onSendMessage(message, selectedImage || undefined);
         setMessage('');
         setSelectedImage(null);
@@ -145,7 +136,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={isSending || isSubmitting || disabled}
+          disabled={isSending || disabled}
           rows={1}
         />
         <div className="flex gap-1">
@@ -156,8 +147,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={isSending || isSubmitting || disabled}
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                  disabled={isSending || disabled}
                   onClick={() => fileInputRef.current?.click()}
                 >
                   <Image className="h-5 w-5" />
@@ -173,8 +164,8 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  disabled={isSending || isSubmitting || disabled}
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                  disabled={isSending || disabled}
                 >
                   <Smile className="h-5 w-5" />
                   <span className="sr-only">Add emoji</span>
@@ -189,11 +180,11 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
           <Button
             variant="default"
             size="icon"
-            disabled={(!message.trim() && !selectedImage) || isSending || isSubmitting || disabled}
+            disabled={(!message.trim() && !selectedImage) || isSending || disabled}
             onClick={handleSend}
-            className="bg-primary hover:bg-primary/90 transition-colors"
+            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200 shadow-lg hover:shadow-xl"
           >
-            {isSending || isSubmitting ? (
+            {isSending ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
               <Send className="h-5 w-5" />

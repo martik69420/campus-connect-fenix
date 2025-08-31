@@ -119,12 +119,9 @@ const Navbar = () => {
                       {isLoading ? (
                         <div className="absolute -top-1 -right-1 h-5 w-5 rounded-full border-2 border-t-transparent border-primary animate-spin" />
                       ) : unreadCount > 0 ? (
-                        <Badge 
-                          variant="destructive" 
-                          className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 flex items-center justify-center"
-                        >
+                        <span className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 flex items-center justify-center bg-red-500 text-white rounded-full text-xs font-medium">
                           {unreadCount > 9 ? '9+' : unreadCount}
-                        </Badge>
+                        </span>
                       ) : null}
                     </Button>
                   </DropdownMenuTrigger>

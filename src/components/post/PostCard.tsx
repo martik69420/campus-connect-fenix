@@ -174,10 +174,10 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
                     {post.user?.displayName || 'Unknown User'}
                   </p>
                   {post.user?.isAdmin && (
-                    <Badge variant="destructive" className="text-xs flex items-center gap-1">
+                    <span className="text-xs text-red-500 font-medium flex items-center gap-1">
                       <Crown className="h-3 w-3" />
                       Admin
-                    </Badge>
+                    </span>
                   )}
                 </div>
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">

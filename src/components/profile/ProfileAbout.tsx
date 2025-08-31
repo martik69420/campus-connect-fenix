@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon, BookIcon, MapPinIcon, Pencil } from 'lucide-react';
+import { CalendarIcon, BookIcon, MapPinIcon, Pencil, Heart, GraduationCap, MapPin } from 'lucide-react';
 import { useAuth } from '@/context/auth';
 import { supabase } from '@/integrations/supabase/client';
 import type { User } from '@/context/auth/types';
@@ -154,27 +154,23 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
           </p>
           
           <div className="flex flex-wrap gap-2 pt-2">
-            {profileUser?.school && (
-              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1">
-                <BookIcon className="w-3.5 h-3.5" />
+            {profileUser.interests && profileUser.interests.length > 0 && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Heart className="h-4 w-4 text-red-500" />
+                <span>{profileUser.interests.join(', ')}</span>
+              </div>
+            )}
+            {profileUser.school && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <GraduationCap className="h-4 w-4 text-blue-500" />
                 <span>{profileUser.school}</span>
-              </Badge>
+              </div>
             )}
-            
-            {profileUser?.location && (
-              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1">
-                <MapPinIcon className="w-3.5 h-3.5" />
-                <span>{profileUser.location}</span>
-              </Badge>
-            )}
-            
-            {profileUser?.createdAt && (
-              <Badge variant="secondary" className="flex items-center gap-1 px-2 py-1">
-                <CalendarIcon className="w-3.5 h-3.5" />
-                <span>
-                  Joined {new Date(profileUser.createdAt).toLocaleDateString()}
-                </span>
-              </Badge>
+            {profileUser.createdAt && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="h-4 w-4 text-blue-500" />
+                <span>Joined {new Date(profileUser.createdAt).toLocaleDateString()}</span>
+              </div>
             )}
           </div>
         </div>

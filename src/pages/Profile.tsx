@@ -11,8 +11,6 @@ import { Skeleton } from '@/components/ui/skeleton';
 import ProfilePictureUpload from '@/components/profile/ProfilePictureUpload';
 import { Shield, Star, Award, BookMarked, Heart, Sparkles } from 'lucide-react';
 import ProfileTabs from '@/components/profile/ProfileTabs';
-import { UserBadge } from '@/types/user';
-import { useAchievements } from '@/context/AchievementContext';
 import { supabase } from '@/integrations/supabase/client';
 
 const Profile: React.FC = () => {
@@ -25,27 +23,6 @@ const Profile: React.FC = () => {
   const [isFriend, setIsFriend] = useState(false);
   const [profileUser, setProfileUser] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
-  const { earnedBadges } = useAchievements();
-
-  const getUserBadges = useMemo((): UserBadge[] => {
-    const allBadges = [...earnedBadges];
-    
-    if (profileUser?.isAdmin) {
-      const adminBadge: UserBadge = {
-        id: 'admin',
-        name: 'Administrator',
-        description: 'This user is a platform administrator',
-        icon: 'admin',
-        backgroundColor: '#FF6B4A',
-        color: '#FFFFFF',
-        earned: true
-      };
-      
-      allBadges.unshift(adminBadge);
-    }
-    
-    return allBadges;
-  }, [earnedBadges, profileUser?.isAdmin]);
 
   const isOwnProfile = useMemo(() => {
     return user && user.username === username;

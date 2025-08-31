@@ -77,12 +77,9 @@ const MobileNavBar: React.FC = () => {
             <Bell className={`h-5 w-5 ${location.pathname === '/notifications' ? 'text-primary' : 'text-muted-foreground'}`} />
           </div>
           {unreadCount > 0 && (
-            <Badge 
-              variant="destructive" 
-              className="absolute top-0 right-0.5 h-4 min-w-[16px] px-1 flex items-center justify-center text-xs"
-            >
+            <span className="absolute top-0 right-0.5 h-4 min-w-[16px] px-1 flex items-center justify-center text-xs bg-red-500 text-white rounded-full font-medium">
               {unreadCount}
-            </Badge>
+            </span>
           )}
           <span className="text-xs mt-1">Alerts</span>
         </Link>

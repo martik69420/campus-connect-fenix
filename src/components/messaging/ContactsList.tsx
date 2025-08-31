@@ -173,9 +173,9 @@ const ContactsList: React.FC<ContactsListProps> = ({
               </div>
               
               {(contact.unreadCount || 0) > 0 && (
-                <Badge className="absolute top-3 right-3 bg-primary text-primary-foreground h-5 min-w-5 flex items-center justify-center text-xs px-1.5">
+                <span className="absolute top-3 right-3 bg-primary text-white h-5 min-w-5 flex items-center justify-center text-xs px-1.5 rounded-full font-medium">
                   {contact.unreadCount}
-                </Badge>
+                </span>
               )}
             </button>
           ))

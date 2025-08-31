@@ -271,6 +271,9 @@ const useMessages = (): UseMessagesResult => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Prevent sending empty messages without content or image
+      if (!content.trim() && !imageFile) return;
+
       console.log('Sending message from', user.id, 'to', receiverId, ':', content);
 
       let imageUrl: string | null = null;
