@@ -1,43 +1,50 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Smile } from 'lucide-react';
 
 interface EmojiPickerProps {
   onEmojiSelect: (emoji: string) => void;
 }
 
+const commonEmojis = [
+  '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+  '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
+  '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜',
+  '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳', '😏',
+  '😒', '😞', '😔', '😟', '😕', '🙁', '☹️', '😣',
+  '😖', '😫', '😩', '🥺', '😢', '😭', '😤', '😠',
+  '😡', '🤬', '🤯', '😳', '🥵', '🥶', '😱', '😨',
+  '😰', '😥', '😓', '🤗', '🤔', '😑', '😐', '😶',
+  '🙄', '😯', '😦', '😧', '😮', '😲', '🥱', '😴',
+  '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧',
+  '😷', '🤒', '🤕', '🤑', '🤠', '😈', '👿', '👹',
+  '👺', '🤡', '💩', '👻', '💀', '☠️', '👽', '👾',
+  '🤖', '🎃', '😺', '😸', '😹', '😻', '😼', '😽',
+  '🙀', '😿', '😾', '❤️', '🧡', '💛', '💚', '💙',
+  '💜', '🤎', '🖤', '🤍', '💔', '❣️', '💕', '💞',
+  '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️',
+  '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️',
+  '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍',
+  '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️',
+  '👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🤟',
+  '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️',
+  '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤝',
+  '💯', '💥', '💫', '💦', '💨', '🔥', '⭐', '🌟',
+  '✨', '⚡', '☄️', '💎', '🔮', '🏆', '🎉', '🎊'
+];
+
 const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
-  const emojiCategories = {
-    smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣', '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🤩', '🥳'],
-    hearts: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤', '🤍', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝'],
-    gestures: ['👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌'],
-    objects: ['💯', '💥', '💫', '💦', '💨', '🔥', '⭐', '🌟', '✨', '⚡', '☄️', '💎', '🔮', '🏆', '🎉', '🎊'],
-    symbols: ['😂', '❤️', '😍', '😘', '😊', '🤗', '🤔', '😅', '😃', '😄', '😁', '😆', '🙂', '😉', '😌', '😙', '😗', '🤤', '😋', '🤓']
-  };
-
-  const [activeCategory, setActiveCategory] = React.useState('smileys');
-
   return (
-    <div className="bg-background border rounded-lg shadow-lg">
-      {/* Category tabs */}
-      <div className="flex border-b">
-        {Object.keys(emojiCategories).map((category) => (
-          <Button
-            key={category}
-            variant={activeCategory === category ? "default" : "ghost"}
-            size="sm"
-            className="flex-1 rounded-none"
-            onClick={() => setActiveCategory(category)}
-          >
-            {category.charAt(0).toUpperCase() + category.slice(1)}
-          </Button>
-        ))}
-      </div>
-
-      {/* Emoji grid */}
-      <div className="p-3 max-h-48 overflow-y-auto">
-        <div className="grid grid-cols-8 gap-1">
-          {emojiCategories[activeCategory as keyof typeof emojiCategories].map((emoji, index) => (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Smile className="h-4 w-4" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-2" align="end">
+        <div className="grid grid-cols-8 gap-1 max-h-64 overflow-y-auto">
+          {commonEmojis.map((emoji, index) => (
             <Button
               key={index}
               variant="ghost"
@@ -45,12 +52,12 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
               className="h-8 w-8 p-0 hover:bg-muted"
               onClick={() => onEmojiSelect(emoji)}
             >
-              {emoji}
+              <span className="text-lg">{emoji}</span>
             </Button>
           ))}
         </div>
-      </div>
-    </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 

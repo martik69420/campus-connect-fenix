@@ -183,8 +183,6 @@ const useMessages = (): UseMessagesResult => {
 
   // Set up real-time subscription for messages
   useEffect(() => {
-    if (!currentContactId) return;
-
     const setupRealtimeSubscription = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
@@ -192,14 +190,14 @@ const useMessages = (): UseMessagesResult => {
       console.log('Setting up real-time subscription for messages');
 
       const channel = supabase
-        .channel('messages-changes')
+        .channel('messages-realtime')
         .on(
           'postgres_changes',
           {
             event: 'INSERT',
             schema: 'public',
             table: 'messages',
-            filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.id}))`
+            filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`
           },
            (payload) => {
             console.log('New message received:', payload);
@@ -207,7 +205,17 @@ const useMessages = (): UseMessagesResult => {
               ...payload.new,
               reactions: (payload.new.reactions || {}) as Record<string, string[]>
             } as Message;
-            setMessages(prev => [...prev, newMessage]);
+            
+            // Only add message if it's for current conversation or update all messages
+            if (currentContactId === null || 
+                payload.new.sender_id === currentContactId || 
+                payload.new.receiver_id === currentContactId) {
+              setMessages(prev => {
+                // Prevent duplicates
+                if (prev.some(msg => msg.id === newMessage.id)) return prev;
+                return [...prev, newMessage];
+              });
+            }
           }
         )
         .on(
@@ -215,8 +223,8 @@ const useMessages = (): UseMessagesResult => {
           {
             event: 'UPDATE',
             schema: 'public',
-            table: 'messages',
-            filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${currentContactId}),and(sender_id.eq.${currentContactId},receiver_id.eq.${user.id}))`
+            table: 'messages', 
+            filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`
           },
            (payload) => {
             console.log('Message updated:', payload);
@@ -227,6 +235,19 @@ const useMessages = (): UseMessagesResult => {
             setMessages(prev => prev.map(msg => 
               msg.id === payload.new.id ? updatedMessage : msg
             ));
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'DELETE',
+            schema: 'public',
+            table: 'messages',
+            filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`
+          },
+           (payload) => {
+            console.log('Message deleted:', payload);
+            setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
           }
         )
         .subscribe();

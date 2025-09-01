@@ -240,7 +240,7 @@ const NotificationMenu = ({ onClose }: NotificationMenuProps) => {
           {!notification.read && (
             <div className="mr-2">
               <span className="ml-auto bg-secondary text-secondary-foreground px-2 py-1 rounded-full text-xs font-medium">
-                {notifications.filter(n => !n.is_read).length}
+                {notifications.filter(n => !n.read).length}
               </span>
             </div>
           )}
