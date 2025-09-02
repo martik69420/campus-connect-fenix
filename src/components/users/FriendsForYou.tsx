@@ -16,7 +16,6 @@ interface FriendSuggestion {
   username: string;
   display_name: string;
   avatar_url: string | null;
-  mutual_friends?: number;
 }
 
 const FriendsForYou: React.FC = () => {
@@ -63,13 +62,9 @@ const FriendsForYou: React.FC = () => {
         ...(friendRequests?.map(f => f.user_id) || [])
       ]);
       
-      // Add mutual friends count and filter out existing friends
+      // Filter out existing friends
       const enhancedUsers = filteredUsers
-        .filter(u => !friendIds.has(u.id))
-        .map(user => ({
-          ...user,
-          mutual_friends: Math.floor(Math.random() * 5) + 1, // Simulate mutual friends
-        }));
+        .filter(u => !friendIds.has(u.id));
         
       setFriendSuggestions(enhancedUsers);
     } catch (error) {
@@ -187,9 +182,7 @@ const FriendsForYou: React.FC = () => {
                     </Avatar>
                     <div>
                       <p className="font-medium text-sm">{friend.display_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {friend.mutual_friends} {t('friends.mutualFriends')}
-                      </p>
+                      <p className="text-xs text-muted-foreground">@{friend.username}</p>
                     </div>
                   </div>
                   

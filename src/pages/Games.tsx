@@ -97,7 +97,7 @@ const Games = () => {
           </Card>
 
           {/* Coming Soon Game Card */}
-          <Card className="hover:shadow-md transition-shadow duration-200 opacity-75">
+          <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start">
                 <div className="space-y-1">
@@ -107,33 +107,30 @@ const Games = () => {
                   </CardTitle>
                   <CardDescription>{t('games.tetrisDesc')}</CardDescription>
                 </div>
-                <Badge variant="outline" className="font-medium">
-                  <Star className="w-3 h-3 mr-1" />
-                  {t('games.new')}
+                <Badge variant="secondary" className="font-medium">
+                  <Crown className="w-3 h-3 mr-1" />
+                  {bestScores.tetris || 0}
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="pb-3">
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">{t('games.development')}</span>
-                  <span className="font-medium">85%</span>
+                  <span className="text-muted-foreground">{t('games.progress')}</span>
+                  <span className="font-medium">{gameState.progress.tetris.gamesPlayed} {t('games.gamesPlayed')}</span>
                 </div>
-                <Progress value={85} className="h-2" />
-                <div className="bg-muted/50 p-2 mt-3 rounded text-sm text-muted-foreground">
-                  {t('games.classicPuzzle')}
-                </div>
+                <Progress 
+                  value={Math.min(gameState.progress.tetris.gamesPlayed * 10, 100)} 
+                  className="h-2" 
+                />
               </div>
             </CardContent>
             <CardFooter>
               <Button 
-                onClick={handleGameClick} 
-                disabled 
-                variant="secondary"
+                onClick={() => navigate('/games/tetris')} 
                 className="w-full"
               >
-                <Award className="w-4 h-4 mr-2" />
-                {t('games.comingSoon')}
+                {t('games.playNow')}
               </Button>
             </CardFooter>
           </Card>
@@ -155,14 +152,14 @@ const Games = () => {
             
             <div className="bg-muted/50 p-4 rounded-lg text-center">
               <Badge variant="outline" className="mb-2">{t('games.total')}</Badge>
-              <p className="text-2xl font-bold">{gameState.progress.snake.gamesPlayed}</p>
+              <p className="text-2xl font-bold">{gameState.progress.snake.gamesPlayed + gameState.progress.tetris.gamesPlayed}</p>
               <p className="text-sm text-muted-foreground">{t('games.gamesPlayed')}</p>
             </div>
             
             <div className="bg-muted/50 p-4 rounded-lg text-center">
-              <Badge variant="outline" className="mb-2">Coming Soon</Badge>
-              <p className="text-2xl font-bold">?</p>
-              <p className="text-sm text-muted-foreground">More games coming</p>
+              <Badge variant="outline" className="mb-2">{t('games.tetris')}</Badge>
+              <p className="text-2xl font-bold">{bestScores.tetris || 0}</p>
+              <p className="text-sm text-muted-foreground">{t('games.bestScore')}</p>
             </div>
           </div>
         </div>

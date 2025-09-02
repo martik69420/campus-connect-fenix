@@ -25,6 +25,8 @@ import Games from './pages/Games';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
 import Snake from './pages/games/Snake';
+import Tetris from '@/pages/games/Tetris';
+import Post from '@/pages/Post';
 import FriendRequests from './pages/FriendRequests';
 import Achievements from './pages/Achievements';
 import AdminPanel from './pages/AdminPanel';
@@ -65,10 +67,11 @@ function App() {
                       <Route path="/add-friends" element={<AddFriends />} />
                       <Route path="/games" element={<Games />} />
                       <Route path="/games/snake" element={<Snake />} />
+                      <Route path="/games/tetris" element={<Tetris />} />
                       <Route path="/games/tictactoe" element={<TicTacToe />} />
                       <Route path="/leaderboard" element={<Leaderboard />} />
                       <Route path="/achievements" element={<Achievements />} />
-                      <Route path="/profile/:username" element={<Profile />} />
+                      <Route path="/post/:postId" element={<Post />} />
                       <Route path="/admin" element={<AdminPanel />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>

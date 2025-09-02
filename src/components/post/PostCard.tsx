@@ -16,7 +16,7 @@ import ReportModal from '@/components/ReportModal';
 import { useToast } from '@/hooks/use-toast';
 import type { Post } from '@/context/PostContext';
 import { motion } from 'framer-motion';
-import MentionRenderer from '@/components/mentions/MentionRenderer';
+import CombinedContentRenderer from '@/components/mentions/CombinedContentRenderer';
 
 interface PostCardProps {
   post: Post;
@@ -212,7 +212,7 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
         
         <CardContent className="pt-0">
           <div className="space-y-3">
-            <MentionRenderer 
+            <CombinedContentRenderer 
               content={post.content}
               className="text-sm leading-relaxed whitespace-pre-wrap break-words"
             />

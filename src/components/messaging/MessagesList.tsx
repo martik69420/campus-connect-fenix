@@ -125,9 +125,9 @@ const MessagesList: React.FC<MessagesListProps> = ({
       case 'sent':
         return <Check className={`${iconClass} text-muted-foreground`} />;
       case 'delivered':
-        return <CheckCheck className={`${iconClass} text-muted-foreground`} />;
+        return <CheckCheck className={`${iconClass} text-gray-500 dark:text-gray-400`} />;
       case 'read':
-        return <CheckCheck className={`${iconClass} text-blue-500`} />;
+        return <CheckCheck className={`${iconClass} text-blue-400 dark:text-blue-300`} />;
       default:
         return <Check className={`${iconClass} text-muted-foreground`} />;
     }

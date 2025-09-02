@@ -32,7 +32,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   const [showLinkCopied, setShowLinkCopied] = useState(false);
   const [customMessage, setCustomMessage] = useState("");
   
-  const postUrl = `${window.location.origin}/post/${postId}`;
+  const postUrl = `${window.location.origin}/#/post/${postId}`;
   const shareText = postTitle 
     ? `${customMessage} Check out this post: ${postTitle}` 
     : `${customMessage} Check out this post!`;
