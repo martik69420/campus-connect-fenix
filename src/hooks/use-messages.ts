@@ -24,7 +24,7 @@ interface UseMessagesResult {
   friends: Friend[];
   messages: Message[];
   loading: boolean;
-  sendMessage: (receiverId: string, content: string, imageFile?: File) => Promise<void>;
+  sendMessage: (receiverId: string, content: string, imageFile?: File, gifUrl?: string) => Promise<void>;
   fetchMessages: (contactId: string) => Promise<void>;
   fetchFriends: () => Promise<void>;
   markMessagesAsRead: (senderId: string) => Promise<void>;
@@ -287,13 +287,13 @@ const useMessages = (): UseMessagesResult => {
     }
   };
 
-  const sendMessage = useCallback(async (receiverId: string, content: string, imageFile?: File) => {
+  const sendMessage = useCallback(async (receiverId: string, content: string, imageFile?: File, gifUrl?: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Prevent sending empty messages without content or image
-      if (!content.trim() && !imageFile) return;
+      // Prevent sending empty messages without content, image, or gif
+      if (!content.trim() && !imageFile && !gifUrl) return;
 
       console.log('Sending message from', user.id, 'to', receiverId, ':', content);
 
@@ -305,12 +305,14 @@ const useMessages = (): UseMessagesResult => {
       const messageData: any = {
         sender_id: user.id,
         receiver_id: receiverId,
-        content: content,
+        content: content || (imageUrl ? '[Image]' : (gifUrl ? '[GIF]' : '')),
         is_read: false
       };
 
       if (imageUrl) {
         messageData.image_url = imageUrl;
+      } else if (gifUrl) {
+        messageData.image_url = gifUrl;
       }
 
       const { data, error } = await supabase

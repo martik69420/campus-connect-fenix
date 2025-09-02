@@ -219,11 +219,15 @@ const AdminPanel: React.FC = () => {
   return (
     <AppLayout>
       <div className="container mx-auto py-8 space-y-8">
-        <div className="flex items-center gap-3">
-          <Shield className="h-8 w-8 text-primary" />
+        <div className="flex items-center gap-3 animate-slide-up">
+          <Shield className="h-8 w-8 text-primary animate-glow" />
           <div>
-            <h1 className="text-3xl font-bold">Admin Panel</h1>
-            <p className="text-muted-foreground">Manage users, content, and platform settings</p>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Admin Panel
+            </h1>
+            <p className="text-muted-foreground animate-slide-right" style={{ animationDelay: '0.2s' }}>
+              Manage users, content, and platform settings
+            </p>
           </div>
         </div>
 

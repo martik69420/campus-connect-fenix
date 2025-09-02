@@ -2,14 +2,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Smile, Paperclip, Loader2, Image, X } from 'lucide-react';
+import { Send, Smile, Paperclip, Loader2, Image, X, FileImage, Zap } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import EmojiPicker from '@/components/messaging/EmojiPicker';
+import GifPicker from '@/components/messaging/GifPicker';
+import GifCreator from '@/components/messaging/GifCreator';
 
 interface MessageInputProps {
-  onSendMessage: (message: string, imageFile?: File) => Promise<void>;
+  onSendMessage: (message: string, imageFile?: File, gifUrl?: string) => Promise<void>;
   isSending: boolean;
   disabled?: boolean;
 }
@@ -19,17 +23,20 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
   const [message, setMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [selectedGif, setSelectedGif] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showGifDialog, setShowGifDialog] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleSend = async () => {
-    if ((message.trim() || selectedImage) && !isSending) {
+    if ((message.trim() || selectedImage || selectedGif) && !isSending) {
       try {
-        await onSendMessage(message, selectedImage || undefined);
+        await onSendMessage(message, selectedImage || undefined, selectedGif || undefined);
         setMessage('');
         setSelectedImage(null);
         setImagePreview(null);
+        setSelectedGif(null);
       } catch (error) {
         console.error('Failed to send message:', error);
         toast({
@@ -77,6 +84,19 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
     }
   };
 
+  const handleGifSelect = (gifUrl: string) => {
+    setSelectedGif(gifUrl);
+    setShowGifDialog(false);
+    toast({
+      title: "GIF Selected",
+      description: "GIF added to your message"
+    });
+  };
+
+  const removeGif = () => {
+    setSelectedGif(null);
+  };
+
   const insertEmoji = (emoji: string) => {
     setMessage(prev => prev + emoji);
     setShowEmojiPicker(false);
@@ -108,25 +128,46 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
 
   return (
     <div className="border-t p-3 dark:border-gray-800 bg-background/95 backdrop-blur-sm">
-      {/* Image Preview */}
-      {imagePreview && (
-        <div className="mb-3 relative inline-block">
-          <img 
-            src={imagePreview} 
-            alt="Preview" 
-            className="max-w-32 max-h-32 rounded-lg object-cover border"
-          />
-          <Button
-            type="button"
-            variant="destructive"
-            size="icon"
-            className="absolute -top-2 -right-2 h-6 w-6"
-            onClick={removeImage}
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      {/* Media Previews */}
+      <div className="flex gap-3 mb-3">
+        {imagePreview && (
+          <div className="relative inline-block animate-bounce-in">
+            <img 
+              src={imagePreview} 
+              alt="Preview" 
+              className="max-w-32 max-h-32 rounded-lg object-cover border shadow-lg"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute -top-2 -right-2 h-6 w-6 animate-bounce-in"
+              onClick={removeImage}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+        
+        {selectedGif && (
+          <div className="relative inline-block animate-bounce-in">
+            <img 
+              src={selectedGif} 
+              alt="Selected GIF" 
+              className="max-w-32 max-h-32 rounded-lg object-cover border shadow-lg"
+            />
+            <Button
+              type="button"
+              variant="destructive"
+              size="icon"
+              className="absolute -top-2 -right-2 h-6 w-6 animate-bounce-in"
+              onClick={removeGif}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
+      </div>
 
       <div className="flex gap-2 items-end">
         <Textarea
@@ -147,7 +188,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-primary transition-colors"
+                  className="text-muted-foreground hover:text-primary transition-all duration-200 hover:scale-110"
                   disabled={isSending || disabled}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -157,6 +198,43 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
               </TooltipTrigger>
               <TooltipContent>Attach image</TooltipContent>
             </Tooltip>
+
+            <Dialog open={showGifDialog} onOpenChange={setShowGifDialog}>
+              <DialogTrigger asChild>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-primary transition-all duration-200 hover:scale-110"
+                      disabled={isSending || disabled}
+                    >
+                      <FileImage className="h-5 w-5" />
+                      <span className="sr-only">Add GIF</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Add GIF</TooltipContent>
+                </Tooltip>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Add GIF</DialogTitle>
+                </DialogHeader>
+                <Tabs defaultValue="search" className="w-full">
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="search">Search GIFs</TabsTrigger>
+                    <TabsTrigger value="create">Create GIF</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="search" className="mt-4">
+                    <GifPicker onGifSelect={handleGifSelect} />
+                  </TabsContent>
+                  <TabsContent value="create" className="mt-4">
+                    <GifCreator onGifCreated={handleGifSelect} />
+                  </TabsContent>
+                </Tabs>
+              </DialogContent>
+            </Dialog>
           
             <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
               <PopoverTrigger asChild>
@@ -164,7 +242,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground hover:text-primary transition-colors"
+                  className="text-muted-foreground hover:text-primary transition-all duration-200 hover:scale-110"
                   disabled={isSending || disabled}
                 >
                   <Smile className="h-5 w-5" />
@@ -180,9 +258,9 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
           <Button
             variant="default"
             size="icon"
-            disabled={(!message.trim() && !selectedImage) || isSending || disabled}
+            disabled={(!message.trim() && !selectedImage && !selectedGif) || isSending || disabled}
             onClick={handleSend}
-            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200 shadow-lg hover:shadow-xl"
+            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 animate-glow"
           >
             {isSending ? (
               <Loader2 className="h-5 w-5 animate-spin" />

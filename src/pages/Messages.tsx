@@ -72,11 +72,11 @@ const Messages = () => {
     setSelectedUser(friend);
   };
 
-  const handleSendMessage = async (content: string, imageFile?: File) => {
+  const handleSendMessage = async (content: string, imageFile?: File, gifUrl?: string) => {
     if (selectedUserId) {
       setIsSending(true);
       try {
-        await sendMessage(selectedUserId, content, imageFile);
+        await sendMessage(selectedUserId, content, imageFile, gifUrl);
       } finally {
         setIsSending(false);
       }
