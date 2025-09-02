@@ -168,7 +168,7 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
             )}
             {profileUser.createdAt && (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4 text-blue-500" />
+                <CalendarIcon className="h-4 w-4 text-blue-500" />
                 <span>Joined {new Date(profileUser.createdAt).toLocaleDateString()}</span>
               </div>
             )}
