@@ -11,6 +11,7 @@ export interface Message {
   is_read: boolean;
   image_url?: string;
   reactions?: Record<string, string[]>;
+  status?: 'sending' | 'sent' | 'delivered' | 'read';
 }
 
 export interface Friend {
@@ -206,14 +207,25 @@ const useMessages = (): UseMessagesResult => {
               reactions: (payload.new.reactions || {}) as Record<string, string[]>
             } as Message;
             
-            // Only add message if it's for current conversation or update all messages
+            // Add message and auto-refresh if it's for current conversation
             if (currentContactId === null || 
                 payload.new.sender_id === currentContactId || 
                 payload.new.receiver_id === currentContactId) {
               setMessages(prev => {
                 // Prevent duplicates
                 if (prev.some(msg => msg.id === newMessage.id)) return prev;
-                return [...prev, newMessage];
+                const updatedMessages = [...prev, newMessage].sort((a, b) => 
+                  new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                );
+                
+                // Auto-mark as read if user is receiving the message
+                if (payload.new.receiver_id === user.id && currentContactId === payload.new.sender_id) {
+                  setTimeout(() => {
+                    markMessagesAsRead(payload.new.sender_id);
+                  }, 100);
+                }
+                
+                return updatedMessages;
               });
             }
           }
@@ -250,7 +262,9 @@ const useMessages = (): UseMessagesResult => {
             setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          console.log('Real-time subscription status:', status);
+        });
 
       return () => {
         console.log('Cleaning up real-time subscription');
@@ -262,7 +276,7 @@ const useMessages = (): UseMessagesResult => {
     return () => {
       cleanup.then(cleanupFn => cleanupFn?.());
     };
-  }, [currentContactId]);
+  }, [currentContactId, markMessagesAsRead]);
 
   const uploadImage = async (imageFile: File): Promise<string | null> => {
     try {
@@ -297,6 +311,22 @@ const useMessages = (): UseMessagesResult => {
 
       console.log('Sending message from', user.id, 'to', receiverId, ':', content);
 
+      // Create optimistic message for immediate UI feedback
+      const tempId = `temp-${Date.now()}`;
+      const optimisticMessage: Message = {
+        id: tempId,
+        sender_id: user.id,
+        receiver_id: receiverId,
+        content: content || (imageFile ? '[Image]' : (gifUrl ? '[GIF]' : '')),
+        created_at: new Date().toISOString(),
+        is_read: false,
+        reactions: {},
+        status: 'sending'
+      };
+
+      // Add optimistic message to UI
+      setMessages(prev => [...prev, optimisticMessage]);
+
       let imageUrl: string | null = null;
       if (imageFile) {
         imageUrl = await uploadImage(imageFile);
@@ -323,10 +353,21 @@ const useMessages = (): UseMessagesResult => {
 
       if (error) {
         console.error('Error sending message:', error);
+        // Remove optimistic message on error
+        setMessages(prev => prev.filter(msg => msg.id !== tempId));
         return;
       }
 
       console.log('Message sent successfully:', data);
+      
+      // Replace optimistic message with real message
+      setMessages(prev => prev.map(msg => 
+        msg.id === tempId ? { 
+          ...data, 
+          reactions: (data.reactions || {}) as Record<string, string[]>
+        } as Message : msg
+      ));
+      
     } catch (error) {
       console.error('Error sending message:', error);
     }
