@@ -193,7 +193,7 @@ const useMessages = (): UseMessagesResult => {
       console.log('Setting up real-time subscription for messages');
 
       const channel = supabase
-        .channel('messages-realtime')
+        .channel(`messages-realtime-${user.id}`)
         .on(
           'postgres_changes',
           {
@@ -250,9 +250,17 @@ const useMessages = (): UseMessagesResult => {
               ...payload.new,
               reactions: (payload.new.reactions || {}) as Record<string, string[]>
             } as Message;
-            setMessages(prev => prev.map(msg => 
-              msg.id === payload.new.id ? updatedMessage : msg
-            ));
+            
+            // Only update if this message belongs to current conversation
+            const isForCurrentConversation = currentContactId === null || 
+              (payload.new.sender_id === currentContactId && payload.new.receiver_id === user.id) ||
+              (payload.new.sender_id === user.id && payload.new.receiver_id === currentContactId);
+            
+            if (isForCurrentConversation) {
+              setMessages(prev => prev.map(msg => 
+                msg.id === payload.new.id ? updatedMessage : msg
+              ));
+            }
           }
         )
         .on(
@@ -265,11 +273,24 @@ const useMessages = (): UseMessagesResult => {
           },
            (payload) => {
             console.log('Message deleted:', payload);
-            setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+            
+            // Only update if this message belongs to current conversation
+            const isForCurrentConversation = currentContactId === null || 
+              (payload.old.sender_id === currentContactId && payload.old.receiver_id === user.id) ||
+              (payload.old.sender_id === user.id && payload.old.receiver_id === currentContactId);
+            
+            if (isForCurrentConversation) {
+              setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+            }
           }
         )
         .subscribe((status) => {
           console.log('Real-time subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('✅ Successfully subscribed to real-time messages');
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('❌ Real-time subscription failed');
+          }
         });
 
       return () => {
