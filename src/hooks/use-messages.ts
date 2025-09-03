@@ -117,6 +117,8 @@ const useMessages = (): UseMessagesResult => {
   const fetchMessages = useCallback(async (contactId: string) => {
     setLoading(true);
     setCurrentContactId(contactId);
+    console.log('Setting current contact ID to:', contactId);
+    
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
@@ -138,15 +140,15 @@ const useMessages = (): UseMessagesResult => {
         return;
       }
 
-      console.log('Messages fetched:', data);
+      console.log('Messages fetched:', data?.length || 0, 'messages');
       const typedMessages = (data || []).map(msg => ({
         ...msg,
         reactions: (msg.reactions || {}) as Record<string, string[]>
-      }));
+      })) as Message[];
+      
+      console.log('Setting messages:', typedMessages);
       setMessages(typedMessages);
       
-      // Mark messages as read when fetching
-      await markMessagesAsRead(contactId);
     } catch (error) {
       console.error('Error fetching messages:', error);
     } finally {
@@ -207,10 +209,12 @@ const useMessages = (): UseMessagesResult => {
               reactions: (payload.new.reactions || {}) as Record<string, string[]>
             } as Message;
             
-            // Add message and auto-refresh if it's for current conversation
-            if (currentContactId === null || 
-                payload.new.sender_id === currentContactId || 
-                payload.new.receiver_id === currentContactId) {
+            // Check if this message belongs to the current conversation
+            const isForCurrentConversation = currentContactId === null || 
+              (payload.new.sender_id === currentContactId && payload.new.receiver_id === user.id) ||
+              (payload.new.sender_id === user.id && payload.new.receiver_id === currentContactId);
+            
+            if (isForCurrentConversation) {
               setMessages(prev => {
                 // Prevent duplicates
                 if (prev.some(msg => msg.id === newMessage.id)) return prev;
@@ -218,15 +222,17 @@ const useMessages = (): UseMessagesResult => {
                   new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 );
                 
-                // Auto-mark as read if user is receiving the message
-                if (payload.new.receiver_id === user.id && currentContactId === payload.new.sender_id) {
-                  setTimeout(() => {
-                    markMessagesAsRead(payload.new.sender_id);
-                  }, 100);
-                }
-                
+                console.log('Adding message to conversation:', newMessage);
                 return updatedMessages;
               });
+              
+              // Auto-mark as read if user is receiving the message in current conversation
+              if (payload.new.receiver_id === user.id && currentContactId === payload.new.sender_id) {
+                console.log('Auto-marking message as read');
+                setTimeout(() => {
+                  markMessagesAsRead(payload.new.sender_id);
+                }, 500);
+              }
             }
           }
         )

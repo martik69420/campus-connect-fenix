@@ -55,18 +55,21 @@ const Messages = () => {
   useEffect(() => {
     if (selectedUserId && user?.id) {
       console.log('Fetching messages for selected user:', selectedUserId);
-      fetchMessages(selectedUserId);
       
-      // Find the selected user from friends list
-      const friend = friends.find(f => f.id === selectedUserId);
-      setSelectedUser(friend);
+      const loadMessages = async () => {
+        await fetchMessages(selectedUserId);
+        
+        // Find the selected user from friends list
+        const friend = friends.find(f => f.id === selectedUserId);
+        setSelectedUser(friend);
+        
+        // Mark messages as read after fetching
+        setTimeout(() => {
+          markMessagesAsRead(selectedUserId);
+        }, 300);
+      };
       
-      // Mark messages as read after a short delay
-      const timer = setTimeout(() => {
-        markMessagesAsRead(selectedUserId);
-      }, 500);
-      
-      return () => clearTimeout(timer);
+      loadMessages();
     }
   }, [selectedUserId, user?.id, fetchMessages, friends, markMessagesAsRead]);
 
