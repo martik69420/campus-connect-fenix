@@ -44,13 +44,122 @@ const GifPicker: React.FC<GifPickerProps> = ({ onGifSelect }) => {
         `https://api.giphy.com/v1/gifs/trending?api_key=${GIPHY_API_KEY}&limit=20&offset=0&rating=g`
       );
       const data = await response.json();
-      setGifs(data.data || []);
+      
+      // Add some popular pre-made GIFs to the beginning
+      const popularGifs = [
+        {
+          id: 'popular_1',
+          title: 'Thumbs Up',
+          images: {
+            fixed_height_small: {
+              url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif',
+              width: '200',
+              height: '200'
+            },
+            original: {
+              url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif'
+            }
+          }
+        },
+        {
+          id: 'popular_2',
+          title: 'Heart Eyes',
+          images: {
+            fixed_height_small: {
+              url: 'https://media.giphy.com/media/l0MYryZTmQgvHI5TG/giphy.gif',
+              width: '200',
+              height: '200'
+            },
+            original: {
+              url: 'https://media.giphy.com/media/l0MYryZTmQgvHI5TG/giphy.gif'
+            }
+          }
+        },
+        {
+          id: 'popular_3',
+          title: 'Laughing',
+          images: {
+            fixed_height_small: {
+              url: 'https://media.giphy.com/media/3o7aCSPqXE5C6T8tBC/giphy.gif',
+              width: '200',
+              height: '200'
+            },
+            original: {
+              url: 'https://media.giphy.com/media/3o7aCSPqXE5C6T8tBC/giphy.gif'
+            }
+          }
+        },
+        {
+          id: 'popular_4',
+          title: 'High Five',
+          images: {
+            fixed_height_small: {
+              url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif',
+              width: '200',
+              height: '200'
+            },
+            original: {
+              url: 'https://media.giphy.com/media/l0MYt5jPR6QX5pnqM/giphy.gif'
+            }
+          }
+        },
+        {
+          id: 'popular_5',
+          title: 'Dancing',
+          images: {
+            fixed_height_small: {
+              url: 'https://media.giphy.com/media/l0MYGb8Q5nXQP0bEA/giphy.gif',
+              width: '200',
+              height: '200'
+            },
+            original: {
+              url: 'https://media.giphy.com/media/l0MYGb8Q5nXQP0bEA/giphy.gif'
+            }
+          }
+        },
+        {
+          id: 'popular_6',
+          title: 'Clapping',
+          images: {
+            fixed_height_small: {
+              url: 'https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif',
+              width: '200',
+              height: '200'
+            },
+            original: {
+              url: 'https://media.giphy.com/media/3o7aD2saalBwwftBIY/giphy.gif'
+            }
+          }
+        }
+      ];
+      
+      // Combine popular GIFs with trending ones
+      const allGifs = [...popularGifs, ...(data.data || [])];
+      setGifs(allGifs);
     } catch (error) {
       console.error('Error loading trending GIFs:', error);
+      // Fallback to just popular GIFs if API fails
+      const fallbackGifs = [
+        {
+          id: 'popular_1',
+          title: 'Thumbs Up',
+          images: {
+            fixed_height_small: {
+              url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif',
+              width: '200',
+              height: '200'
+            },
+            original: {
+              url: 'https://media.giphy.com/media/3o7abKhOpu0NwenH3O/giphy.gif'
+            }
+          }
+        }
+      ];
+      setGifs(fallbackGifs);
       toast({
-        title: "Error",
-        description: "Failed to load trending GIFs",
-        variant: "destructive"
+        title: "Limited GIF Selection",
+        description: "Showing popular GIFs only",
+        variant: "default"
       });
     } finally {
       setLoading(false);

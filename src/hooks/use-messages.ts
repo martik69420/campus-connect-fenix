@@ -190,111 +190,144 @@ const useMessages = (): UseMessagesResult => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      console.log('Setting up real-time subscription for messages');
+      console.log('🔄 Setting up real-time subscription for user:', user.id);
 
-      const channel = supabase
-        .channel(`messages-realtime-${user.id}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'messages',
-            filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`
-          },
-           (payload) => {
-            console.log('New message received:', payload);
-            const newMessage = {
-              ...payload.new,
-              reactions: (payload.new.reactions || {}) as Record<string, string[]>
-            } as Message;
+      // Create a unique channel for this user
+      const channelName = `messages_${user.id}`;
+      const channel = supabase.channel(channelName);
+
+      // Listen for INSERT events (new messages)
+      channel.on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('🆕 New message received via realtime:', payload);
+          const newMessage = payload.new as Message;
+          
+          // Check if this user is involved in this message
+          const isInvolvedUser = newMessage.sender_id === user.id || newMessage.receiver_id === user.id;
+          
+          if (isInvolvedUser) {
+            // Check if this message belongs to current conversation
+            const belongsToCurrentConversation = !currentContactId || 
+              (newMessage.sender_id === currentContactId && newMessage.receiver_id === user.id) ||
+              (newMessage.sender_id === user.id && newMessage.receiver_id === currentContactId);
             
-            // Check if this message belongs to the current conversation
-            const isForCurrentConversation = currentContactId === null || 
-              (payload.new.sender_id === currentContactId && payload.new.receiver_id === user.id) ||
-              (payload.new.sender_id === user.id && payload.new.receiver_id === currentContactId);
-            
-            if (isForCurrentConversation) {
+            if (belongsToCurrentConversation) {
+              console.log('➡️ Adding message to current conversation');
               setMessages(prev => {
                 // Prevent duplicates
-                if (prev.some(msg => msg.id === newMessage.id)) return prev;
-                const updatedMessages = [...prev, newMessage].sort((a, b) => 
+                const exists = prev.some(msg => msg.id === newMessage.id);
+                if (exists) {
+                  console.log('⚠️ Message already exists, skipping');
+                  return prev;
+                }
+                
+                const updatedMessages = [...prev, {
+                  ...newMessage,
+                  reactions: (newMessage.reactions || {}) as Record<string, string[]>
+                }].sort((a, b) => 
                   new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
                 );
                 
-                console.log('Adding message to conversation:', newMessage);
+                console.log('✅ Message added to conversation');
                 return updatedMessages;
               });
               
-              // Auto-mark as read if user is receiving the message in current conversation
-              if (payload.new.receiver_id === user.id && currentContactId === payload.new.sender_id) {
-                console.log('Auto-marking message as read');
+              // Auto-mark as read if user is receiving the message
+              if (newMessage.receiver_id === user.id && currentContactId === newMessage.sender_id) {
+                console.log('📖 Auto-marking message as read');
                 setTimeout(() => {
-                  markMessagesAsRead(payload.new.sender_id);
-                }, 500);
+                  markMessagesAsRead(newMessage.sender_id);
+                }, 300);
               }
+            } else {
+              console.log('📝 Message for different conversation');
             }
+          } else {
+            console.log('👤 Message not for this user');
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'messages', 
-            filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`
-          },
-           (payload) => {
-            console.log('Message updated:', payload);
-            const updatedMessage = {
-              ...payload.new,
-              reactions: (payload.new.reactions || {}) as Record<string, string[]>
-            } as Message;
+        }
+      );
+
+      // Listen for UPDATE events (message reactions, read status)
+      channel.on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('🔄 Message updated via realtime:', payload);
+          const updatedMessage = payload.new as Message;
+          
+          // Check if this user is involved in this message
+          const isInvolvedUser = updatedMessage.sender_id === user.id || updatedMessage.receiver_id === user.id;
+          
+          if (isInvolvedUser) {
+            const belongsToCurrentConversation = !currentContactId || 
+              (updatedMessage.sender_id === currentContactId && updatedMessage.receiver_id === user.id) ||
+              (updatedMessage.sender_id === user.id && updatedMessage.receiver_id === currentContactId);
             
-            // Only update if this message belongs to current conversation
-            const isForCurrentConversation = currentContactId === null || 
-              (payload.new.sender_id === currentContactId && payload.new.receiver_id === user.id) ||
-              (payload.new.sender_id === user.id && payload.new.receiver_id === currentContactId);
-            
-            if (isForCurrentConversation) {
+            if (belongsToCurrentConversation) {
+              console.log('🔄 Updating message in current conversation');
               setMessages(prev => prev.map(msg => 
-                msg.id === payload.new.id ? updatedMessage : msg
+                msg.id === updatedMessage.id ? {
+                  ...updatedMessage,
+                  reactions: (updatedMessage.reactions || {}) as Record<string, string[]>
+                } : msg
               ));
             }
           }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'DELETE',
-            schema: 'public',
-            table: 'messages',
-            filter: `or(sender_id.eq.${user.id},receiver_id.eq.${user.id})`
-          },
-           (payload) => {
-            console.log('Message deleted:', payload);
+        }
+      );
+
+      // Listen for DELETE events
+      channel.on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('🗑️ Message deleted via realtime:', payload);
+          const deletedMessage = payload.old as Message;
+          
+          // Check if this user is involved in this message
+          const isInvolvedUser = deletedMessage.sender_id === user.id || deletedMessage.receiver_id === user.id;
+          
+          if (isInvolvedUser) {
+            const belongsToCurrentConversation = !currentContactId || 
+              (deletedMessage.sender_id === currentContactId && deletedMessage.receiver_id === user.id) ||
+              (deletedMessage.sender_id === user.id && deletedMessage.receiver_id === currentContactId);
             
-            // Only update if this message belongs to current conversation
-            const isForCurrentConversation = currentContactId === null || 
-              (payload.old.sender_id === currentContactId && payload.old.receiver_id === user.id) ||
-              (payload.old.sender_id === user.id && payload.old.receiver_id === currentContactId);
-            
-            if (isForCurrentConversation) {
-              setMessages(prev => prev.filter(msg => msg.id !== payload.old.id));
+            if (belongsToCurrentConversation) {
+              console.log('🗑️ Removing message from current conversation');
+              setMessages(prev => prev.filter(msg => msg.id !== deletedMessage.id));
             }
           }
-        )
-        .subscribe((status) => {
-          console.log('Real-time subscription status:', status);
-          if (status === 'SUBSCRIBED') {
-            console.log('✅ Successfully subscribed to real-time messages');
-          } else if (status === 'CHANNEL_ERROR') {
-            console.error('❌ Real-time subscription failed');
-          }
-        });
+        }
+      );
+
+      // Subscribe to the channel
+      channel.subscribe((status) => {
+        console.log('📡 Real-time subscription status:', status);
+        
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to real-time messages');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Failed to subscribe to real-time messages');
+        }
+      });
 
       return () => {
-        console.log('Cleaning up real-time subscription');
+        console.log('🧹 Cleaning up real-time subscription');
         supabase.removeChannel(channel);
       };
     };
