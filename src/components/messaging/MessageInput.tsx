@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import EmojiPicker from '@/components/messaging/EmojiPicker';
 import GifPicker from '@/components/messaging/GifPicker';
+import PrebuiltGifs from '@/components/messaging/PrebuiltGifs';
 import GifCreator from '@/components/messaging/GifCreator';
 
 interface MessageInputProps {
@@ -222,12 +223,16 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
                   <DialogTitle>Add GIF</DialogTitle>
                 </DialogHeader>
                 <Tabs defaultValue="search" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="search">Search GIFs</TabsTrigger>
-                    <TabsTrigger value="create">Create GIF</TabsTrigger>
+                  <TabsList className="grid w-full grid-cols-3">
+                    <TabsTrigger value="search">Search</TabsTrigger>
+                    <TabsTrigger value="popular">Popular</TabsTrigger>
+                    <TabsTrigger value="create">Create</TabsTrigger>
                   </TabsList>
                   <TabsContent value="search" className="mt-4">
                     <GifPicker onGifSelect={handleGifSelect} />
+                  </TabsContent>
+                  <TabsContent value="popular" className="mt-4">
+                    <PrebuiltGifs onGifSelect={handleGifSelect} />
                   </TabsContent>
                   <TabsContent value="create" className="mt-4">
                     <GifCreator onGifCreated={handleGifSelect} />

@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
+import TwitterMentionInput from '@/components/mentions/TwitterMentionInput';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, Send, Image as ImageIcon } from 'lucide-react';
@@ -70,10 +70,10 @@ const CreatePostForm: React.FC = () => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Textarea
+          <TwitterMentionInput
             placeholder="What's on your mind?"
             value={content}
-            onChange={(e) => setContent(e.target.value)}
+            onChange={setContent}
             className="min-h-[100px] resize-none border-0 bg-muted/30 focus-visible:ring-1 focus-visible:ring-primary"
             disabled={isSubmitting}
           />

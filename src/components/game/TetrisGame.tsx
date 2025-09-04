@@ -333,11 +333,19 @@ const TetrisGame: React.FC<TetrisGameProps> = ({ onGameEnd }) => {
     for (let y = 0; y < GRID_HEIGHT; y++) {
       for (let x = 0; x < GRID_WIDTH; x++) {
         if (grid[y][x]) {
+          // Add glow effect to placed pieces
+          ctx.shadowColor = COLORS[grid[y][x] as keyof typeof COLORS] || COLORS.filled;
+          ctx.shadowBlur = 8;
+          
           ctx.fillStyle = COLORS[grid[y][x] as keyof typeof COLORS] || COLORS.filled;
           ctx.fillRect(x * CELL_SIZE + 1, y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
           
-          // Add highlight
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+          ctx.shadowBlur = 0;
+          
+          // Add animated highlight
+          const time = Date.now() * 0.003;
+          const shimmer = Math.sin(time + x + y) * 0.1 + 0.2;
+          ctx.fillStyle = `rgba(255, 255, 255, ${shimmer})`;
           ctx.fillRect(x * CELL_SIZE + 1, y * CELL_SIZE + 1, CELL_SIZE - 2, 4);
         }
       }
@@ -364,8 +372,15 @@ const TetrisGame: React.FC<TetrisGameProps> = ({ onGameEnd }) => {
       }
     }
 
-    // Draw current piece
+    // Draw current piece with enhanced animations
     if (currentPiece) {
+      const time = Date.now() * 0.005;
+      const pulse = Math.sin(time) * 0.05 + 0.95;
+      
+      // Add strong glow to current piece
+      ctx.shadowColor = COLORS[currentPiece.type as keyof typeof COLORS];
+      ctx.shadowBlur = 15 * pulse;
+      
       ctx.fillStyle = COLORS[currentPiece.type as keyof typeof COLORS];
       for (let y = 0; y < currentPiece.shape.length; y++) {
         for (let x = 0; x < currentPiece.shape[y].length; x++) {
@@ -373,16 +388,23 @@ const TetrisGame: React.FC<TetrisGameProps> = ({ onGameEnd }) => {
             const drawX = currentPiece.position.x + x;
             const drawY = currentPiece.position.y + y;
             if (drawY >= 0) {
-              ctx.fillRect(drawX * CELL_SIZE + 1, drawY * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+              // Scale with pulse
+              const size = (CELL_SIZE - 2) * pulse;
+              const offset = (CELL_SIZE - size) / 2;
+              ctx.fillRect(drawX * CELL_SIZE + 1 + offset, drawY * CELL_SIZE + 1 + offset, size, size);
               
-              // Add highlight
-              ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+              ctx.shadowBlur = 0;
+              
+              // Add animated highlight
+              const shimmer = Math.sin(time * 2 + x + y) * 0.2 + 0.3;
+              ctx.fillStyle = `rgba(255, 255, 255, ${shimmer})`;
               ctx.fillRect(drawX * CELL_SIZE + 1, drawY * CELL_SIZE + 1, CELL_SIZE - 2, 4);
               ctx.fillStyle = COLORS[currentPiece.type as keyof typeof COLORS];
             }
           }
         }
       }
+      ctx.shadowBlur = 0;
     }
   }, [grid, currentPiece, canPlacePiece, movePiece]);
 
@@ -423,10 +445,10 @@ const TetrisGame: React.FC<TetrisGameProps> = ({ onGameEnd }) => {
   return (
     <div className="flex flex-col items-center space-y-4">
       <div className="flex items-center gap-8 text-lg font-semibold">
-        <div>Score: {score}</div>
-        <div>Level: {level}</div>
-        <div>Lines: {lines}</div>
-        <div className="flex items-center gap-2 text-yellow-600">
+        <div className="animate-pulse">Score: {score}</div>
+        <div className="animate-fade-in">Level: {level}</div>
+        <div className="animate-scale-in">Lines: {lines}</div>
+        <div className="flex items-center gap-2 text-yellow-600 animate-pulse">
           <Trophy className="h-5 w-5" />
           <span>Best: {highScore}</span>
         </div>
