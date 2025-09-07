@@ -41,7 +41,7 @@ const NAV_ITEMS = [
   { icon: Users, labelKey: 'nav.friends', href: '/friends', tooltip: 'Manage your connections' },
   { icon: UserPlus, labelKey: 'nav.addFriends', href: '/add-friends', tooltip: 'Grow your network' },
   { icon: Gamepad2, labelKey: 'nav.games', href: '/games', tooltip: 'Play games for fun' },
-  { icon: Trophy, labelKey: 'nav.leaderboard', href: '/leaderboard', tooltip: 'See top performers' },
+  
   { icon: Settings, labelKey: 'nav.settings', href: '/settings', tooltip: 'Customize your experience' },
 ];
 

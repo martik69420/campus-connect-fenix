@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Eye, EyeOff } from 'lucide-react';
 
 const Signup = () => {
@@ -19,7 +20,7 @@ const Signup = () => {
     confirmPassword: '',
     username: '',
     displayName: '',
-    school: ''
+    class: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -39,6 +40,20 @@ const Signup = () => {
       [name]: value
     }));
   };
+
+  const handleSelectChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      class: value
+    }));
+  };
+
+  const classOptions = [
+    '1A LAT', '1A WET', '1B LAT', '1B WET', '1C', '1D', '1E', '1F', '1G', '1H', '1I',
+    '2A LAT', '2B E&O', '2C E&O', '2D STWE', '2E STWE', '2F STWE', '2G MTWE', '2H MTWE',
+    '3BW', '3EWmt 1', '3EWmt 2', '3EWww', '3HW', '3LAww', '3MTec', '3MTww', '3NWww1', '3NWww2', '3TW',
+    '4BW', '4EWww', '4HW', '4LAmt', '4LAww', '4MTec', '4MTww', '4NWmt', '4NWww', '4TW'
+  ];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,8 +84,8 @@ const Signup = () => {
       return;
     }
 
-    if (!formData.school.trim()) {
-      setError('School is required');
+    if (!formData.class.trim()) {
+      setError('Klas is verplicht');
       setIsSubmitting(false);
       return;
     }
@@ -78,7 +93,7 @@ const Signup = () => {
     const userData = {
       username: formData.username.trim(),
       display_name: formData.displayName.trim(),
-      school: formData.school.trim()
+      class: formData.class.trim()
     };
 
     const result = await register(formData.email, formData.password, userData);
@@ -119,7 +134,7 @@ const Signup = () => {
         className="text-center mb-8"
       >
         <h1 className="text-4xl font-bold text-primary">Campus Fenix</h1>
-        <p className="text-muted-foreground mt-2">Join your school community</p>
+        <p className="text-muted-foreground mt-2">Word lid van je klas gemeenschap</p>
       </motion.div>
       
       <motion.div 
@@ -130,9 +145,9 @@ const Signup = () => {
       >
         <Card className="border shadow-lg">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Create Account</CardTitle>
+            <CardTitle className="text-2xl text-center">Account Aanmaken</CardTitle>
             <CardDescription className="text-center">
-              Sign up to get started with Campus Fenix
+              Registreer om te beginnen met Campus Fenix
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -145,12 +160,12 @@ const Signup = () => {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">Gebruikersnaam</Label>
                   <Input
                     id="username"
                     name="username"
                     type="text"
-                    placeholder="Username"
+                    placeholder="Gebruikersnaam"
                     value={formData.username}
                     onChange={handleInputChange}
                     required
@@ -158,12 +173,12 @@ const Signup = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Display Name</Label>
+                  <Label htmlFor="displayName">Weergavenaam</Label>
                   <Input
                     id="displayName"
                     name="displayName"
                     type="text"
-                    placeholder="Your Name"
+                    placeholder="Jouw Naam"
                     value={formData.displayName}
                     onChange={handleInputChange}
                     required
@@ -177,7 +192,7 @@ const Signup = () => {
                   id="email"
                   name="email"
                   type="email"
-                  placeholder="Enter your email"
+                  placeholder="Voer je email in"
                   value={formData.email}
                   onChange={handleInputChange}
                   required
@@ -185,16 +200,19 @@ const Signup = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="school">School</Label>
-                <Input
-                  id="school"
-                  name="school"
-                  type="text"
-                  placeholder="Your school name"
-                  value={formData.school}
-                  onChange={handleInputChange}
-                  required
-                />
+                <Label htmlFor="class">Klas</Label>
+                <Select value={formData.class} onValueChange={handleSelectChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecteer je klas" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classOptions.map((classOption) => (
+                      <SelectItem key={classOption} value={classOption}>
+                        {classOption}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               
               <div className="space-y-2">

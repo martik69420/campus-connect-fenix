@@ -22,7 +22,7 @@ import Notifications from './pages/Notifications';
 import Friends from './pages/Friends';
 import AddFriends from './pages/AddFriends';
 import Games from './pages/Games';
-import Leaderboard from './pages/Leaderboard';
+
 import Profile from './pages/Profile';
 import Snake from './pages/games/Snake';
 import Tetris from '@/pages/games/Tetris';
@@ -69,7 +69,7 @@ function App() {
                       <Route path="/games/snake" element={<Snake />} />
                       <Route path="/games/tetris" element={<Tetris />} />
                       <Route path="/games/tictactoe" element={<TicTacToe />} />
-                      <Route path="/leaderboard" element={<Leaderboard />} />
+                      
                       <Route path="/achievements" element={<Achievements />} />
                       <Route path="/post/:postId" element={<Post />} />
                       <Route path="/admin" element={<AdminPanel />} />

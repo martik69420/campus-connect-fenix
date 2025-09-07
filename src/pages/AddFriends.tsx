@@ -19,6 +19,7 @@ const AddFriends = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [sentRequests, setSentRequests] = useState<{[key: string]: boolean}>({});
   
@@ -28,9 +29,10 @@ const AddFriends = () => {
       return;
     }
     
-    // Load sent friend requests on component mount
+    // Load sent friend requests and recommendations on component mount
     if (user) {
       fetchSentRequests();
+      fetchRecommendations();
     }
   }, [isAuthenticated, authLoading, navigate, user]);
   
@@ -59,6 +61,36 @@ const AddFriends = () => {
       
     } catch (error) {
       console.error('Error loading sent requests:', error);
+    }
+  };
+
+  const fetchRecommendations = async () => {
+    if (!user) return;
+    
+    try {
+      // Get 5 random users from same class for recommendations
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, display_name, avatar_url, class')
+        .eq('class', user.class || '')
+        .neq('id', user.id)
+        .limit(5);
+        
+      if (error) {
+        console.error("Error fetching recommendations:", error);
+        return;
+      }
+      
+      // Mark already sent requests
+      const recommendationsWithStatus = data?.map(result => ({
+        ...result,
+        requestSent: sentRequests[result.id] || false
+      })) || [];
+      
+      setRecommendations(recommendationsWithStatus);
+      
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
     }
   };
   
@@ -222,26 +254,89 @@ const AddFriends = () => {
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Find New Friends</h1>
-            <p className="text-muted-foreground">Connect with people from your school and expand your network</p>
+            <h1 className="text-3xl font-bold">Vrienden Zoeken</h1>
+            <p className="text-muted-foreground">Verbind met mensen uit je klas en breid je netwerk uit</p>
           </div>
           <Button onClick={() => navigate('/friends')} className="bg-primary hover:bg-primary/90">
             <UserCheck className="mr-2 h-4 w-4" />
-            View Friends
+            Bekijk Vrienden
           </Button>
         </div>
         
+        {/* Recommendations Section */}
+        {recommendations.length > 0 && (
+          <Card className="shadow-lg mb-6">
+            <CardHeader>
+              <CardTitle>Aanbevelingen uit je Klas</CardTitle>
+              <CardDescription>Mensen uit jouw klas die je zou kunnen kennen</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {recommendations.map((person) => (
+                  <motion.div 
+                    key={person.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center justify-between p-4 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Avatar>
+                        <AvatarImage src={person.avatar_url || "/placeholder.svg"} />
+                        <AvatarFallback>
+                          {person.display_name?.substring(0, 2).toUpperCase() || 'U'}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <h3 className="font-medium">{person.display_name}</h3>
+                        <p className="text-sm text-muted-foreground">@{person.username}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant={person.requestSent ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => !person.requestSent && handleAddFriend(person.id)}
+                        disabled={person.requestSent}
+                        className={person.requestSent ? "border-green-500/30 text-green-500" : ""}
+                      >
+                        {person.requestSent ? (
+                          <>
+                            <UserCheck className="mr-2 h-4 w-4" />
+                            Verzoek Verzonden
+                          </>
+                        ) : (
+                          <>
+                            <UserPlus className="mr-2 h-4 w-4" />
+                            Voeg Toe
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => navigate(`/profile/${person.username}`)}
+                      >
+                        Bekijk Profiel
+                      </Button>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <Card className="shadow-lg">
           <CardHeader>
-            <CardTitle>Search for Friends</CardTitle>
-            <CardDescription>Enter a username or display name to find people</CardDescription>
+            <CardTitle>Zoek naar Vrienden</CardTitle>
+            <CardDescription>Voer een gebruikersnaam of weergavenaam in om mensen te vinden</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-6">
               <div className="flex items-center mt-2">
                 <Input
                   type="search"
-                  placeholder="Search by username or display name..."
+                  placeholder="Zoek op gebruikersnaam of weergavenaam..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   onKeyDown={handleKeyPress}
@@ -253,7 +348,7 @@ const AddFriends = () => {
                   disabled={loading || !searchTerm.trim()}
                 >
                   <Search className="mr-2 h-4 w-4" />
-                  Search
+                  Zoeken
                 </Button>
               </div>
               
