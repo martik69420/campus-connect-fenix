@@ -107,7 +107,7 @@ const FriendsList: React.FC<FriendsListProps> = ({
         <UserX className="h-16 w-16 mx-auto text-muted-foreground mb-6" />
         <h3 className="text-xl font-semibold mb-2">No friends yet</h3>
         <p className="text-muted-foreground max-w-md mx-auto mb-6">
-          You haven't added any friends yet. Find people from your school and connect with them.
+          Je hebt nog geen vrienden toegevoegd. Zoek mensen uit je klas en maak verbinding met ze.
         </p>
         <Button asChild>
           <Link to="/add-friends">Find Friends</Link>
@@ -142,7 +142,7 @@ const FriendsList: React.FC<FriendsListProps> = ({
                   <div>
                     <p className="font-medium">{friend.displayName}</p>
                     <p className="text-sm text-muted-foreground">@{friend.username}</p>
-                    {friend.school && <p className="text-xs text-muted-foreground">{friend.school}</p>}
+                    {friend.class && <p className="text-xs text-muted-foreground">{friend.class}</p>}
                   </div>
                 </Link>
                 <div className="flex items-center space-x-2">

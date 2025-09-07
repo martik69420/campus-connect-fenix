@@ -8,7 +8,7 @@ export interface User {
   displayName: string;
   avatar: string;
   bio?: string;
-  school: string;
+  class: string;
   coins: number;
   createdAt: string;
   isAdmin: boolean;
@@ -40,7 +40,7 @@ export interface ProfileUpdateData {
   display_name?: string;
   username?: string;
   avatar_url?: string;
-  school?: string;
+  class?: string;
   bio?: string;
   interests?: string[];
   settings?: Record<string, any>;

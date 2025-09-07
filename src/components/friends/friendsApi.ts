@@ -19,14 +19,14 @@ export const fetchFriendsData = async (userId: string): Promise<Friend[]> => {
           username,
           display_name,
           avatar_url,
-          school
+          class
         ),
         users_profiles:profiles!friends_user_id_fkey (
           id,
           username,
           display_name,
           avatar_url,
-          school
+          class
         )
       `)
       .or(`user_id.eq.${userId},friend_id.eq.${userId}`)
@@ -56,7 +56,7 @@ export const fetchFriendsData = async (userId: string): Promise<Friend[]> => {
         username: friendProfile.username,
         displayName: friendProfile.display_name,
         avatar: friendProfile.avatar_url,
-        school: friendProfile.school,
+        class: friendProfile.class,
         isOnline: false, // Default to false, will be updated by useOnlineStatus
       };
     }).filter(Boolean) as Friend[];
@@ -81,7 +81,7 @@ export const fetchReceivedRequests = async (userId: string): Promise<FriendReque
         created_at,
         status,
         user:profiles!friends_user_id_fkey (
-          id, username, display_name, avatar_url, school
+          id, username, display_name, avatar_url, class
         )
       `)
       .eq('friend_id', userId)
@@ -112,7 +112,7 @@ export const fetchSentRequests = async (userId: string): Promise<FriendRequest[]
         created_at,
         status,
         friend:profiles!friends_friend_id_fkey (
-          id, username, display_name, avatar_url, school
+          id, username, display_name, avatar_url, class
         )
       `)
       .eq('user_id', userId)

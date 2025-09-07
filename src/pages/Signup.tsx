@@ -216,13 +216,13 @@ const Signup = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Wachtwoord</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     name="password"
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="Create a password"
+                    placeholder="Maak een wachtwoord"
                     value={formData.password}
                     onChange={handleInputChange}
                     required
@@ -244,12 +244,12 @@ const Signup = () => {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                <Label htmlFor="confirmPassword">Bevestig Wachtwoord</Label>
                 <Input
                   id="confirmPassword"
                   name="confirmPassword"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Confirm your password"
+                  placeholder="Bevestig je wachtwoord"
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   required
@@ -261,14 +261,14 @@ const Signup = () => {
                 className="w-full" 
                 disabled={isSubmitting}
               >
-                {isSubmitting ? "Creating Account..." : "Create Account"}
+                {isSubmitting ? "Account Aanmaken..." : "Account Aanmaken"}
               </Button>
             </form>
             
             <div className="mt-4 text-center text-sm">
-              <span className="text-muted-foreground">Already have an account? </span>
+              <span className="text-muted-foreground">Heb je al een account? </span>
               <Link to="/login" className="text-primary hover:underline">
-                Sign in
+                Inloggen
               </Link>
             </div>
           </CardContent>

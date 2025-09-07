@@ -28,7 +28,7 @@ export type Post = {
     displayName: string;
     avatar: string;
     email: string;
-    school: string;
+    class: string;
     coins: number;
     isAdmin: boolean;
     // Add missing required properties from User type for consistency
@@ -86,13 +86,13 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
               displayName: profileData.display_name,
               avatar: profileData.avatar_url,
               bio: profileData.bio || '',
-              school: profileData.school,
+              class: profileData.class,
               coins: profileData.coins || 0,
               createdAt: profileData.created_at,
               isAdmin: profileData.is_admin || false,
               interests: profileData.interests || [],
               // The issue is here - we need to use TypeScript's type assertion to handle the location property
-              location: (profileData as any).location || profileData.school || '',
+              location: (profileData as any).location || profileData.class || '',
               settings: {
                 publicLikedPosts: false,
                 publicSavedPosts: false,
@@ -143,7 +143,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     // Return the post's embedded user if available
     const postWithUser = posts.find(post => post.userId === userId && post.user);
-    return postWithUser?.user as User | undefined;
+    return postWithUser?.user as any | undefined;
   }, [userCache, posts]);
 
   // Function to fetch posts
@@ -186,7 +186,7 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatar: post.profiles.avatar_url || '/placeholder.svg',
           coins: 0,
           email: '',
-          school: '',
+        class: '',
           isAdmin: false,
           // Added required User type properties
           interests: [],
@@ -275,11 +275,11 @@ export const PostProvider: React.FC<{ children: React.ReactNode }> = ({ children
           avatar: currentUser.avatar || '/placeholder.svg',
           coins: currentUser.coins,
           email: currentUser.email || '',
-          school: currentUser.school,
+          class: currentUser.class || '',
           isAdmin: currentUser.isAdmin,
           // Added missing User type properties
           interests: currentUser.interests,
-          location: currentUser.location,
+          location: currentUser.location || currentUser.class || '',
           createdAt: currentUser.createdAt,
           settings: currentUser.settings
         },

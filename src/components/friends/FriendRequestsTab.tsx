@@ -97,7 +97,7 @@ const FriendRequestsTab: React.FC<FriendRequestsTabProps> = ({
                     <div>
                       <p className="font-medium">{sender.display_name}</p>
                       <p className="text-sm text-muted-foreground">@{sender.username}</p>
-                      {sender.school && <p className="text-xs text-muted-foreground">{sender.school}</p>}
+                      {sender.class && <p className="text-xs text-muted-foreground">{sender.class}</p>}
                     </div>
                   </Link>
                   

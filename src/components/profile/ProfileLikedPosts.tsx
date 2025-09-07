@@ -144,7 +144,7 @@ const ProfileLikedPosts: React.FC<ProfileLikedPostsProps> = ({ username }) => {
             displayName: post.profiles.display_name,
             avatar: post.profiles.avatar_url,
             email: '', 
-            school: '',
+            class: '',
             coins: 0,
             isAdmin: false
           } : undefined

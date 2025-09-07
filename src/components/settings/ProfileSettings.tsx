@@ -15,7 +15,7 @@ export const ProfileSettings = () => {
     display_name: user?.displayName || '',
     username: user?.username || '',
     bio: user?.bio || '',
-    school: user?.school || '',
+    class: user?.class || '',
     location: user?.location || '',
     website: localStorage.getItem('userWebsite') || ''
   });
@@ -26,7 +26,7 @@ export const ProfileSettings = () => {
         display_name: user.displayName || '',
         username: user.username || '',
         bio: user.bio || '',
-        school: user.school || '',
+        class: user.class || '',
         location: user.location || '',
         website: localStorage.getItem('userWebsite') || ''
       });
@@ -52,7 +52,7 @@ export const ProfileSettings = () => {
         display_name: profileData.display_name,
         username: profileData.username,
         bio: profileData.bio,
-        school: profileData.school,
+        class: profileData.class,
         location: profileData.location
       });
 
@@ -131,13 +131,13 @@ export const ProfileSettings = () => {
             <div className="flex items-center gap-3">
               <Building2 className="h-5 w-5 text-primary flex-shrink-0" />
               <div className="flex-1">
-                <Label htmlFor="school" className="text-base">School</Label>
+                <Label htmlFor="class" className="text-base">Klas</Label>
                 <Input
-                  id="school"
-                  name="school"
-                  value={profileData.school}
+                  id="class"
+                  name="class"
+                  value={profileData.class}
                   onChange={handleInputChange}
-                  placeholder="Your school"
+                  placeholder="Jouw klas"
                   className="mt-2"
                 />
               </div>

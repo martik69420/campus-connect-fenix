@@ -6,7 +6,7 @@ export interface Friend {
   avatar?: string;
   lastActive?: string;
   isOnline?: boolean;
-  school?: string;
+  class?: string;
 }
 
 export interface FriendRequest {
@@ -24,5 +24,5 @@ export interface FriendProfile {
   username: string;
   display_name: string;
   avatar_url?: string;
-  school?: string;
+  class?: string;
 }

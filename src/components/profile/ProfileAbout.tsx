@@ -65,7 +65,7 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
           displayName: data.display_name || data.username,
           avatar: data.avatar_url,
           bio: data.bio,
-          school: data.school,
+          class: data.class,
           location: '', // Add location if available in your schema
           createdAt: data.created_at,
           coins: data.coins || 0,
@@ -160,10 +160,10 @@ const ProfileAbout: React.FC<ProfileAboutProps> = ({ username, isEditable = fals
                 <span>{profileUser.interests.join(', ')}</span>
               </div>
             )}
-            {profileUser.school && (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <GraduationCap className="h-4 w-4 text-blue-500" />
-                <span>{profileUser.school}</span>
+             {profileUser.class && (
+               <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                 <GraduationCap className="h-4 w-4 text-blue-500" />
+                 <span>{profileUser.class}</span>
               </div>
             )}
             {profileUser.createdAt && (

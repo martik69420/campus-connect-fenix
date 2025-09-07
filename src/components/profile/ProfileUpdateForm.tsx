@@ -21,7 +21,7 @@ const profileFormSchema = z.object({
     .max(20, { message: "Username cannot exceed 20 characters" })
     .regex(/^[a-z0-9_]+$/, { message: "Username can only contain lowercase letters, numbers, and underscores" }),
   bio: z.string().max(160).optional(),
-  school: z.string().min(2, { message: "School name is required" }),
+  class: z.string().min(2, { message: "Klas naam is verplicht" }),
   interests: z.array(z.string()).optional(),
 });
 
@@ -41,7 +41,7 @@ const ProfileUpdateForm: React.FC = () => {
       displayName: user?.displayName || "",
       username: user?.username || "",
       bio: user?.bio || "",
-      school: user?.school || "",
+      class: user?.class || "",
       interests: user?.interests || [],
     },
     mode: "onChange"
@@ -54,7 +54,7 @@ const ProfileUpdateForm: React.FC = () => {
         displayName: user.displayName || "",
         username: user.username || "",
         bio: user.bio || "",
-        school: user.school || "",
+        class: user.class || "",
         interests: user.interests || [],
       });
       
@@ -95,7 +95,7 @@ const ProfileUpdateForm: React.FC = () => {
         displayName: data.displayName,
         username: data.username,
         bio: data.bio || "",
-        school: data.school,
+        class: data.class,
         interests: data.interests,
       });
       
@@ -177,12 +177,12 @@ const ProfileUpdateForm: React.FC = () => {
         
         <FormField
           control={form.control}
-          name="school"
+          name="class"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>School</FormLabel>
+              <FormLabel>Klas</FormLabel>
               <FormControl>
-                <Input {...field} placeholder="Your school or university" />
+                <Input {...field} placeholder="Jouw klas" />
               </FormControl>
               <FormMessage />
             </FormItem>

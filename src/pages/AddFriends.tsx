@@ -19,7 +19,6 @@ const AddFriends = () => {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [sentRequests, setSentRequests] = useState<{[key: string]: boolean}>({});
   
@@ -29,10 +28,9 @@ const AddFriends = () => {
       return;
     }
     
-    // Load sent friend requests and recommendations on component mount
+    // Load sent friend requests on component mount
     if (user) {
       fetchSentRequests();
-      fetchRecommendations();
     }
   }, [isAuthenticated, authLoading, navigate, user]);
   
@@ -61,36 +59,6 @@ const AddFriends = () => {
       
     } catch (error) {
       console.error('Error loading sent requests:', error);
-    }
-  };
-
-  const fetchRecommendations = async () => {
-    if (!user) return;
-    
-    try {
-      // Get 5 random users from same class for recommendations
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, display_name, avatar_url, class')
-        .eq('class', user.class || '')
-        .neq('id', user.id)
-        .limit(5);
-        
-      if (error) {
-        console.error("Error fetching recommendations:", error);
-        return;
-      }
-      
-      // Mark already sent requests
-      const recommendationsWithStatus = data?.map(result => ({
-        ...result,
-        requestSent: sentRequests[result.id] || false
-      })) || [];
-      
-      setRecommendations(recommendationsWithStatus);
-      
-    } catch (error) {
-      console.error('Error loading recommendations:', error);
     }
   };
   
@@ -263,69 +231,6 @@ const AddFriends = () => {
           </Button>
         </div>
         
-        {/* Recommendations Section */}
-        {recommendations.length > 0 && (
-          <Card className="shadow-lg mb-6">
-            <CardHeader>
-              <CardTitle>Aanbevelingen uit je Klas</CardTitle>
-              <CardDescription>Mensen uit jouw klas die je zou kunnen kennen</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {recommendations.map((person) => (
-                  <motion.div 
-                    key={person.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex items-center justify-between p-4 rounded-lg border bg-card/50 hover:bg-card/80 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <Avatar>
-                        <AvatarImage src={person.avatar_url || "/placeholder.svg"} />
-                        <AvatarFallback>
-                          {person.display_name?.substring(0, 2).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <h3 className="font-medium">{person.display_name}</h3>
-                        <p className="text-sm text-muted-foreground">@{person.username}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button 
-                        variant={person.requestSent ? "outline" : "default"}
-                        size="sm"
-                        onClick={() => !person.requestSent && handleAddFriend(person.id)}
-                        disabled={person.requestSent}
-                        className={person.requestSent ? "border-green-500/30 text-green-500" : ""}
-                      >
-                        {person.requestSent ? (
-                          <>
-                            <UserCheck className="mr-2 h-4 w-4" />
-                            Verzoek Verzonden
-                          </>
-                        ) : (
-                          <>
-                            <UserPlus className="mr-2 h-4 w-4" />
-                            Voeg Toe
-                          </>
-                        )}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/profile/${person.username}`)}
-                      >
-                        Bekijk Profiel
-                      </Button>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
         <Card className="shadow-lg">
           <CardHeader>
             <CardTitle>Zoek naar Vrienden</CardTitle>
@@ -397,38 +302,38 @@ const AddFriends = () => {
                                 <>
                                   <UserCheck className="mr-2 h-4 w-4" />
                                   Request Sent
-                                </>
-                              ) : (
-                                <>
-                                  <UserPlus className="mr-2 h-4 w-4" />
-                                  Add Friend
-                                </>
-                              )}
+                               </>
+                             ) : (
+                               <>
+                                 <UserPlus className="mr-2 h-4 w-4" />
+                                 Voeg Toe
+                               </>
+                             )}
                             </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/profile/${result.username}`)}
-                            >
-                              View Profile
-                            </Button>
+                             <Button
+                               variant="outline"
+                               size="sm"
+                               onClick={() => navigate(`/profile/${result.username}`)}
+                             >
+                               Bekijk Profiel
+                             </Button>
                           </div>
                         </motion.div>
                       ))}
                     </motion.div>
                   ) : searchTerm && !loading && (
-                    <motion.div 
-                      initial={{ opacity: 0 }} 
-                      animate={{ opacity: 1 }} 
-                      exit={{ opacity: 0 }}
-                      className="text-center py-10"
-                    >
-                      <UserPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium">No users found</h3>
-                      <p className="text-muted-foreground mt-1 max-w-md mx-auto">
-                        We couldn't find any users matching "{searchTerm}". Try using a different name or username.
-                      </p>
-                    </motion.div>
+                     <motion.div 
+                       initial={{ opacity: 0 }} 
+                       animate={{ opacity: 1 }} 
+                       exit={{ opacity: 0 }}
+                       className="text-center py-10"
+                     >
+                       <UserPlus className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                       <h3 className="text-lg font-medium">Geen gebruikers gevonden</h3>
+                       <p className="text-muted-foreground mt-1 max-w-md mx-auto">
+                         We konden geen gebruikers vinden die overeenkomen met "{searchTerm}". Probeer een andere naam of gebruikersnaam.
+                       </p>
+                     </motion.div>
                   )}
                 </AnimatePresence>
               )}

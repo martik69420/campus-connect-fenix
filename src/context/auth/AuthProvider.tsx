@@ -23,7 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       displayName: profile.display_name || supabaseUser.email?.split('@')[0] || '',
       avatar: profile.avatar_url || '/placeholder.svg',
       bio: profile.bio || '',
-      school: profile.school || '',
+      class: profile.class || '',
       coins: 0, // Remove coins from user data
       createdAt: profile.created_at || new Date().toISOString(),
       isAdmin: profile.is_admin || false,

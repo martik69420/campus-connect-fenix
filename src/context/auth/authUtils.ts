@@ -53,7 +53,7 @@ export const createUserProfile = async (
                      userMeta?.picture || 
                      '/placeholder.svg';
                      
-    const school = userMeta?.school || 'Unknown School';
+    const userClass = userMeta?.class || 'Onbekende Klas';
     
     // Insert profile with minimal required data
     const { error } = await supabase.from('profiles').insert({
@@ -62,7 +62,8 @@ export const createUserProfile = async (
       username: username,
       display_name: displayName,
       avatar_url: avatarUrl,
-      school: school,
+      school: userClass, // Keep school for database compatibility 
+      class: userClass,
       is_admin: false,
       coins: 0
     });
