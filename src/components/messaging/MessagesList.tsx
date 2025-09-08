@@ -177,10 +177,10 @@ const MessagesList: React.FC<MessagesListProps> = ({
                     <Avatar className="h-10 w-10 border-2 border-background shadow-sm">
                       <AvatarImage 
                         src={message.sender?.avatar_url || '/placeholder.svg'} 
-                        alt={message.sender?.display_name || 'User'} 
+                        alt={message.sender?.username || message.sender?.display_name || 'User'} 
                       />
                       <AvatarFallback className="text-sm font-medium bg-gradient-to-br from-blue-500 to-purple-500 text-white">
-                        {(message.sender?.display_name || message.sender?.username || '?').charAt(0).toUpperCase()}
+                        {(message.sender?.username || message.sender?.display_name || '?').charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
                   ) : null}
@@ -190,7 +190,7 @@ const MessagesList: React.FC<MessagesListProps> = ({
               <div className={`max-w-[70%] space-y-1 ${isOwn ? 'items-end' : 'items-start'} flex flex-col`}>
                 {showName && !isOwn && (
                   <span className="text-sm font-semibold text-foreground px-4">
-                    {message.sender?.display_name || message.sender?.username || 'Unknown'}
+                    {message.sender?.username || message.sender?.display_name || 'Unknown'}
                   </span>
                 )}
                 
