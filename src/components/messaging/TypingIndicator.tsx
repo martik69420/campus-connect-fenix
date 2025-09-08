@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useEffect, useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/auth';
 
@@ -17,21 +17,18 @@ interface TypingUser {
 const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onTypingChange }, ref) => {
   const { user } = useAuth();
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
-  const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
   
-  // Debug: Let's check if this component is being called
-  console.log('TypingIndicator rendering with receiverId:', receiverId);
-
   // Function to update typing status
-  const updateTypingStatus = async (isTyping: boolean) => {
+  const updateTypingStatus = useCallback(async (isTyping: boolean) => {
     if (!user || !receiverId) return;
 
     try {
       const channelName = `typing_${user.id}_${receiverId}`;
       
       if (isTyping) {
-        // Start typing
+        // Start typing - create channel and subscribe first
         const channel = supabase.channel(channelName);
+        
         channel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             await channel.track({
@@ -54,35 +51,30 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
     } catch (error) {
       console.error('Error updating typing status:', error);
     }
-  };
+  }, [user, receiverId, onTypingChange]);
 
   // Handle typing trigger
-  const handleTyping = () => {
+  const handleTyping = useCallback(() => {
     updateTypingStatus(true);
     
-    // Clear existing timeout
-    if (typingTimeout) {
-      clearTimeout(typingTimeout);
-    }
-    
-    // Set new timeout to stop typing after 3 seconds
+    // Set timeout to stop typing after 3 seconds
     const timeout = setTimeout(() => {
       updateTypingStatus(false);
     }, 3000);
     
-    setTypingTimeout(timeout);
-  };
+    return () => clearTimeout(timeout);
+  }, [updateTypingStatus]);
 
   // Expose handleTyping method to parent
   useImperativeHandle(ref, () => ({
     handleTyping
-  }));
+  }), [handleTyping]);
 
-  // Listen for typing indicators from others
+  // Listen for typing indicators from others - memoized to prevent infinite loops
   useEffect(() => {
     if (!user || !receiverId) return;
 
-    const channel = supabase.channel(`typing_indicators_${user.id}`);
+    const channel = supabase.channel(`typing_indicators_${user.id}_${receiverId}`);
 
     channel
       .on('presence', { event: 'sync' }, () => {
@@ -91,7 +83,7 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
         
         Object.values(state).forEach((presences: any) => {
           presences.forEach((presence: any) => {
-            if (presence.typing_to === user.id && presence.user_id !== user.id) {
+            if (presence.typing_to === user.id && presence.user_id !== user.id && presence.user_id === receiverId) {
               typing.push({
                 user_id: presence.user_id,
                 username: presence.username,
@@ -108,7 +100,8 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
         const relevantUsers = newPresences
           .filter((presence: any) => 
             presence.typing_to === user.id && 
-            presence.user_id !== user.id
+            presence.user_id !== user.id &&
+            presence.user_id === receiverId
           )
           .map((presence: any) => ({
             user_id: presence.user_id,
@@ -130,17 +123,7 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, receiverId]);
-
-  // Stop typing when component unmounts
-  useEffect(() => {
-    return () => {
-      if (typingTimeout) {
-        clearTimeout(typingTimeout);
-      }
-      updateTypingStatus(false);
-    };
-  }, []);
+  }, [user?.id, receiverId]); // Fixed dependencies to prevent infinite loop
 
   if (typingUsers.length === 0) return null;
 

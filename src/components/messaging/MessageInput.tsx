@@ -14,9 +14,6 @@ import PrebuiltGifs from '@/components/messaging/PrebuiltGifs';
 import GifCreator from '@/components/messaging/GifCreator';
 import { TypingIndicator } from '@/components/messaging/TypingIndicator';
 
-// Debug: Let's check if TypingIndicator is properly imported
-console.log('TypingIndicator imported:', TypingIndicator);
-
 interface MessageInputProps {
   onSendMessage: (message: string, imageFile?: File, gifUrl?: string) => Promise<void>;
   isSending: boolean;
