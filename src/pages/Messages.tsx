@@ -12,6 +12,9 @@ import { useLanguage } from '@/context/LanguageContext';
 import useMessages from '@/hooks/use-messages';
 import { MessageCircle } from 'lucide-react';
 
+// Debug: Let's check if TypingIndicator is properly imported
+console.log('TypingIndicator imported in Messages:', TypingIndicator);
+
 const Messages = () => {
   const { user } = useAuth();
   const { t } = useLanguage();

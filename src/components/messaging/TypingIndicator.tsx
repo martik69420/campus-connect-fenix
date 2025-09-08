@@ -18,6 +18,9 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
   const { user } = useAuth();
   const [typingUsers, setTypingUsers] = useState<TypingUser[]>([]);
   const [typingTimeout, setTypingTimeout] = useState<NodeJS.Timeout | null>(null);
+  
+  // Debug: Let's check if this component is being called
+  console.log('TypingIndicator rendering with receiverId:', receiverId);
 
   // Function to update typing status
   const updateTypingStatus = async (isTyping: boolean) => {

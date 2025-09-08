@@ -59,6 +59,9 @@ const emojiCategories = {
 const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
   const [selectedCategory, setSelectedCategory] = useState('Frequently Used');
   
+  // Debug: Let's check if this component is being called
+  console.log('EmojiPicker rendering');
+  
   return (
     <div className="w-80 h-80 flex flex-col">
       {/* Category tabs */}
