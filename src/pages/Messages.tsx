@@ -108,8 +108,8 @@ const Messages = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-200px)]">
-          {/* Contacts List */}
-          <div className="lg:col-span-4">
+          {/* Contacts List - Hidden on mobile when chat is active */}
+          <div className={`lg:col-span-4 ${selectedUser ? 'hidden lg:block' : 'block'}`}>
             <Card className="h-full">
               <ContactsList
                 contacts={friends}
@@ -123,8 +123,8 @@ const Messages = () => {
             </Card>
           </div>
 
-          {/* Chat Area */}
-          <div className="lg:col-span-8">
+          {/* Chat Area - Hidden on mobile when no chat selected */}
+          <div className={`lg:col-span-8 ${!selectedUser ? 'hidden lg:block' : 'block'}`}>
             <Card className="h-full flex flex-col">
               {selectedUser ? (
                 <>
@@ -132,6 +132,10 @@ const Messages = () => {
                     <ChatHeader 
                       contact={selectedUser} 
                       onOpenUserActions={() => console.log('Open user actions')}
+                      onBack={() => {
+                        setSelectedUserId(null);
+                        setSelectedUser(null);
+                      }}
                     />
                   </div>
                   <div className="flex-1 min-h-0 flex flex-col">

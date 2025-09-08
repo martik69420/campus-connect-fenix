@@ -23,18 +23,17 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
     if (!user || !receiverId) return;
 
     try {
-      const channelName = `typing_${user.id}_${receiverId}`;
+      const channelName = `typing_indicators_${[user.id, receiverId].sort().join('_')}`;
+      const channel = supabase.channel(channelName);
       
       if (isTyping) {
-        // Start typing - create channel and subscribe first
-        const channel = supabase.channel(channelName);
-        
+        // Start typing
         channel.subscribe(async (status) => {
           if (status === 'SUBSCRIBED') {
             await channel.track({
               user_id: user.id,
-              username: user.username || '',
-              display_name: user.displayName || '',
+              username: user.username || user.email?.split('@')[0] || '',
+              display_name: user.displayName || user.username || user.email?.split('@')[0] || '',
               typing_to: receiverId,
               updated_at: new Date().toISOString()
             });
@@ -42,7 +41,6 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
         });
       } else {
         // Stop typing
-        const channel = supabase.channel(channelName);
         await channel.untrack();
         supabase.removeChannel(channel);
       }
@@ -70,11 +68,12 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
     handleTyping
   }), [handleTyping]);
 
-  // Listen for typing indicators from others - memoized to prevent infinite loops
+  // Listen for typing indicators from others
   useEffect(() => {
     if (!user || !receiverId) return;
 
-    const channel = supabase.channel(`typing_indicators_${user.id}_${receiverId}`);
+    const channelName = `typing_indicators_${[user.id, receiverId].sort().join('_')}`;
+    const channel = supabase.channel(channelName);
 
     channel
       .on('presence', { event: 'sync' }, () => {
@@ -83,7 +82,7 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
         
         Object.values(state).forEach((presences: any) => {
           presences.forEach((presence: any) => {
-            if (presence.typing_to === user.id && presence.user_id !== user.id && presence.user_id === receiverId) {
+            if (presence.user_id === receiverId && presence.typing_to === user.id) {
               typing.push({
                 user_id: presence.user_id,
                 username: presence.username,
@@ -99,9 +98,7 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
       .on('presence', { event: 'join' }, ({ newPresences }) => {
         const relevantUsers = newPresences
           .filter((presence: any) => 
-            presence.typing_to === user.id && 
-            presence.user_id !== user.id &&
-            presence.user_id === receiverId
+            presence.user_id === receiverId && presence.typing_to === user.id
           )
           .map((presence: any) => ({
             user_id: presence.user_id,
@@ -111,7 +108,11 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
           }));
         
         if (relevantUsers.length > 0) {
-          setTypingUsers(prev => [...prev, ...relevantUsers]);
+          setTypingUsers(prev => {
+            // Prevent duplicates
+            const filtered = prev.filter(u => !relevantUsers.some(r => r.user_id === u.user_id));
+            return [...filtered, ...relevantUsers];
+          });
         }
       })
       .on('presence', { event: 'leave' }, ({ leftPresences }) => {
@@ -123,7 +124,7 @@ const TypingIndicator = forwardRef<any, TypingIndicatorProps>(({ receiverId, onT
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.id, receiverId]); // Fixed dependencies to prevent infinite loop
+  }, [user?.id, receiverId]);
 
   if (typingUsers.length === 0) return null;
 

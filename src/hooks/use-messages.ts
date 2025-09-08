@@ -100,8 +100,8 @@ const useMessages = (): UseMessagesResult => {
 
       const friendsList = profilesData?.map(profile => ({
         id: profile.id,
-        username: profile.username,
-        displayName: profile.display_name || profile.username,
+        username: profile.username || profile.id.slice(0, 8),
+        displayName: profile.display_name || profile.username || `User ${profile.id.slice(0, 8)}`,
         avatar: profile.avatar_url
       })) || [];
 
@@ -132,7 +132,8 @@ const useMessages = (): UseMessagesResult => {
         .from('messages')
         .select(`
           *,
-          sender:profiles!messages_sender_id_fkey(username, display_name, avatar_url)
+          sender:profiles!messages_sender_id_fkey(id, username, display_name, avatar_url),
+          receiver:profiles!messages_receiver_id_fkey(id, username, display_name, avatar_url)
         `)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });

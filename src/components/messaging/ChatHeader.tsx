@@ -24,9 +24,10 @@ interface Contact {
 interface ChatHeaderProps {
   contact: Contact | null;
   onOpenUserActions: () => void;
+  onBack?: () => void;
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ contact, onOpenUserActions }) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ contact, onOpenUserActions, onBack }) => {
   const { t } = useLanguage();
   const navigate = useNavigate();
 
@@ -38,8 +39,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ contact, onOpenUserActions }) =
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
-          onClick={() => navigate(-1)}
+          className="lg:hidden"
+          onClick={onBack || (() => navigate(-1))}
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
