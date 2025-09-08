@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Smile } from 'lucide-react';
@@ -34,30 +34,70 @@ const commonEmojis = [
   '✨', '⚡', '☄️', '💎', '🔮', '🏆', '🎉', '🎊'
 ];
 
+const emojiCategories = {
+  'Frequently Used': ['😀', '😂', '❤️', '👍', '👎', '😍', '🔥', '💯'],
+  'Smileys': [
+    '😀', '😃', '😄', '😁', '😆', '😅', '😂', '🤣',
+    '😊', '😇', '🙂', '🙃', '😉', '😌', '😍', '🥰',
+    '😘', '😗', '😙', '😚', '😋', '😛', '😝', '😜'
+  ],
+  'Gestures': [
+    '👍', '👎', '👌', '🤌', '🤏', '✌️', '🤞', '🤟',
+    '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️',
+    '👋', '🤚', '🖐️', '✋', '🖖', '👏', '🙌', '🤝'
+  ],
+  'Hearts': [
+    '❤️', '🧡', '💛', '💚', '💙', '💜', '🤎', '🖤',
+    '🤍', '💔', '❣️', '💕', '💞', '💓', '💗', '💖'
+  ],
+  'Objects': [
+    '💯', '💥', '💫', '💦', '💨', '🔥', '⭐', '🌟',
+    '✨', '⚡', '☄️', '💎', '🔮', '🏆', '🎉', '🎊'
+  ]
+};
+
 const EmojiPicker: React.FC<EmojiPickerProps> = ({ onEmojiSelect }) => {
+  const [selectedCategory, setSelectedCategory] = useState('Frequently Used');
+  
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-          <Smile className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-80 p-2" align="end">
-        <div className="grid grid-cols-8 gap-1 max-h-64 overflow-y-auto">
-          {commonEmojis.map((emoji, index) => (
+    <div className="w-80 h-80 flex flex-col">
+      {/* Category tabs */}
+      <div className="flex border-b">
+        {Object.keys(emojiCategories).map((category) => (
+          <button
+            key={category}
+            onClick={() => setSelectedCategory(category)}
+            className={`px-3 py-2 text-xs font-medium transition-colors ${
+              selectedCategory === category
+                ? 'border-b-2 border-primary text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {category === 'Frequently Used' ? '⏰' : 
+             category === 'Smileys' ? '😀' :
+             category === 'Gestures' ? '👋' :
+             category === 'Hearts' ? '❤️' : '🎯'}
+          </button>
+        ))}
+      </div>
+      
+      {/* Emoji grid */}
+      <div className="flex-1 overflow-y-auto p-2">
+        <div className="grid grid-cols-8 gap-1">
+          {emojiCategories[selectedCategory as keyof typeof emojiCategories].map((emoji, index) => (
             <Button
               key={index}
               variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 hover:bg-muted"
+              className="h-8 w-8 p-0 hover:bg-muted transition-colors hover:scale-110"
               onClick={() => onEmojiSelect(emoji)}
             >
               <span className="text-lg">{emoji}</span>
             </Button>
           ))}
         </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+    </div>
   );
 };
 

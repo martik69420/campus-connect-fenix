@@ -64,13 +64,19 @@ const MessagesList: React.FC<MessagesListProps> = ({
     }
   }, [messages.length, shouldAutoScroll, isLoading, isUserScrolling]);
 
-  // Reset auto scroll when new messages arrive
+  // Auto-scroll on new messages from others or own messages
   useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    if (lastMessage && lastMessage.sender_id === currentUserId) {
+    const lastMessage = allMessages[allMessages.length - 1];
+    if (lastMessage) {
+      // Always scroll for new messages
       setShouldAutoScroll(true);
+      setTimeout(() => {
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
     }
-  }, [messages, currentUserId]);
+  }, [allMessages.length]);
 
   // Track user scrolling
   const handleScroll = (e: React.UIEvent) => {

@@ -5,6 +5,7 @@ import ContactsList from '@/components/messaging/ContactsList';
 import ChatHeader from '@/components/messaging/ChatHeader';
 import MessagesList from '@/components/messaging/MessagesList';
 import MessageInput from '@/components/messaging/MessageInput';
+import { TypingIndicator } from '@/components/messaging/TypingIndicator';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/context/auth';
 import { useLanguage } from '@/context/LanguageContext';
@@ -133,19 +134,25 @@ const Messages = () => {
                       onOpenUserActions={() => console.log('Open user actions')}
                     />
                   </div>
-                  <div className="flex-1 min-h-0">
-                    <MessagesList
-                      messages={messages}
-                      optimisticMessages={[]}
-                      currentUserId={user?.id || ''}
-                      isLoading={loading}
-                      onDeleteMessage={deleteMessage}
-                      onReactToMessage={reactToMessage}
-                    />
+                  <div className="flex-1 min-h-0 flex flex-col">
+                    <div className="flex-1">
+                      <MessagesList
+                        messages={messages}
+                        optimisticMessages={[]}
+                        currentUserId={user?.id || ''}
+                        isLoading={loading}
+                        onDeleteMessage={deleteMessage}
+                        onReactToMessage={reactToMessage}
+                      />
+                    </div>
+                    {selectedUserId && (
+                      <TypingIndicator receiverId={selectedUserId} />
+                    )}
                   </div>
                   <MessageInput 
                     onSendMessage={handleSendMessage}
                     isSending={isSending}
+                    receiverId={selectedUserId || undefined}
                   />
                 </>
               ) : (

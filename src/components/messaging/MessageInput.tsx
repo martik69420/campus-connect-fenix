@@ -12,14 +12,16 @@ import EmojiPicker from '@/components/messaging/EmojiPicker';
 import GifPicker from '@/components/messaging/GifPicker';
 import PrebuiltGifs from '@/components/messaging/PrebuiltGifs';
 import GifCreator from '@/components/messaging/GifCreator';
+import { TypingIndicator } from '@/components/messaging/TypingIndicator';
 
 interface MessageInputProps {
   onSendMessage: (message: string, imageFile?: File, gifUrl?: string) => Promise<void>;
   isSending: boolean;
   disabled?: boolean;
+  receiverId?: string;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, disabled }) => {
+const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, disabled, receiverId }) => {
   const { toast } = useToast();
   const [message, setMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -27,8 +29,10 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
   const [selectedGif, setSelectedGif] = useState<string | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [showGifDialog, setShowGifDialog] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const typingIndicatorRef = useRef<any>(null);
 
   const handleSend = async () => {
     if ((message.trim() || selectedImage || selectedGif) && !isSending) {
@@ -38,6 +42,13 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
         setSelectedImage(null);
         setImagePreview(null);
         setSelectedGif(null);
+        
+        // Keep focus on textarea after sending
+        setTimeout(() => {
+          if (textareaRef.current) {
+            textareaRef.current.focus();
+          }
+        }, 0);
       } catch (error) {
         console.error('Failed to send message:', error);
         toast({
@@ -120,12 +131,27 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
     }
   }, [message]);
 
-  // Focus the textarea when the component mounts
+  // Focus the textarea when the component mounts and after messages
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.focus();
     }
   }, []);
+
+  // Handle typing indicators
+  const handleTypingChange = (typing: boolean) => {
+    setIsTyping(typing);
+  };
+
+  // Trigger typing when user types
+  const handleMessageChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    
+    // Trigger typing indicator
+    if (typingIndicatorRef.current && receiverId) {
+      typingIndicatorRef.current.handleTyping();
+    }
+  };
 
   return (
     <div className="border-t p-3 dark:border-gray-800 bg-background/95 backdrop-blur-sm">
@@ -176,7 +202,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
           placeholder="Type a message..."
           className="min-h-[40px] max-h-[150px] flex-1 resize-none py-2 px-3 focus-visible:ring-1 focus-visible:ring-primary"
           value={message}
-          onChange={(e) => setMessage(e.target.value)}
+          onChange={handleMessageChange}
           onKeyDown={handleKeyDown}
           disabled={isSending || disabled}
           rows={1}
@@ -284,6 +310,15 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending, d
         ref={fileInputRef}
         onChange={handleImageSelect}
       />
+      
+      {/* Typing Indicator Component */}
+      {receiverId && (
+        <TypingIndicator
+          ref={typingIndicatorRef}
+          receiverId={receiverId}
+          onTypingChange={handleTypingChange}
+        />
+      )}
     </div>
   );
 };

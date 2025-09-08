@@ -130,7 +130,10 @@ const useMessages = (): UseMessagesResult => {
 
       const { data, error } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          *,
+          sender:profiles!messages_sender_id_fkey(username, display_name, avatar_url)
+        `)
         .or(`and(sender_id.eq.${user.id},receiver_id.eq.${contactId}),and(sender_id.eq.${contactId},receiver_id.eq.${user.id})`)
         .order('created_at', { ascending: true });
 
